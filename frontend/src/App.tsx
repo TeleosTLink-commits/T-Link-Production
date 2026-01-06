@@ -35,6 +35,9 @@ function App() {
         </Route>
 
         <Route path="*" element={<Navigate to={token ? '/dashboard' : '/login'} />} />
+      </Routes>
+    </Router>
+  );
 }
 
 export default App;

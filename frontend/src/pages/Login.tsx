@@ -82,3 +82,11 @@ const Login: React.FC = () => {
           <p style={{ marginTop: '10px', fontSize: '13px', color: '#666' }}>
             Note: Only authorized email addresses can register
           </p>
+
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Login;
