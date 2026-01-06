@@ -10,6 +10,11 @@ export interface AuthRequest extends Request {
     email: string;
     role: string;
   };
+  body: any;
+  params: any;
+  query: any;
+  headers: any;
+  file?: any;
 }
 
 export const generateToken = (payload: any): string => {
@@ -29,7 +34,7 @@ export const verifyToken = (token: string): any => {
 export const authenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'No token provided' });
     }

@@ -71,15 +71,15 @@ async function importTestMethods() {
     function getCategoryId(methodType: string): string | null {
       const type = (methodType || '').toLowerCase();
       if (type.includes('gc') || type.includes('gas chromatography')) {
-        return categories.get('gas chromatography') || null;
+        return (categories.get('gas chromatography') || null) as string | null;
       } else if (type.includes('hplc') || type.includes('lc')) {
-        return categories.get('liquid chromatography') || null;
+        return (categories.get('liquid chromatography') || null) as string | null;
       } else if (type.includes('titration') || type.includes('kf')) {
-        return categories.get('titration') || null;
+        return (categories.get('titration') || null) as string | null;
       } else if (type.includes('uv') || type.includes('ir') || type.includes('nmr') || type.includes('ms')) {
-        return categories.get('spectroscopy') || null;
+        return (categories.get('spectroscopy') || null) as string | null;
       } else {
-        return categories.get('other') || null;
+        return (categories.get('other') || null) as string | null;
       }
     }
 
