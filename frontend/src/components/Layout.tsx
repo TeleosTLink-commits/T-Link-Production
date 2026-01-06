@@ -6,7 +6,6 @@ import {
 import './Layout.css';
 
 const Layout = () => {
-  const navigate = useNavigate();
   const userStr = localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
 
@@ -55,7 +54,7 @@ const Layout = () => {
           <div className="user-info">
             <FaUserCircle size={24} />
             <div>
-              <div className="user-name">{user?.first_name} {user?.last_name}</div>
+              <div className="user-name">{user?.firstName} {user?.lastName}</div>
               <div className="user-role">{user?.role}</div>
             </div>
           </div>

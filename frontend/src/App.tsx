@@ -14,8 +14,6 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   const token = localStorage.getItem('auth_token');
-  const userStr = localStorage.getItem('user');
-  const user = userStr ? JSON.parse(userStr) : null;
 
   return (
     <Router>
