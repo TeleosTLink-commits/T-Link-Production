@@ -54,7 +54,7 @@ const Dashboard: React.FC = () => {
   return (
     <div className="dashboard">
       <h1>Welcome to T-Link Dashboard</h1>
-      <p className="welcome-message">Hello, {user?.first_name || user?.username}!</p>
+      <p className="welcome-message">Hello, {user?.firstName || user?.username}!</p>
 
       <div className="dashboard-grid">
         <div className="dashboard-card">
