@@ -1,0 +1,71 @@
+﻿// Download CoA file by lot number
+router.get('/lot/:lotNumber/download', authenticate, async (req: AuthRequest, res, next) => {
+  try {
+    const { lotNumber } = req.params;
+
+    const result = await query(
+      'SELECT * FROM certificates_of_analysis WHERE lot_number = $1',
+      [lotNumber]
+    );
+
+    if (result.rows.length === 0) {
+      throw new AppError('CoA not found for this lot number', 404);
+    }
+
+    const coa = result.rows[0];
+    const filePath = path.join(__dirname, '../..', coa.file_path);
+
+    // Check if file exists
+    if (!require('fs').existsSync(filePath)) {
+      throw new AppError('CoA file not found on server', 404);
+    }
+
+    // Log audit trail
+    await query(
+      `INSERT INTO document_audit_log (document_type, document_id, action, performed_by)
+       VALUES ('coa', $1, 'downloaded', $2)`,
+      [coa.id, req.user?.id]
+    );
+
+    res.download(filePath, coa.file_name);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Download CoA file by ID
+router.get('/:id/download', authenticate, async (req: AuthRequest, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const result = await query(
+      'SELECT * FROM certificates_of_analysis WHERE id = $1',
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      throw new AppError('CoA not found', 404);
+    }
+
+    const coa = result.rows[0];
+    const filePath = path.join(__dirname, '../..', coa.file_path);
+
+    // Check if file exists
+    if (!require('fs').existsSync(filePath)) {
+      throw new AppError('CoA file not found on server', 404);
+    }
+
+    // Log audit trail
+    await query(
+      `INSERT INTO document_audit_log (document_type, document_id, action, performed_by)
+       VALUES ('coa', $1, 'downloaded', $2)`,
+      [coa.id, req.user?.id]
+    );
+
+    res.download(filePath, coa.file_name);
+  } catch (error) {
+    next(error);
+  }
+});
+
+export default router;
