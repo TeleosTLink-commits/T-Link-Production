@@ -51,12 +51,9 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
       page = '1',
       limit = '50',
       search = '',
-      hazardClass,
       status,
       expirationStatus,
-      hasCoa,
-      hasSds,
-      sortBy = 'chemical_name',
+      sortBy = 'sample_name',
       sortOrder = 'asc'
     } = req.query;
 
@@ -67,39 +64,20 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     const params: any[] = [];
     let paramCount = 1;
 
-    // Full-text search across chemical name, CAS number, lot number
+    // Full-text search across sample name, sample_id, lot number
     if (search && search !== '') {
       conditions.push(`(
-        chemical_name ILIKE $${paramCount} OR 
-        cas_number ILIKE $${paramCount} OR 
-        lot_number ILIKE $${paramCount} OR
-        search_vector @@ plainto_tsquery('english', $${paramCount})
+        sample_name ILIKE $${paramCount} OR 
+        sample_id ILIKE $${paramCount} OR 
+        lot_number ILIKE $${paramCount}
       )`);
       params.push(`%${search}%`);
-      paramCount++;
-    }
-
-    if (hazardClass) {
-      conditions.push(`hazard_class = $${paramCount}`);
-      params.push(hazardClass);
       paramCount++;
     }
 
     if (status) {
       conditions.push(`status = $${paramCount}`);
       params.push(status);
-      paramCount++;
-    }
-
-    if (hasCoa !== undefined) {
-      conditions.push(`has_coa = $${paramCount}`);
-      params.push(hasCoa === 'true');
-      paramCount++;
-    }
-
-    if (hasSds !== undefined) {
-      conditions.push(`has_dow_sds = $${paramCount}`);
-      params.push(hasSds === 'true');
       paramCount++;
     }
 
@@ -124,8 +102,8 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     
     // Validate sort column to prevent SQL injection
-    const allowedSortColumns = ['chemical_name', 'lot_number', 'received_date', 'expiration_date', 'hazard_class', 'status'];
-    const sortColumn = allowedSortColumns.includes(sortBy as string) ? sortBy : 'chemical_name';
+    const allowedSortColumns = ['sample_name', 'sample_id', 'lot_number', 'received_date', 'expiration_date', 'status'];
+    const sortColumn = allowedSortColumns.includes(sortBy as string) ? sortBy : 'sample_name';
     const orderDirection = sortOrder === 'desc' ? 'DESC' : 'ASC';
 
     // Get total count
@@ -139,24 +117,19 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     const samplesResult = await pool.query(
       `SELECT 
         id,
-        chemical_name,
-        received_date,
+        sample_id,
+        sample_name,
+        sample_type,
         lot_number,
-        quantity,
-        concentration,
-        has_dow_sds,
-        cas_number,
-        has_coa,
-        certification_date,
-        recertification_date,
+        received_date,
         expiration_date,
-        un_number,
-        hazard_description,
-        hs_code,
-        hazard_class,
-        packing_group,
-        packing_instruction,
+        current_volume,
+        initial_volume,
+        unit,
+        low_inventory_threshold,
         status,
+        coa_id,
+        notes,
         created_at,
         updated_at,
         CASE
@@ -199,16 +172,16 @@ router.get('/expiring', authenticate, async (req: AuthRequest, res: Response) =>
     const result = await pool.query(
       `SELECT 
         id,
-        chemical_name,
+        sample_name,
+        sample_id,
         lot_number,
-        quantity,
+        current_volume,
         expiration_date,
-        hazard_class,
-        cas_number,
+        sample_type,
         EXTRACT(DAY FROM (expiration_date - CURRENT_DATE)) as days_until_expiration
        FROM samples
        WHERE expiration_date BETWEEN CURRENT_DATE AND CURRENT_DATE + $1::INTEGER * INTERVAL '1 day'
-       AND status = 'active'
+       AND status != 'expired'
        ORDER BY expiration_date ASC`,
       [parseInt(days as string)]
     );
@@ -229,30 +202,27 @@ router.get('/stats', authenticate, async (req: AuthRequest, res: Response) => {
     const statsResult = await pool.query(`
       SELECT 
         COUNT(*) as total_samples,
-        COUNT(*) FILTER (WHERE status = 'active') as active_samples,
-        COUNT(*) FILTER (WHERE status = 'expired') as expired_samples,
+        COUNT(*) FILTER (WHERE status = 'available') as available_samples,
+        COUNT(*) FILTER (WHERE status = 'low') as low_samples,
         COUNT(*) FILTER (WHERE status = 'depleted') as depleted_samples,
-        COUNT(*) FILTER (WHERE expiration_date < CURRENT_DATE AND status = 'active') as needs_review,
+        COUNT(*) FILTER (WHERE status = 'quarantine') as quarantine_samples,
+        COUNT(*) FILTER (WHERE status = 'expired') as expired_samples,
+        COUNT(*) FILTER (WHERE expiration_date < CURRENT_DATE) as needs_review,
         COUNT(*) FILTER (WHERE expiration_date < CURRENT_DATE + INTERVAL '30 days' 
-                        AND expiration_date >= CURRENT_DATE 
-                        AND status = 'active') as expiring_30_days,
+                        AND expiration_date >= CURRENT_DATE) as expiring_30_days,
         COUNT(*) FILTER (WHERE expiration_date < CURRENT_DATE + INTERVAL '60 days' 
-                        AND expiration_date >= CURRENT_DATE 
-                        AND status = 'active') as expiring_60_days,
+                        AND expiration_date >= CURRENT_DATE) as expiring_60_days,
         COUNT(*) FILTER (WHERE expiration_date < CURRENT_DATE + INTERVAL '90 days' 
-                        AND expiration_date >= CURRENT_DATE 
-                        AND status = 'active') as expiring_90_days,
-        COUNT(*) FILTER (WHERE has_coa = true) as with_coa,
-        COUNT(*) FILTER (WHERE has_dow_sds = true) as with_sds,
-        COUNT(DISTINCT hazard_class) FILTER (WHERE hazard_class IS NOT NULL) as hazard_classes_count
+                        AND expiration_date >= CURRENT_DATE) as expiring_90_days,
+        COUNT(*) FILTER (WHERE coa_id IS NOT NULL) as with_coa
       FROM samples
     `);
 
-    const hazardClassesResult = await pool.query(`
-      SELECT hazard_class, COUNT(*) as count
+    const sampleTypesResult = await pool.query(`
+      SELECT sample_type, COUNT(*) as count
       FROM samples
-      WHERE hazard_class IS NOT NULL AND hazard_class != ''
-      GROUP BY hazard_class
+      WHERE sample_type IS NOT NULL AND sample_type != ''
+      GROUP BY sample_type
       ORDER BY count DESC
     `);
 
@@ -260,7 +230,7 @@ router.get('/stats', authenticate, async (req: AuthRequest, res: Response) => {
       success: true,
       data: {
         ...statsResult.rows[0],
-        hazard_classes: hazardClassesResult.rows
+        sample_types: sampleTypesResult.rows
       }
     });
   } catch (error: any) {
@@ -324,89 +294,72 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
 router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const {
-      chemical_name,
-      received_date,
+      sample_id,
+      sample_name,
+      sample_type,
       lot_number,
-      quantity,
-      concentration,
-      has_dow_sds,
-      cas_number,
-      has_coa,
-      certification_date,
-      recertification_date,
+      received_date,
       expiration_date,
-      un_number,
-      hazard_description,
-      hs_code,
-      hazard_class,
-      packing_group,
-      packing_instruction,
+      initial_volume,
+      current_volume,
+      unit,
+      low_inventory_threshold,
+      status,
+      coa_id,
       notes
     } = req.body;
 
     const userId = (req as any).user.id;
 
+    // Validate required fields
+    if (!sample_id || !sample_name) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'sample_id and sample_name are required' 
+      });
+    }
+
     // Convert empty strings to null for date fields
     const cleanedData = {
       received_date: received_date || null,
-      certification_date: certification_date || null,
-      recertification_date: recertification_date || null,
       expiration_date: expiration_date || null
     };
 
     const result = await pool.query(
       `INSERT INTO samples (
-        chemical_name,
-        received_date,
+        sample_id,
+        sample_name,
+        sample_type,
         lot_number,
-        quantity,
-        concentration,
-        has_dow_sds,
-        cas_number,
-        has_coa,
-        certification_date,
-        recertification_date,
+        received_date,
         expiration_date,
-        un_number,
-        hazard_description,
-        hs_code,
-        hazard_class,
-        packing_group,
-        packing_instruction,
-        created_by,
-        status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 'active')
+        initial_volume,
+        current_volume,
+        unit,
+        low_inventory_threshold,
+        status,
+        coa_id,
+        notes,
+        created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *`,
       [
-        chemical_name,
-        cleanedData.received_date,
+        sample_id,
+        sample_name,
+        sample_type || 'Standard',
         lot_number,
-        quantity,
-        concentration,
-        has_dow_sds,
-        cas_number,
-        has_coa,
-        cleanedData.certification_date,
-        cleanedData.recertification_date,
+        cleanedData.received_date,
         cleanedData.expiration_date,
-        un_number,
-        hazard_description,
-        hs_code,
-        hazard_class,
-        packing_group,
-        packing_instruction,
+        initial_volume || 0,
+        current_volume || 0,
+        unit || 'mL',
+        low_inventory_threshold || 0,
+        status || 'available',
+        coa_id || null,
+        notes || null,
         userId
       ]
     );
-
-    // Log creation transaction
-    if (notes) {
-      await pool.query(
-        `INSERT INTO sample_transactions (sample_id, transaction_type, notes, performed_by)
-         VALUES ($1, 'created', $2, $3)`,
-        [result.rows[0].id, notes, userId]
-      );
-    }
 
     res.status(201).json({
       success: true,
@@ -424,100 +377,98 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const {
-      chemical_name,
-      received_date,
+      sample_id,
+      sample_name,
+      sample_type,
       lot_number,
-      quantity,
-      concentration,
-      has_dow_sds,
-      cas_number,
-      has_coa,
-      certification_date,
-      recertification_date,
+      received_date,
       expiration_date,
-      un_number,
-      hazard_description,
-      hs_code,
-      hazard_class,
-      packing_group,
-      packing_instruction,
+      initial_volume,
+      current_volume,
+      unit,
+      low_inventory_threshold,
       status,
+      coa_id,
       notes
     } = req.body;
 
     const userId = (req as any).user.id;
 
-    // Convert empty strings to null for date fields
-    const cleanedData = {
-      received_date: received_date || null,
-      certification_date: certification_date || null,
-      recertification_date: recertification_date || null,
-      expiration_date: expiration_date || null
-    };
+    // Build dynamic UPDATE query based on provided fields
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
 
-    // Convert empty strings to null for date fields
-    const cleanedReceivedDate = received_date === '' ? null : received_date;
-    const cleanedCertificationDate = certification_date === '' ? null : certification_date;
-    const cleanedRecertificationDate = recertification_date === '' ? null : recertification_date;
-    const cleanedExpirationDate = expiration_date === '' ? null : expiration_date;
+    if (sample_id !== undefined) {
+      updates.push(`sample_id = $${paramIndex++}`);
+      values.push(sample_id);
+    }
+    if (sample_name !== undefined) {
+      updates.push(`sample_name = $${paramIndex++}`);
+      values.push(sample_name);
+    }
+    if (sample_type !== undefined) {
+      updates.push(`sample_type = $${paramIndex++}`);
+      values.push(sample_type);
+    }
+    if (lot_number !== undefined) {
+      updates.push(`lot_number = $${paramIndex++}`);
+      values.push(lot_number);
+    }
+    if (received_date !== undefined) {
+      updates.push(`received_date = $${paramIndex++}`);
+      values.push(received_date || null);
+    }
+    if (expiration_date !== undefined) {
+      updates.push(`expiration_date = $${paramIndex++}`);
+      values.push(expiration_date || null);
+    }
+    if (initial_volume !== undefined) {
+      updates.push(`initial_volume = $${paramIndex++}`);
+      values.push(initial_volume);
+    }
+    if (current_volume !== undefined) {
+      updates.push(`current_volume = $${paramIndex++}`);
+      values.push(current_volume);
+    }
+    if (unit !== undefined) {
+      updates.push(`unit = $${paramIndex++}`);
+      values.push(unit);
+    }
+    if (low_inventory_threshold !== undefined) {
+      updates.push(`low_inventory_threshold = $${paramIndex++}`);
+      values.push(low_inventory_threshold);
+    }
+    if (status !== undefined) {
+      updates.push(`status = $${paramIndex++}`);
+      values.push(status);
+    }
+    if (coa_id !== undefined) {
+      updates.push(`coa_id = $${paramIndex++}`);
+      values.push(coa_id || null);
+    }
+    if (notes !== undefined) {
+      updates.push(`notes = $${paramIndex++}`);
+      values.push(notes);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, message: 'No fields to update' });
+    }
+
+    updates.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(id);
 
     const result = await pool.query(
       `UPDATE samples SET
-        chemical_name = COALESCE($1, chemical_name),
-        received_date = COALESCE($2, received_date),
-        lot_number = COALESCE($3, lot_number),
-        quantity = COALESCE($4, quantity),
-        concentration = COALESCE($5, concentration),
-        has_dow_sds = COALESCE($6, has_dow_sds),
-        cas_number = COALESCE($7, cas_number),
-        has_coa = COALESCE($8, has_coa),
-        certification_date = COALESCE($9, certification_date),
-        recertification_date = COALESCE($10, recertification_date),
-        expiration_date = COALESCE($11, expiration_date),
-        un_number = COALESCE($12, un_number),
-        hazard_description = COALESCE($13, hazard_description),
-        hs_code = COALESCE($14, hs_code),
-        hazard_class = COALESCE($15, hazard_class),
-        packing_group = COALESCE($16, packing_group),
-        packing_instruction = COALESCE($17, packing_instruction),
-        status = COALESCE($18, status),
-        updated_at = CURRENT_TIMESTAMP
-       WHERE id = $19
+        ${updates.join(', ')}
+       WHERE id = $${paramIndex}
        RETURNING *`,
-      [
-        chemical_name,
-        cleanedReceivedDate,
-        lot_number,
-        quantity,
-        concentration,
-        has_dow_sds,
-        cas_number,
-        has_coa,
-        cleanedCertificationDate,
-        cleanedRecertificationDate,
-        cleanedExpirationDate,
-        un_number,
-        hazard_description,
-        hs_code,
-        hazard_class,
-        packing_group,
-        packing_instruction,
-        status,
-        id
-      ]
+      values
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Sample not found' });
-    }
-
-    // Log update transaction
-    if (notes) {
-      await pool.query(
-        `INSERT INTO sample_transactions (sample_id, transaction_type, notes, performed_by)
-         VALUES ($1, 'updated', $2, $3)`,
-        [id, notes, userId]
-      );
     }
 
     res.json({
@@ -622,9 +573,9 @@ router.post('/:id/coa/upload', authenticate, upload.single('file'), async (req: 
     // Update sample with file information
     await pool.query(
       `UPDATE samples
-       SET coa_file_path = $1, coa_file_name = $2, has_coa = true, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $3`,
-      [file.path, file.originalname, id]
+       SET updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1`,
+      [id]
     );
 
     // Also update the certificates_of_analysis table if a matching lot number exists
@@ -660,9 +611,9 @@ router.post('/:id/sds/upload', authenticate, upload.single('file'), async (req: 
     // Update database with file information
     await pool.query(
       `UPDATE samples
-       SET sds_file_path = $1, sds_file_name = $2, has_dow_sds = true, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $3`,
-      [file.path, file.originalname, id]
+       SET updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1`,
+      [id]
     );
 
     res.json({
@@ -701,7 +652,7 @@ router.delete('/:id/coa', authenticate, async (req: AuthRequest, res: Response) 
     // Update database to remove COA reference
     await pool.query(
       `UPDATE samples 
-       SET coa_file_path = NULL, coa_file_name = NULL, has_coa = false, updated_at = CURRENT_TIMESTAMP
+       SET updated_at = CURRENT_TIMESTAMP
        WHERE id = $1`,
       [id]
     );
@@ -741,7 +692,7 @@ router.delete('/:id/sds', authenticate, async (req: AuthRequest, res: Response) 
     // Update database to remove SDS reference
     await pool.query(
       `UPDATE samples 
-       SET sds_file_path = NULL, sds_file_name = NULL, has_dow_sds = false, updated_at = CURRENT_TIMESTAMP
+       SET updated_at = CURRENT_TIMESTAMP
        WHERE id = $1`,
       [id]
     );
