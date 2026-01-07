@@ -39,7 +39,7 @@ const SampleInventory: React.FC = () => {
   const [error, setError] = useState('');
   
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('active');
+  const [statusFilter, setStatusFilter] = useState('available');
   const [expirationFilter, setExpirationFilter] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -142,7 +142,7 @@ const SampleInventory: React.FC = () => {
       low_inventory_threshold: 10,
       received_date: '',
       expiration_date: '',
-      status: 'active',
+      status: 'available',
       notes: '',
     });
     setSelectedSample(null);
@@ -247,7 +247,7 @@ const SampleInventory: React.FC = () => {
         <div className="filters">
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="">All Statuses</option>
-            <option value="active">Active</option>
+            <option value="available">Available</option>
             <option value="expired">Expired</option>
             <option value="depleted">Depleted</option>
           </select>
@@ -315,7 +315,7 @@ const SampleInventory: React.FC = () => {
                         {getExpirationBadge(sample.expiration_status, sample.expiration_date)}
                       </td>
                       <td>
-                        <span className={`badge badge-${sample.status === 'active' ? 'success' : 'secondary'}`}>
+                        <span className={`badge badge-${sample.status === 'available' ? 'success' : 'secondary'}`}>
                           {sample.status}
                         </span>
                       </td>
@@ -468,7 +468,7 @@ const SampleInventory: React.FC = () => {
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                   >
-                    <option value="active">Active</option>
+                    <option value="available">Available</option>
                     <option value="expired">Expired</option>
                     <option value="depleted">Depleted</option>
                   </select>
