@@ -17,6 +17,7 @@ interface Sample {
   status: string;
   expiration_status: string;
   coa_id: string | null;
+  sds_file_path: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -198,6 +199,16 @@ const SampleInventory: React.FC = () => {
     }
   };
 
+  const handleViewCoA = (id: string) => {
+    const url = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/sample-inventory/${id}/coa`;
+    window.open(url, '_blank');
+  };
+
+  const handleViewSDS = (id: string) => {
+    const url = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/sample-inventory/${id}/sds`;
+    window.open(url, '_blank');
+  };
+
   return (
     <div className="sample-inventory">
       <div className="page-header">
@@ -320,12 +331,32 @@ const SampleInventory: React.FC = () => {
                         </span>
                       </td>
                       <td>
-                        <button className="btn btn-sm btn-secondary" onClick={() => handleEdit(sample)}>
-                          Edit
-                        </button>
-                        <button className="btn btn-sm btn-danger" onClick={() => handleDelete(sample.id)}>
-                          Delete
-                        </button>
+                        <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
+                          {sample.coa_id && (
+                            <button 
+                              className="btn btn-sm btn-info" 
+                              onClick={() => handleViewCoA(sample.id)}
+                              title="View Certificate of Analysis"
+                            >
+                              CoA
+                            </button>
+                          )}
+                          {sample.sds_file_path && (
+                            <button 
+                              className="btn btn-sm btn-warning" 
+                              onClick={() => handleViewSDS(sample.id)}
+                              title="View Safety Data Sheet"
+                            >
+                              SDS
+                            </button>
+                          )}
+                          <button className="btn btn-sm btn-secondary" onClick={() => handleEdit(sample)}>
+                            Edit
+                          </button>
+                          <button className="btn btn-sm btn-danger" onClick={() => handleDelete(sample.id)}>
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))

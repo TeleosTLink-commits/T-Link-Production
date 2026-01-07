@@ -707,4 +707,85 @@ router.delete('/:id/sds', authenticate, async (req: AuthRequest, res: Response) 
   }
 });
 
+// GET /api/sample-inventory/:id/coa - Get CoA file for a sample
+router.get('/:id/coa', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Get sample with CoA info
+    const result = await pool.query(
+      `SELECT s.sample_name, s.coa_id, c.file_path 
+       FROM samples s 
+       LEFT JOIN certificates_of_analysis c ON s.coa_id = c.id 
+       WHERE s.id = $1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Sample not found' });
+    }
+
+    const sample = result.rows[0];
+    
+    if (!sample.coa_id || !sample.file_path) {
+      return res.status(404).json({ success: false, message: 'CoA not available for this sample' });
+    }
+
+    // If Cloudinary URL, redirect to it
+    if (sample.file_path.startsWith('https://')) {
+      return res.redirect(sample.file_path);
+    }
+
+    // If local path, serve the file
+    const filePath = path.join(__dirname, '../..', sample.file_path);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ success: false, message: 'CoA file not found on server' });
+    }
+
+    res.download(filePath, `${sample.sample_name}_CoA.pdf`);
+  } catch (error: any) {
+    console.error('Error retrieving CoA:', error);
+    res.status(500).json({ success: false, message: 'Failed to retrieve CoA', error: error.message });
+  }
+});
+
+// GET /api/sample-inventory/:id/sds - Get SDS file for a sample  
+router.get('/:id/sds', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Get sample with SDS info
+    const result = await pool.query(
+      `SELECT sample_name, sds_file_path FROM samples WHERE id = $1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Sample not found' });
+    }
+
+    const sample = result.rows[0];
+    
+    if (!sample.sds_file_path) {
+      return res.status(404).json({ success: false, message: 'SDS not available for this sample' });
+    }
+
+    // If Cloudinary URL, redirect to it
+    if (sample.sds_file_path.startsWith('https://')) {
+      return res.redirect(sample.sds_file_path);
+    }
+
+    // If local path, serve the file
+    const filePath = path.join(__dirname, '../..', sample.sds_file_path);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ success: false, message: 'SDS file not found on server' });
+    }
+
+    res.download(filePath, `${sample.sample_name}_SDS.pdf`);
+  } catch (error: any) {
+    console.error('Error retrieving SDS:', error);
+    res.status(500).json({ success: false, message: 'Failed to retrieve SDS', error: error.message });
+  }
+});
+
 export default router;
