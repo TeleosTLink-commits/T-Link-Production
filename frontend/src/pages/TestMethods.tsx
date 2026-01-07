@@ -4,14 +4,16 @@ import './TestMethods.css';
 
 interface TestMethod {
   id?: number;
-  legacy_number: string;
-  official_number?: string;
-  original_title: string;
-  method_type: string;
-  effective_date?: string;
-  aal_verification_date?: string;
+  tm_number: string;
+  version: string;
+  title: string;
+  description?: string;
+  status: string;
+  is_current_version?: boolean;
   file_path?: string;
   file_name?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 const TestMethods: React.FC = () => {
@@ -21,15 +23,13 @@ const TestMethods: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingMethod, setEditingMethod] = useState<TestMethod | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [naVerification, setNaVerification] = useState(false);
   
   const [formData, setFormData] = useState<TestMethod>({
-    legacy_number: '',
-    official_number: '',
-    original_title: '',
-    method_type: '',
-    effective_date: '',
-    aal_verification_date: ''
+    tm_number: '',
+    version: '',
+    title: '',
+    description: '',
+    status: 'active',
   });
 
   useEffect(() => {
@@ -50,15 +50,13 @@ const TestMethods: React.FC = () => {
   const handleAdd = () => {
     setEditingMethod(null);
     setFormData({
-      legacy_number: '',
-      official_number: '',
-      original_title: '',
-      method_type: '',
-      effective_date: '',
-      aal_verification_date: ''
+      tm_number: '',
+      version: '',
+      title: '',
+      description: '',
+      status: 'active',
     });
     setSelectedFile(null);
-    setNaVerification(false);
     setShowModal(true);
   };
 
@@ -66,24 +64,18 @@ const TestMethods: React.FC = () => {
     setEditingMethod(method);
     setFormData(method);
     setSelectedFile(null);
-    setNaVerification(!method.aal_verification_date);
     setShowModal(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const submitData = {
-        ...formData,
-        aal_verification_date: naVerification ? null : formData.aal_verification_date
-      };
-      
       let methodId;
       if (editingMethod) {
-        await api.put(`/test-methods/${editingMethod.id}`, submitData);
+        await api.put(`/test-methods/${editingMethod.id}`, formData);
         methodId = editingMethod.id;
       } else {
-        const response = await api.post('/test-methods', submitData);
+        const response = await api.post('/test-methods', formData);
         methodId = response.data.data.id;
       }
       
@@ -151,32 +143,30 @@ const TestMethods: React.FC = () => {
         <table className="test-methods-table">
           <thead>
             <tr>
-              <th>Legacy Number</th>
+              <th>TM Number</th>
+              <th>Version</th>
               <th>Title</th>
-              <th>Method Type</th>
-              <th>Effective Date</th>
-              <th>AAL Test Method Number</th>
-              <th>Date of AAL Verification</th>
+              <th>Description</th>
+              <th>Status</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {testMethods.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ textAlign: 'center', padding: '40px' }}>
+                <td colSpan={6} style={{ textAlign: 'center', padding: '40px' }}>
                   <p>No test methods found.</p>
-                  <p>Click &quot;+ Add Test Method&quot; to create one, or import from CSV.</p>
+                  <p>Click &quot;+ Add Test Method&quot; to create one.</p>
                 </td>
               </tr>
             ) : (
               testMethods.map((method: TestMethod) => (
                 <tr key={method.id}>
-                  <td>{method.legacy_number || 'N/A'}</td>
-                  <td>{method.original_title}</td>
-                  <td>{method.method_type || 'N/A'}</td>
-                  <td>{method.effective_date ? new Date(method.effective_date).toLocaleDateString() : 'N/A'}</td>
-                  <td>{method.official_number || 'Not Assigned'}</td>
-                  <td>{method.aal_verification_date ? new Date(method.aal_verification_date).toLocaleDateString() : 'N/A'}</td>
+                  <td>{method.tm_number}</td>
+                  <td>{method.version}</td>
+                  <td>{method.title}</td>
+                  <td>{method.description || 'N/A'}</td>
+                  <td><span style={{padding: '4px 8px', backgroundColor: method.status === 'active' ? '#d4edda' : '#fff3cd', borderRadius: '4px'}}>{method.status}</span></td>
                   <td>
                     {method.file_path && (
                       <button className="btn-icon" onClick={() => handleViewDocument(method.id, method.file_name || 'document.pdf')} title="View Document">📄 View</button>
@@ -201,23 +191,24 @@ const TestMethods: React.FC = () => {
             <form onSubmit={handleSubmit}>
               <div className="form-grid">
                 <div className="form-group">
-                  <label>Legacy Number *</label>
+                  <label>TM Number *</label>
                   <input
                     type="text"
-                    value={formData.legacy_number}
-                    onChange={(e) => setFormData({...formData, legacy_number: e.target.value})}
+                    value={formData.tm_number}
+                    onChange={(e) => setFormData({...formData, tm_number: e.target.value})}
                     required
-                    placeholder="e.g., LAB-A-2019-05"
+                    placeholder="e.g., TM-001"
                   />
                 </div>
                 
                 <div className="form-group">
-                  <label>AAL Test Method Number</label>
+                  <label>Version *</label>
                   <input
                     type="text"
-                    value={formData.official_number || ''}
-                    onChange={(e) => setFormData({...formData, official_number: e.target.value})}
-                    placeholder="e.g., TM-001"
+                    value={formData.version}
+                    onChange={(e) => setFormData({...formData, version: e.target.value})}
+                    required
+                    placeholder="e.g., 1.0"
                   />
                 </div>
 
@@ -225,57 +216,34 @@ const TestMethods: React.FC = () => {
                   <label>Title *</label>
                   <input
                     type="text"
-                    value={formData.original_title}
-                    onChange={(e) => setFormData({...formData, original_title: e.target.value})}
+                    value={formData.title}
+                    onChange={(e) => setFormData({...formData, title: e.target.value})}
                     required
                     placeholder="Test method title"
                   />
                 </div>
 
+                <div className="form-group full-width">
+                  <label>Description</label>
+                  <textarea
+                    value={formData.description || ''}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    placeholder="Description of the test method"
+                    rows={4}
+                  />
+                </div>
+
                 <div className="form-group">
-                  <label>Method Type *</label>
+                  <label>Status *</label>
                   <select
-                    value={formData.method_type}
-                    onChange={(e) => setFormData({...formData, method_type: e.target.value})}
+                    value={formData.status}
+                    onChange={(e) => setFormData({...formData, status: e.target.value})}
                     required
                   >
-                    <option value="">Select type...</option>
-                    <option value="GC">Gas Chromatography (GC)</option>
-                    <option value="HPLC">HPLC</option>
-                    <option value="FTIR">FTIR</option>
-                    <option value="NMR">NMR</option>
-                    <option value="Titration">Titration</option>
-                    <option value="Wet Chemistry">Wet Chemistry</option>
-                    <option value="Physical Testing">Physical Testing</option>
-                    <option value="Other">Other</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="archived">Archived</option>
                   </select>
-                </div>
-
-                <div className="form-group">
-                  <label>Effective Date</label>
-                  <input
-                    type="date"
-                    value={formData.effective_date || ''}
-                    onChange={(e) => setFormData({...formData, effective_date: e.target.value})}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Date of AAL Verification</label>
-                  <input
-                    type="date"
-                    value={naVerification ? '' : (formData.aal_verification_date || '')}
-                    onChange={(e) => setFormData({...formData, aal_verification_date: e.target.value})}
-                    disabled={naVerification}
-                  />
-                  <label style={{marginTop: '5px', fontSize: '14px'}}>
-                    <input
-                      type="checkbox"
-                      checked={naVerification}
-                      onChange={(e) => setNaVerification(e.target.checked)}
-                    />
-                    {' '}N/A
-                  </label>
                 </div>
 
                 <div className="form-group full-width">
