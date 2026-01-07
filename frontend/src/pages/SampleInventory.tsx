@@ -3,26 +3,23 @@ import api from '../services/api';
 import './SampleInventory.css';
 
 interface Sample {
-  id: number;
-  chemical_name: string;
+  id: string;
+  sample_id: string;
+  sample_name: string;
+  sample_type: string;
   lot_number: string;
-  cas_number: string;
-  quantity: string;
-  concentration: string;
+  initial_volume: number;
+  current_volume: number;
+  unit: string;
+  low_inventory_threshold: number;
   received_date: string;
   expiration_date: string;
-  hazard_class: string;
-  hazard_description: string;
-  un_number: string;
-  hs_code: string;
-  packing_group: string;
-  packing_instruction: string;
-  has_coa: boolean;
-  has_dow_sds: boolean;
   status: string;
   expiration_status: string;
-  certification_date: string;
-  recertification_date: string;
+  coa_id: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 interface Stats {
@@ -33,8 +30,6 @@ interface Stats {
   expiring_60_days: number;
   expiring_90_days: number;
   with_coa: number;
-  with_sds: number;
-  hazard_classes: Array<{ hazard_class: string; count: number }>;
 }
 
 const SampleInventory: React.FC = () => {
@@ -45,11 +40,8 @@ const SampleInventory: React.FC = () => {
   
   // Filters and search
   const [search, setSearch] = useState('');
-  const [hazardClassFilter, setHazardClassFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('active');
   const [expirationFilter, setExpirationFilter] = useState('');
-  const [hasCoa, setHasCoa] = useState<boolean | undefined>(undefined);
-  const [hasSds, setHasSds] = useState<boolean | undefined>(undefined);
   
   // Pagination
   const [page, setPage] = useState(1);
@@ -57,7 +49,7 @@ const SampleInventory: React.FC = () => {
   const [totalCount, setTotalCount] = useState(0);
   
   // Sort
-  const [sortBy, setSortBy] = useState('chemical_name');
+  const [sortBy, setSortBy] = useState('sample_name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   
   // Modal
@@ -71,29 +63,24 @@ const SampleInventory: React.FC = () => {
   
   // Form data
   const [formData, setFormData] = useState({
-    chemical_name: '',
+    sample_id: '',
+    sample_name: '',
+    sample_type: '',
     lot_number: '',
-    cas_number: '',
-    quantity: '',
-    concentration: '',
+    initial_volume: 0,
+    current_volume: 0,
+    unit: 'mL',
+    low_inventory_threshold: 10,
     received_date: '',
     expiration_date: '',
-    certification_date: '',
-    recertification_date: '',
-    hazard_class: '',
-    hazard_description: '',
-    un_number: '',
-    hs_code: '',
-    packing_group: '',
-    packing_instruction: '',
-    has_coa: false,
-    has_dow_sds: false,
+    status: 'active',
+    notes: '',
   });
 
   useEffect(() => {
     fetchSamples();
     fetchStats();
-  }, [page, search, hazardClassFilter, statusFilter, expirationFilter, hasCoa, hasSds, sortBy, sortOrder]);
+  }, [page, search, statusFilter, expirationFilter, sortBy, sortOrder]);
 
   const fetchSamples = async () => {
     try {
@@ -101,14 +88,11 @@ const SampleInventory: React.FC = () => {
       const params: any = { page, limit: 20, sortBy, sortOrder };
       
       if (search) params.search = search;
-      if (hazardClassFilter) params.hazardClass = hazardClassFilter;
       if (statusFilter) params.status = statusFilter;
       if (expirationFilter) params.expirationStatus = expirationFilter;
-      if (hasCoa !== undefined) params.hasCoa = hasCoa;
-      if (hasSds !== undefined) params.hasSds = hasSds;
       
       const response = await api.get('/sample-inventory', { params });
-      setSamples(response.data.data.samples);
+      setSamples(response.data.data.samples || []);
       setTotalPages(response.data.data.pagination.pages);
       setTotalCount(response.data.data.pagination.total);
       setError('');
