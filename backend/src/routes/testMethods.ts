@@ -50,10 +50,9 @@ router.get('/stats', authenticate, async (req, res) => {
     const statsQuery = `
       SELECT 
         COUNT(*) as total_methods,
-        COUNT(CASE WHEN official_number IS NOT NULL THEN 1 END) as standardized_methods,
-        COUNT(CASE WHEN verification_status = 'pending' THEN 1 END) as pending_verification,
-        COUNT(CASE WHEN verification_status = 'verified' THEN 1 END) as verified_methods,
-        COUNT(DISTINCT legacy_lab_source) as lab_sources_count
+        COUNT(CASE WHEN is_current_version = true THEN 1 END) as current_versions,
+        COUNT(CASE WHEN status = 'active' THEN 1 END) as active_methods,
+        COUNT(DISTINCT tm_number) as unique_methods
       FROM test_methods
       WHERE status != 'archived'
     `;
@@ -66,19 +65,9 @@ router.get('/stats', authenticate, async (req, res) => {
       ORDER BY count DESC
     `;
 
-    const byCategoryQuery = `
-      SELECT c.category_name, COUNT(tm.id) as count
-      FROM test_methods tm
-      LEFT JOIN test_method_categories c ON tm.category_id = c.id
-      WHERE tm.status != 'archived'
-      GROUP BY c.category_name
-      ORDER BY count DESC
-    `;
-
-    const [statsResult, statusResult, categoryResult] = await Promise.all([
+    const [statsResult, statusResult] = await Promise.all([
       pool.query(statsQuery),
       pool.query(byStatusQuery),
-      pool.query(byCategoryQuery),
     ]);
 
     res.json({
@@ -86,7 +75,6 @@ router.get('/stats', authenticate, async (req, res) => {
       data: {
         ...statsResult.rows[0],
         by_status: statusResult.rows,
-        by_category: categoryResult.rows,
       },
     });
   } catch (error: any) {
@@ -95,13 +83,10 @@ router.get('/stats', authenticate, async (req, res) => {
   }
 });
 
-// Get all categories
+// Get all categories (return empty since table doesn't exist in production)
 router.get('/categories', authenticate, async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT id, category_name, description FROM test_method_categories ORDER BY category_name'
-    );
-    res.json({ success: true, data: result.rows });
+    res.json({ success: true, data: [] });
   } catch (error: any) {
     console.error('Error fetching categories:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch categories' });
@@ -116,9 +101,6 @@ router.get('/', authenticate, async (req, res) => {
       limit = 20,
       search = '',
       status,
-      verification_status,
-      category_id,
-      is_standardized,
     } = req.query;
 
     const offset = (Number(page) - 1) * Number(limit);
@@ -126,15 +108,11 @@ router.get('/', authenticate, async (req, res) => {
     const values: any[] = [];
     let valueIndex = 1;
 
-    // Search
+    // Search by tm_number or title
     if (search) {
       conditions.push(`(
-        legacy_number ILIKE $${valueIndex} OR
-        official_number ILIKE $${valueIndex} OR
-        original_title ILIKE $${valueIndex} OR
-        official_title ILIKE $${valueIndex} OR
-        legacy_lab_source ILIKE $${valueIndex} OR
-        method_type ILIKE $${valueIndex}
+        tm_number ILIKE $${valueIndex} OR
+        title ILIKE $${valueIndex}
       )`);
       values.push(`%${search}%`);
       valueIndex++;
@@ -149,26 +127,6 @@ router.get('/', authenticate, async (req, res) => {
       conditions.push("status != 'archived'");
     }
 
-    if (verification_status) {
-      conditions.push(`verification_status = $${valueIndex}`);
-      values.push(verification_status);
-      valueIndex++;
-    }
-
-    if (category_id) {
-      conditions.push(`category_id = $${valueIndex}`);
-      values.push(category_id);
-      valueIndex++;
-    }
-
-    if (is_standardized !== undefined) {
-      if (is_standardized === 'true') {
-        conditions.push('official_number IS NOT NULL');
-      } else if (is_standardized === 'false') {
-        conditions.push('official_number IS NULL');
-      }
-    }
-
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     // Count total
@@ -180,7 +138,8 @@ router.get('/', authenticate, async (req, res) => {
 
     // Get data
     const dataQuery = `
-      SELECT * FROM test_methods_full ${whereClause}
+      SELECT id, tm_number, version, title, description, file_path, file_name, status, is_current_version, created_at, updated_at 
+      FROM test_methods ${whereClause}
       ORDER BY created_at DESC
       LIMIT $${valueIndex} OFFSET $${valueIndex + 1}
     `;
@@ -210,15 +169,9 @@ router.get('/:id', authenticate, async (req, res) => {
     const { id } = req.params;
 
     const result = await pool.query(
-      `SELECT tm.*, 
-        c.category_name,
-        u1.username as created_by_name,
-        u2.username as verified_by_name
-      FROM test_methods tm
-      LEFT JOIN test_method_categories c ON tm.category_id = c.id
-      LEFT JOIN users u1 ON tm.created_by = u1.id
-      LEFT JOIN users u2 ON tm.verified_by = u2.id
-      WHERE tm.id = $1`,
+      `SELECT id, tm_number, version, title, description, file_path, file_name, status, is_current_version, created_by, created_at, updated_at
+      FROM test_methods
+      WHERE id = $1`,
       [id]
     );
 
@@ -236,18 +189,8 @@ router.get('/:id', authenticate, async (req, res) => {
 // Get version history for a test method
 router.get('/:id/versions', authenticate, async (req, res) => {
   try {
-    const { id } = req.params;
-
-    const result = await pool.query(
-      `SELECT v.*, u.username as changed_by_name
-      FROM test_method_versions v
-      LEFT JOIN users u ON v.changed_by = u.id
-      WHERE v.test_method_id = $1
-      ORDER BY v.change_date DESC`,
-      [id]
-    );
-
-    res.json({ success: true, data: result.rows });
+    // Version history not available in production schema
+    res.json({ success: true, data: [] });
   } catch (error: any) {
     console.error('Error fetching version history:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch version history' });
@@ -257,18 +200,8 @@ router.get('/:id/versions', authenticate, async (req, res) => {
 // Get files for a test method
 router.get('/:id/files', authenticate, async (req, res) => {
   try {
-    const { id } = req.params;
-
-    const result = await pool.query(
-      `SELECT f.*, u.username as uploaded_by_name
-      FROM test_method_files f
-      LEFT JOIN users u ON f.uploaded_by = u.id
-      WHERE f.test_method_id = $1
-      ORDER BY f.uploaded_at DESC`,
-      [id]
-    );
-
-    res.json({ success: true, data: result.rows });
+    // File management not available in production schema
+    res.json({ success: true, data: [] });
   } catch (error: any) {
     console.error('Error fetching files:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch files' });
