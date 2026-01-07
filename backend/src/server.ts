@@ -24,10 +24,17 @@ const BUILD_VERSION = '2.0.0'; // Updated with schema fixes
 
 // Middleware
 app.use(helmet());
-console.log('CORS origin:', process.env.FRONTEND_URL || 'http://localhost:3000');
+const corsOrigins = [
+  process.env.FRONTEND_URL || 'http://localhost:3000',
+  'https://t-link-l41i.vercel.app',   // Old Vercel project
+  'https://t-link-vv3r.vercel.app',   // New Vercel project
+  'http://localhost:3000',
+  'http://10.0.0.41:3000',             // Network access
+];
+console.log('CORS origins:', corsOrigins);
 console.log('Build version:', BUILD_VERSION);
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: corsOrigins,
   credentials: true,
 }));
 app.use(express.json());
