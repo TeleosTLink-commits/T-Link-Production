@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import axios from 'axios';
 import './SampleInventory.css';
 
 interface Sample {
@@ -17,7 +18,10 @@ interface Sample {
   status: string;
   expiration_status: string;
   coa_id: string | null;
+  coa_file_path: string | null;
+  coa_file_name: string | null;
   sds_file_path: string | null;
+  sds_file_name: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -52,7 +56,10 @@ const SampleInventory: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedSample, setSelectedSample] = useState<Sample | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  
+  const [selectedCoaFile, setSelectedCoaFile] = useState<File | null>(null);
+  const [selectedSdsFile, setSelectedSdsFile] = useState<File | null>(null);
+  const [deleteCoaFile, setDeleteCoaFile] = useState(false);
+  const [deleteSdsFile, setDeleteSdsFile] = useState(false);
   const [formData, setFormData] = useState({
     sample_id: '',
     sample_name: '',
@@ -82,7 +89,7 @@ const SampleInventory: React.FC = () => {
       if (statusFilter) params.status = statusFilter;
       if (expirationFilter) params.expirationStatus = expirationFilter;
       
-      const response = await api.get('/sample-inventory', { params });
+      const response = await api.get('/api/sample-inventory', { params });
       setSamples(response.data.data.samples || []);
       setTotalPages(response.data.data.pagination.pages);
       setTotalCount(response.data.data.pagination.total);
@@ -97,7 +104,7 @@ const SampleInventory: React.FC = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await api.get('/sample-inventory/stats');
+      const response = await api.get('/api/sample-inventory/stats');
       setStats(response.data.data);
     } catch (err) {
       console.error('Error fetching stats:', err);
@@ -161,52 +168,137 @@ const SampleInventory: React.FC = () => {
       current_volume: sample.current_volume,
       unit: sample.unit,
       low_inventory_threshold: sample.low_inventory_threshold,
-      received_date: sample.received_date?.split('T')[0] || '',
-      expiration_date: sample.expiration_date?.split('T')[0] || '',
+      received_date: sample.received_date ? sample.received_date.split('T')[0] : '',
+      expiration_date: sample.expiration_date ? sample.expiration_date.split('T')[0] : '',
       status: sample.status,
       notes: sample.notes || '',
     });
     setSelectedSample(sample);
+    setSelectedCoaFile(null);
+    setSelectedSdsFile(null);
+    setDeleteCoaFile(false);
+    setDeleteSdsFile(false);
     setIsEditing(true);
     setShowModal(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+ const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       if (isEditing && selectedSample) {
-        await api.put(`/sample-inventory/${selectedSample.id}`, formData);
+        await api.put(`/api/sample-inventory/${selectedSample.id}`, formData);
+
+        // Handle file uploads/deletions
+        if (selectedCoaFile || deleteCoaFile) {
+          if (deleteCoaFile && selectedSample.coa_file_path) {
+            await api.delete(`/api/sample-inventory/${selectedSample.id}/coa`);
+          } else if (selectedCoaFile) {
+            const fileFormData = new FormData();
+            fileFormData.append('file', selectedCoaFile);
+            await api.post(
+              `/api/sample-inventory/${selectedSample.id}/coa/upload`,
+              fileFormData,
+              { headers: { 'Content-Type': 'multipart/form-data' } }
+            );
+          }
+        }
+
+        if (selectedSdsFile || deleteSdsFile) {
+          if (deleteSdsFile && selectedSample.sds_file_path) {
+            await api.delete(`/api/sample-inventory/${selectedSample.id}/sds`);
+          } else if (selectedSdsFile) {
+            const fileFormData = new FormData();
+            fileFormData.append('file', selectedSdsFile);
+            await api.post(
+              `/api/sample-inventory/${selectedSample.id}/sds/upload`,
+              fileFormData,
+              { headers: { 'Content-Type': 'multipart/form-data' } }
+            );
+          }
+        }
       } else {
-        await api.post('/sample-inventory', formData);
+        const response = await api.post('/api/sample-inventory', formData);
+        const newSampleId = response.data.id;
+
+        // Handle file uploads if provided
+        if (selectedCoaFile) {
+          const fileFormData = new FormData();
+          fileFormData.append('file', selectedCoaFile);
+          await api.post(
+            `/api/sample-inventory/${newSampleId}/coa/upload`,
+            fileFormData,
+            { headers: { 'Content-Type': 'multipart/form-data' } }
+          );
+        }
+
+        if (selectedSdsFile) {
+          const fileFormData = new FormData();
+          fileFormData.append('file', selectedSdsFile);
+          await api.post(
+            `/api/sample-inventory/${newSampleId}/sds/upload`,
+            fileFormData,
+            { headers: { 'Content-Type': 'multipart/form-data' } }
+          );
+        }
       }
+
       setShowModal(false);
+      setSelectedCoaFile(null);
+      setSelectedSdsFile(null);
+      setDeleteCoaFile(false);
+      setDeleteSdsFile(false);
       fetchSamples();
       fetchStats();
+      alert('Sample saved successfully');
     } catch (err: any) {
       console.error('Error saving sample:', err);
-      alert(`Error: ${err.response?.data?.message || err.message}`);
+      const message = axios.isAxiosError(err) && err.response?.data?.error
+        ? err.response.data.error
+        : 'Failed to save sample';
+      alert(`Error: ${message}`);
+    }
+  };
+  const handleViewCoA = (sample: Sample) => {
+    if (!sample.coa_file_path) {
+      alert('No CoA file attached to this sample');
+      return;
+    }
+    // Check if it's a Cloudinary URL (production) or local path (development)
+    if (sample.coa_file_path.startsWith('http')) {
+      // Direct Cloudinary URL - open in new tab
+      window.open(sample.coa_file_path, '_blank');
+    } else {
+      // Local file path - use backend proxy
+      const url = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/sample-inventory/${sample.id}/coa`;
+      window.open(url, '_blank');
+    }
+  };
+
+  const handleViewSDS = (sample: Sample) => {
+    if (!sample.sds_file_path) {
+      alert('No SDS file attached to this sample');
+      return;
+    }
+    // Check if it's a Cloudinary URL (production) or local path (development)
+    if (sample.sds_file_path.startsWith('http')) {
+      // Direct Cloudinary URL - open in new tab
+      window.open(sample.sds_file_path, '_blank');
+    } else {
+      // Local file path - use backend proxy
+      const url = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/sample-inventory/${sample.id}/sds`;
+      window.open(url, '_blank');
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this sample?')) return;
     try {
-      await api.delete(`/sample-inventory/${id}`);
+      await api.delete(`/api/sample-inventory/${id}`);
       fetchSamples();
       fetchStats();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to delete sample');
     }
-  };
-
-  const handleViewCoA = (id: string) => {
-    const url = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/sample-inventory/${id}/coa`;
-    window.open(url, '_blank');
-  };
-
-  const handleViewSDS = (id: string) => {
-    const url = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/sample-inventory/${id}/sds`;
-    window.open(url, '_blank');
   };
 
   return (
@@ -332,19 +424,19 @@ const SampleInventory: React.FC = () => {
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
-                          {sample.coa_id && (
-                            <button 
-                              className="btn btn-sm btn-info" 
-                              onClick={() => handleViewCoA(sample.id)}
-                              title="View Certificate of Analysis"
-                            >
-                              CoA
-                            </button>
-                          )}
+                          {sample.coa_file_path && (
+  <button 
+    className="btn btn-sm btn-info" 
+    onClick={() => handleViewCoA(sample)}
+    title="View Certificate of Analysis"
+  >
+    CoA
+  </button>
+)}
                           {sample.sds_file_path && (
                             <button 
                               className="btn btn-sm btn-warning" 
-                              onClick={() => handleViewSDS(sample.id)}
+                              onClick={() => handleViewSDS(sample)}
                               title="View Safety Data Sheet"
                             >
                               SDS
@@ -504,6 +596,60 @@ const SampleInventory: React.FC = () => {
                     <option value="depleted">Depleted</option>
                   </select>
                 </div>
+
+                <div className="form-group full-width">
+  <label>Certificate of Analysis (CoA)</label>
+  <div style={{ marginBottom: '10px' }}>
+    {isEditing && selectedSample?.coa_file_name && !deleteCoaFile && (
+      <div style={{ marginBottom: '10px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '4px' }}>
+        <div>Current file: {selectedSample.coa_file_name}</div>
+        <label style={{ marginTop: '5px' }}>
+          <input
+            type="checkbox"
+            checked={deleteCoaFile}
+            onChange={(e) => setDeleteCoaFile(e.target.checked)}
+          />
+          {' '}Delete current file
+        </label>
+      </div>
+    )}
+    {!deleteCoaFile && (
+      <input
+        type="file"
+        accept=".pdf,.doc,.docx"
+        onChange={(e) => setSelectedCoaFile(e.target.files?.[0] || null)}
+      />
+    )}
+    {selectedCoaFile && <div style={{ marginTop: '5px', fontSize: '0.9em', color: '#666' }}>Selected: {selectedCoaFile.name}</div>}
+  </div>
+</div>
+
+<div className="form-group full-width">
+  <label>Safety Data Sheet (SDS)</label>
+  <div style={{ marginBottom: '10px' }}>
+    {isEditing && selectedSample?.sds_file_name && !deleteSdsFile && (
+      <div style={{ marginBottom: '10px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '4px' }}>
+        <div>Current file: {selectedSample.sds_file_name}</div>
+        <label style={{ marginTop: '5px' }}>
+          <input
+            type="checkbox"
+            checked={deleteSdsFile}
+            onChange={(e) => setDeleteSdsFile(e.target.checked)}
+          />
+          {' '}Delete current file
+        </label>
+      </div>
+    )}
+    {!deleteSdsFile && (
+      <input
+        type="file"
+        accept=".pdf,.doc,.docx"
+        onChange={(e) => setSelectedSdsFile(e.target.files?.[0] || null)}
+      />
+    )}
+    {selectedSdsFile && <div style={{ marginTop: '5px', fontSize: '0.9em', color: '#666' }}>Selected: {selectedSdsFile.name}</div>}
+  </div>
+</div>
 
                 <div className="form-group full-width">
                   <label>Notes</label>
