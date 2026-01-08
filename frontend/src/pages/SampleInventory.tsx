@@ -89,7 +89,7 @@ const SampleInventory: React.FC = () => {
       if (statusFilter) params.status = statusFilter;
       if (expirationFilter) params.expirationStatus = expirationFilter;
       
-      const response = await api.get('/api/sample-inventory', { params });
+      const response = await api.get('/sample-inventory', { params });
       setSamples(response.data.data.samples || []);
       setTotalPages(response.data.data.pagination.pages);
       setTotalCount(response.data.data.pagination.total);
@@ -104,7 +104,7 @@ const SampleInventory: React.FC = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await api.get('/api/sample-inventory/stats');
+      const response = await api.get('/sample-inventory/stats');
       setStats(response.data.data);
     } catch (err) {
       console.error('Error fetching stats:', err);
@@ -186,17 +186,17 @@ const SampleInventory: React.FC = () => {
     e.preventDefault();
     try {
       if (isEditing && selectedSample) {
-        await api.put(`/api/sample-inventory/${selectedSample.id}`, formData);
+        await api.put(`/sample-inventory/${selectedSample.id}`, formData);
 
         // Handle file uploads/deletions
         if (selectedCoaFile || deleteCoaFile) {
           if (deleteCoaFile && selectedSample.coa_file_path) {
-            await api.delete(`/api/sample-inventory/${selectedSample.id}/coa`);
+            await api.delete(`/sample-inventory/${selectedSample.id}/coa`);
           } else if (selectedCoaFile) {
             const fileFormData = new FormData();
             fileFormData.append('file', selectedCoaFile);
             await api.post(
-              `/api/sample-inventory/${selectedSample.id}/coa/upload`,
+              `/sample-inventory/${selectedSample.id}/coa/upload`,
               fileFormData,
               { headers: { 'Content-Type': 'multipart/form-data' } }
             );
@@ -205,19 +205,19 @@ const SampleInventory: React.FC = () => {
 
         if (selectedSdsFile || deleteSdsFile) {
           if (deleteSdsFile && selectedSample.sds_file_path) {
-            await api.delete(`/api/sample-inventory/${selectedSample.id}/sds`);
+            await api.delete(`/sample-inventory/${selectedSample.id}/sds`);
           } else if (selectedSdsFile) {
             const fileFormData = new FormData();
             fileFormData.append('file', selectedSdsFile);
             await api.post(
-              `/api/sample-inventory/${selectedSample.id}/sds/upload`,
+              `/sample-inventory/${selectedSample.id}/sds/upload`,
               fileFormData,
               { headers: { 'Content-Type': 'multipart/form-data' } }
             );
           }
         }
       } else {
-        const response = await api.post('/api/sample-inventory', formData);
+        const response = await api.post('/sample-inventory', formData);
         const newSampleId = response.data.id;
 
         // Handle file uploads if provided
@@ -225,7 +225,7 @@ const SampleInventory: React.FC = () => {
           const fileFormData = new FormData();
           fileFormData.append('file', selectedCoaFile);
           await api.post(
-            `/api/sample-inventory/${newSampleId}/coa/upload`,
+            `/sample-inventory/${newSampleId}/coa/upload`,
             fileFormData,
             { headers: { 'Content-Type': 'multipart/form-data' } }
           );
@@ -235,7 +235,7 @@ const SampleInventory: React.FC = () => {
           const fileFormData = new FormData();
           fileFormData.append('file', selectedSdsFile);
           await api.post(
-            `/api/sample-inventory/${newSampleId}/sds/upload`,
+            `/sample-inventory/${newSampleId}/sds/upload`,
             fileFormData,
             { headers: { 'Content-Type': 'multipart/form-data' } }
           );
@@ -293,7 +293,7 @@ const SampleInventory: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this sample?')) return;
     try {
-      await api.delete(`/api/sample-inventory/${id}`);
+      await api.delete(`/sample-inventory/${id}`);
       fetchSamples();
       fetchStats();
     } catch (err: any) {
