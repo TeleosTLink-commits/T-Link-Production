@@ -268,8 +268,10 @@ const SampleInventory: React.FC = () => {
       // Direct Cloudinary URL - open in new tab
       window.open(sample.coa_file_path, '_blank');
     } else {
-      // Local file path - use backend proxy
-      const url = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/sample-inventory/${sample.id}/coa`;
+      // Local file path - use backend download endpoint
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const token = localStorage.getItem('auth_token');
+      const url = `${baseUrl}/sample-inventory/${sample.id}/coa/download?token=${token}`;
       window.open(url, '_blank');
     }
   };
@@ -284,8 +286,10 @@ const SampleInventory: React.FC = () => {
       // Direct Cloudinary URL - open in new tab
       window.open(sample.sds_file_path, '_blank');
     } else {
-      // Local file path - use backend proxy
-      const url = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/sample-inventory/${sample.id}/sds`;
+      // Local file path - use backend download endpoint
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const token = localStorage.getItem('auth_token');
+      const url = `${baseUrl}/sample-inventory/${sample.id}/sds/download?token=${token}`;
       window.open(url, '_blank');
     }
   };

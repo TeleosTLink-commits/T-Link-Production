@@ -96,25 +96,16 @@ const TestMethods: React.FC = () => {
     }
   };
 
-  const handleViewDocument = async (id: number | undefined, fileName: string) => {
-    if (!id) return;
-    try {
-      const response = await api.get(`/test-methods/${id}/download`, {
-        responseType: 'blob'
-      });
-      
-      // Create blob URL and open in new tab
-      const blob = new Blob([response.data]);
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.target = '_blank';
-      link.download = fileName;
-      link.click();
-      window.URL.revokeObjectURL(url);
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to open document');
+  const handleViewDocument = (id: number | undefined) => {
+    if (!id) {
+      alert('No document ID available');
+      return;
     }
+    // Open file in new tab using backend endpoint
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const token = localStorage.getItem('auth_token');
+    const url = `${baseUrl}/test-methods/${id}/download?token=${token}`;
+    window.open(url, '_blank');
   };
 
   const handleDelete = async (id: number) => {
@@ -169,7 +160,7 @@ const TestMethods: React.FC = () => {
                   <td><span style={{padding: '4px 8px', backgroundColor: method.status === 'active' ? '#d4edda' : '#fff3cd', borderRadius: '4px'}}>{method.status}</span></td>
                   <td>
                     {method.file_path && (
-                      <button className="btn-icon" onClick={() => handleViewDocument(method.id, method.file_name || 'document.pdf')} title="View Document">📄 View</button>
+                      <button className="btn-icon" onClick={() => handleViewDocument(method.id)} title="View Document">📄 View</button>
                     )}
                     <button className="btn-icon" onClick={() => handleEdit(method)} title="Edit">✏️ Edit</button>
                     <button className="btn-icon" onClick={() => handleDelete(method.id!)} title="Delete">🗑️ Delete</button>
