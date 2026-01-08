@@ -9,7 +9,8 @@
         "start": "node dist/server.js",
         "db:migrate": "ts-node src/database/migrate.ts",
         "db:seed": "ts-node src/database/seed.ts",
-        "import:test-methods": "ts-node src/scripts/importTestMethods.ts"
+        "import:test-methods": "ts-node src/scripts/importTestMethods.ts",
+        "migrate:cloudinary": "ts-node src/scripts/migrateCloudinary.ts"
     },
     "dependencies": {
         "@types/bcrypt": "^6.0.0",

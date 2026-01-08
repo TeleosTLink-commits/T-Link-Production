@@ -1,6 +1,7 @@
 .sample-inventory {
   padding: 20px;
-  max-width: 1600px;
+  width: 100%;
+  max-width: 100%;
   margin: 0 auto;
 }
 
@@ -127,26 +128,32 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   overflow-x: auto;
   margin-bottom: 20px;
+  max-width: 100%;
 }
 
 .samples-table {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
 }
 
 .samples-table thead {
   background: #f8f9fa;
   border-bottom: 2px solid #dee2e6;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .samples-table th {
-  padding: 12px;
+  padding: 12px 8px;
   text-align: left;
   font-weight: 600;
   color: #495057;
-  font-size: 13px;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
   cursor: pointer;
   user-select: none;
 }
@@ -156,9 +163,10 @@
 }
 
 .samples-table td {
-  padding: 12px;
+  padding: 8px 6px;
   border-bottom: 1px solid #e9ecef;
-  font-size: 14px;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .samples-table tbody tr:hover {

@@ -3,13 +3,18 @@ import api from '../services/api';
 import './TestMethods.css';
 
 interface TestMethod {
-  id?: number;
-  tm_number: string;
-  version: string;
-  title: string;
-  description?: string;
+  id?: string;
+  legacy_number: string;
+  legacy_lab_source?: string;
+  original_title: string;
+  official_number?: string;
+  official_title?: string;
+  method_type?: string;
   status: string;
-  is_current_version?: boolean;
+  verification_status?: string;
+  effective_date?: string;
+  verified_date?: string;
+  current_version?: string;
   file_path?: string;
   file_name?: string;
   created_at?: string;
@@ -25,11 +30,12 @@ const TestMethods: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   
   const [formData, setFormData] = useState<TestMethod>({
-    tm_number: '',
-    version: '',
-    title: '',
-    description: '',
-    status: 'active',
+    legacy_number: '',
+    legacy_lab_source: '',
+    original_title: '',
+    official_number: '',
+    method_type: '',
+    status: 'draft',
   });
 
   useEffect(() => {
@@ -50,11 +56,12 @@ const TestMethods: React.FC = () => {
   const handleAdd = () => {
     setEditingMethod(null);
     setFormData({
-      tm_number: '',
-      version: '',
-      title: '',
-      description: '',
-      status: 'active',
+      legacy_number: '',
+      legacy_lab_source: '',
+      original_title: '',
+      official_number: '',
+      method_type: '',
+      status: 'draft',
     });
     setSelectedFile(null);
     setShowModal(true);
@@ -96,19 +103,17 @@ const TestMethods: React.FC = () => {
     }
   };
 
-  const handleViewDocument = (id: number | undefined) => {
+  const handleViewDocument = (id: string | undefined) => {
     if (!id) {
       alert('No document ID available');
       return;
     }
     // Open file in new tab using backend endpoint
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-    const token = localStorage.getItem('auth_token');
-    const url = `${baseUrl}/test-methods/${id}/download?token=${token}`;
+    const url = `http://localhost:5000/api/test-methods/${id}/download`;
     window.open(url, '_blank');
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this test method?')) return;
     try {
       await api.delete(`/test-methods/${id}`);
@@ -134,18 +139,18 @@ const TestMethods: React.FC = () => {
         <table className="test-methods-table">
           <thead>
             <tr>
-              <th>TM Number</th>
-              <th>Version</th>
+              <th>Legacy Number</th>
+              <th>Lab Source</th>
               <th>Title</th>
-              <th>Description</th>
-              <th>Status</th>
+              <th>AAL Test Method Number</th>
+              <th>Method Type</th>              <th>Effective Date</th>              <th>Status</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {testMethods.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: '40px' }}>
+                <td colSpan={8} style={{ textAlign: 'center', padding: '40px' }}>
                   <p>No test methods found.</p>
                   <p>Click &quot;+ Add Test Method&quot; to create one.</p>
                 </td>
@@ -153,11 +158,13 @@ const TestMethods: React.FC = () => {
             ) : (
               testMethods.map((method: TestMethod) => (
                 <tr key={method.id}>
-                  <td>{method.tm_number}</td>
-                  <td>{method.version}</td>
-                  <td>{method.title}</td>
-                  <td>{method.description || 'N/A'}</td>
-                  <td><span style={{padding: '4px 8px', backgroundColor: method.status === 'active' ? '#d4edda' : '#fff3cd', borderRadius: '4px'}}>{method.status}</span></td>
+                  <td>{method.legacy_number || 'N/A'}</td>
+                  <td>{method.legacy_lab_source || 'N/A'}</td>
+                  <td>{method.original_title}</td>
+                  <td>{method.official_number || 'Pending'}</td>
+                  <td>{method.method_type || 'N/A'}</td>
+                  <td>{method.effective_date ? new Date(method.effective_date).toLocaleDateString() : 'N/A'}</td>
+                  <td><span style={{padding: '4px 8px', backgroundColor: method.status === 'verified' ? '#d4edda' : '#fff3cd', borderRadius: '4px'}}>{method.status}</span></td>
                   <td>
                     {method.file_path && (
                       <button className="btn-icon" onClick={() => handleViewDocument(method.id)} title="View Document">📄 View</button>
@@ -182,24 +189,23 @@ const TestMethods: React.FC = () => {
             <form onSubmit={handleSubmit}>
               <div className="form-grid">
                 <div className="form-group">
-                  <label>TM Number *</label>
+                  <label>Legacy Number *</label>
                   <input
                     type="text"
-                    value={formData.tm_number}
-                    onChange={(e) => setFormData({...formData, tm_number: e.target.value})}
+                    value={formData.legacy_number}
+                    onChange={(e) => setFormData({...formData, legacy_number: e.target.value})}
                     required
-                    placeholder="e.g., TM-001"
+                    placeholder="e.g., TEL-001-E25A"
                   />
                 </div>
                 
                 <div className="form-group">
-                  <label>Version *</label>
+                  <label>Legacy Lab Source</label>
                   <input
                     type="text"
-                    value={formData.version}
-                    onChange={(e) => setFormData({...formData, version: e.target.value})}
-                    required
-                    placeholder="e.g., 1.0"
+                    value={formData.legacy_lab_source || ''}
+                    onChange={(e) => setFormData({...formData, legacy_lab_source: e.target.value})}
+                    placeholder="e.g., Dow Chemical Company"
                   />
                 </div>
 
@@ -207,20 +213,30 @@ const TestMethods: React.FC = () => {
                   <label>Title *</label>
                   <input
                     type="text"
-                    value={formData.title}
-                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                    value={formData.original_title}
+                    onChange={(e) => setFormData({...formData, original_title: e.target.value})}
                     required
                     placeholder="Test method title"
                   />
                 </div>
 
-                <div className="form-group full-width">
-                  <label>Description</label>
-                  <textarea
-                    value={formData.description || ''}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    placeholder="Description of the test method"
-                    rows={4}
+                <div className="form-group">
+                  <label>AAL Test Method Number</label>
+                  <input
+                    type="text"
+                    value={formData.official_number || ''}
+                    onChange={(e) => setFormData({...formData, official_number: e.target.value})}
+                    placeholder="e.g., AAL-TM-001"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Method Type</label>
+                  <input
+                    type="text"
+                    value={formData.method_type || ''}
+                    onChange={(e) => setFormData({...formData, method_type: e.target.value})}
+                    placeholder="e.g., FTIR, GC-MS, HPLC"
                   />
                 </div>
 
@@ -231,8 +247,10 @@ const TestMethods: React.FC = () => {
                     onChange={(e) => setFormData({...formData, status: e.target.value})}
                     required
                   >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
+                    <option value="draft">Draft</option>
+                    <option value="under_review">Under Review</option>
+                    <option value="verified">Verified</option>
+                    <option value="standardized">Standardized</option>
                     <option value="archived">Archived</option>
                   </select>
                 </div>

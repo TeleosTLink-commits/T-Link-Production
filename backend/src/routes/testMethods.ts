@@ -50,9 +50,9 @@ router.get('/stats', authenticate, async (req, res) => {
     const statsQuery = `
       SELECT 
         COUNT(*) as total_methods,
-        COUNT(CASE WHEN is_current_version = true THEN 1 END) as current_versions,
-        COUNT(CASE WHEN status = 'active' THEN 1 END) as active_methods,
-        COUNT(DISTINCT tm_number) as unique_methods
+        COUNT(CASE WHEN status = 'verified' THEN 1 END) as verified_methods,
+        COUNT(CASE WHEN status = 'draft' THEN 1 END) as draft_methods,
+        COUNT(DISTINCT legacy_number) as unique_legacy_methods
       FROM test_methods
       WHERE status != 'archived'
     `;
@@ -108,11 +108,13 @@ router.get('/', authenticate, async (req, res) => {
     const values: any[] = [];
     let valueIndex = 1;
 
-    // Search by tm_number or title
+    // Search by legacy_number, official_number, or title
     if (search) {
       conditions.push(`(
-        tm_number ILIKE $${valueIndex} OR
-        title ILIKE $${valueIndex}
+        legacy_number ILIKE $${valueIndex} OR
+        official_number ILIKE $${valueIndex} OR
+        original_title ILIKE $${valueIndex} OR
+        official_title ILIKE $${valueIndex}
       )`);
       values.push(`%${search}%`);
       valueIndex++;
@@ -136,9 +138,11 @@ router.get('/', authenticate, async (req, res) => {
     const countResult = await pool.query(countQuery, values);
     const total = parseInt(countResult.rows[0].count);
 
-    // Get data
+    // Get data (include file path so UI can show view button)
     const dataQuery = `
-      SELECT id, tm_number, version, title, description, file_path, file_name, status, is_current_version, created_at, updated_at 
+      SELECT id, legacy_number, legacy_lab_source, original_title, official_number, official_title,
+             method_type, status, verification_status, effective_date, verified_date,
+             current_version, file_path, file_name, created_at, updated_at
       FROM test_methods ${whereClause}
       ORDER BY created_at DESC
       LIMIT $${valueIndex} OFFSET $${valueIndex + 1}
@@ -169,9 +173,7 @@ router.get('/:id', authenticate, async (req, res) => {
     const { id } = req.params;
 
     const result = await pool.query(
-      `SELECT id, tm_number, version, title, description, file_path, file_name, status, is_current_version, created_by, created_at, updated_at
-      FROM test_methods
-      WHERE id = $1`,
+      `SELECT * FROM test_methods WHERE id = $1`,
       [id]
     );
 
@@ -467,7 +469,7 @@ router.post('/:id/upload', authenticate, authorize('admin', 'lab_user'), upload.
   }
 });
 // Download test method file
-router.get('/:id/download', authenticate, async (req, res) => {
+router.get('/:id/download', async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query('SELECT file_path, file_name, original_title FROM test_methods WHERE id = $1', [id]);

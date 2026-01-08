@@ -1,0 +1,7 @@
+Cloud Name di7yyu1mx
+
+API Key 733869953499621
+
+API secret S4ASfISu4o4Br1r3fchP0SiIko4
+
+API environment Variables CLOUDINARY_URL=cloudinary://733869953499621:S4ASfISu4o4Br1r3fchP0SiIko4@di7yyu1mx

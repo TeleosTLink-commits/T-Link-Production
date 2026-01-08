@@ -1,28 +1,33 @@
 ﻿import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import axios from 'axios';
 import './SampleInventory.css';
 
 interface Sample {
   id: string;
-  sample_id: string;
-  sample_name: string;
-  sample_type: string;
-  lot_number: string;
-  initial_volume: number;
-  current_volume: number;
-  unit: string;
-  low_inventory_threshold: number;
+  chemical_name: string;
   received_date: string;
+  lot_number: string;
+  quantity: string;
+  concentration: string;
+  has_dow_sds: boolean;
+  cas_number: string;
+  has_coa: boolean;
+  certification_date: string;
+  recertification_date: string;
   expiration_date: string;
+  un_number: string;
+  hazard_description: string;
+  hs_code: string;
+  hazard_class: string;
+  packing_group: string;
+  packing_instruction: string;
   status: string;
-  expiration_status: string;
-  coa_id: string | null;
+  notes: string;
   coa_file_path: string | null;
   coa_file_name: string | null;
   sds_file_path: string | null;
   sds_file_name: string | null;
-  notes: string | null;
+  expiration_status: string;
   created_at: string;
   updated_at: string;
 }
@@ -35,6 +40,7 @@ interface Stats {
   expiring_60_days: number;
   expiring_90_days: number;
   with_coa: number;
+  with_sds: number;
 }
 
 const SampleInventory: React.FC = () => {
@@ -44,13 +50,12 @@ const SampleInventory: React.FC = () => {
   const [error, setError] = useState('');
   
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('available');
-  const [expirationFilter, setExpirationFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   
-  const [sortBy, setSortBy] = useState('sample_name');
+  const [sortBy, setSortBy] = useState('chemical_name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   
   const [showModal, setShowModal] = useState(false);
@@ -60,17 +65,25 @@ const SampleInventory: React.FC = () => {
   const [selectedSdsFile, setSelectedSdsFile] = useState<File | null>(null);
   const [deleteCoaFile, setDeleteCoaFile] = useState(false);
   const [deleteSdsFile, setDeleteSdsFile] = useState(false);
+  
   const [formData, setFormData] = useState({
-    sample_id: '',
-    sample_name: '',
-    sample_type: '',
-    lot_number: '',
-    initial_volume: 0,
-    current_volume: 0,
-    unit: 'mL',
-    low_inventory_threshold: 10,
+    chemical_name: '',
     received_date: '',
+    lot_number: '',
+    quantity: '',
+    concentration: '',
+    has_dow_sds: false,
+    cas_number: '',
+    has_coa: false,
+    certification_date: '',
+    recertification_date: '',
     expiration_date: '',
+    un_number: '',
+    hazard_description: '',
+    hs_code: '',
+    hazard_class: '',
+    packing_group: '',
+    packing_instruction: '',
     status: 'active',
     notes: '',
   });
@@ -78,7 +91,7 @@ const SampleInventory: React.FC = () => {
   useEffect(() => {
     fetchSamples();
     fetchStats();
-  }, [page, search, statusFilter, expirationFilter, sortBy, sortOrder]);
+  }, [page, search, statusFilter, sortBy, sortOrder]);
 
   const fetchSamples = async () => {
     try {
@@ -87,7 +100,6 @@ const SampleInventory: React.FC = () => {
       
       if (search) params.search = search;
       if (statusFilter) params.status = statusFilter;
-      if (expirationFilter) params.expirationStatus = expirationFilter;
       
       const response = await api.get('/sample-inventory', { params });
       setSamples(response.data.data.samples || []);
@@ -140,36 +152,54 @@ const SampleInventory: React.FC = () => {
 
   const handleAddNew = () => {
     setFormData({
-      sample_id: '',
-      sample_name: '',
-      sample_type: '',
-      lot_number: '',
-      initial_volume: 0,
-      current_volume: 0,
-      unit: 'mL',
-      low_inventory_threshold: 10,
+      chemical_name: '',
       received_date: '',
+      lot_number: '',
+      quantity: '',
+      concentration: '',
+      has_dow_sds: false,
+      cas_number: '',
+      has_coa: false,
+      certification_date: '',
+      recertification_date: '',
       expiration_date: '',
-      status: 'available',
+      un_number: '',
+      hazard_description: '',
+      hs_code: '',
+      hazard_class: '',
+      packing_group: '',
+      packing_instruction: '',
+      status: 'active',
       notes: '',
     });
     setSelectedSample(null);
+    setSelectedCoaFile(null);
+    setSelectedSdsFile(null);
+    setDeleteCoaFile(false);
+    setDeleteSdsFile(false);
     setIsEditing(false);
     setShowModal(true);
   };
 
   const handleEdit = (sample: Sample) => {
     setFormData({
-      sample_id: sample.sample_id,
-      sample_name: sample.sample_name,
-      sample_type: sample.sample_type,
-      lot_number: sample.lot_number,
-      initial_volume: sample.initial_volume,
-      current_volume: sample.current_volume,
-      unit: sample.unit,
-      low_inventory_threshold: sample.low_inventory_threshold,
+      chemical_name: sample.chemical_name,
       received_date: sample.received_date ? sample.received_date.split('T')[0] : '',
+      lot_number: sample.lot_number || '',
+      quantity: sample.quantity || '',
+      concentration: sample.concentration || '',
+      has_dow_sds: sample.has_dow_sds,
+      cas_number: sample.cas_number || '',
+      has_coa: sample.has_coa,
+      certification_date: sample.certification_date ? sample.certification_date.split('T')[0] : '',
+      recertification_date: sample.recertification_date ? sample.recertification_date.split('T')[0] : '',
       expiration_date: sample.expiration_date ? sample.expiration_date.split('T')[0] : '',
+      un_number: sample.un_number || '',
+      hazard_description: sample.hazard_description || '',
+      hs_code: sample.hs_code || '',
+      hazard_class: sample.hazard_class || '',
+      packing_group: sample.packing_group || '',
+      packing_instruction: sample.packing_instruction || '',
       status: sample.status,
       notes: sample.notes || '',
     });
@@ -182,43 +212,40 @@ const SampleInventory: React.FC = () => {
     setShowModal(true);
   };
 
- const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       if (isEditing && selectedSample) {
         await api.put(`/sample-inventory/${selectedSample.id}`, formData);
 
-        // Handle file uploads/deletions
-        if (selectedCoaFile || deleteCoaFile) {
-          if (deleteCoaFile && selectedSample.coa_file_path) {
-            await api.delete(`/sample-inventory/${selectedSample.id}/coa`);
-          } else if (selectedCoaFile) {
-            const fileFormData = new FormData();
-            fileFormData.append('file', selectedCoaFile);
-            await api.post(
-              `/sample-inventory/${selectedSample.id}/coa/upload`,
-              fileFormData,
-              { headers: { 'Content-Type': 'multipart/form-data' } }
-            );
-          }
+        // Handle CoA file upload/deletion
+        if (deleteCoaFile && selectedSample.coa_file_path) {
+          await api.delete(`/sample-inventory/${selectedSample.id}/coa`);
+        } else if (selectedCoaFile) {
+          const fileFormData = new FormData();
+          fileFormData.append('file', selectedCoaFile);
+          await api.post(
+            `/sample-inventory/${selectedSample.id}/coa/upload`,
+            fileFormData,
+            { headers: { 'Content-Type': 'multipart/form-data' } }
+          );
         }
 
-        if (selectedSdsFile || deleteSdsFile) {
-          if (deleteSdsFile && selectedSample.sds_file_path) {
-            await api.delete(`/sample-inventory/${selectedSample.id}/sds`);
-          } else if (selectedSdsFile) {
-            const fileFormData = new FormData();
-            fileFormData.append('file', selectedSdsFile);
-            await api.post(
-              `/sample-inventory/${selectedSample.id}/sds/upload`,
-              fileFormData,
-              { headers: { 'Content-Type': 'multipart/form-data' } }
-            );
-          }
+        // Handle SDS file upload/deletion
+        if (deleteSdsFile && selectedSample.sds_file_path) {
+          await api.delete(`/sample-inventory/${selectedSample.id}/sds`);
+        } else if (selectedSdsFile) {
+          const fileFormData = new FormData();
+          fileFormData.append('file', selectedSdsFile);
+          await api.post(
+            `/sample-inventory/${selectedSample.id}/sds/upload`,
+            fileFormData,
+            { headers: { 'Content-Type': 'multipart/form-data' } }
+          );
         }
       } else {
         const response = await api.post('/sample-inventory', formData);
-        const newSampleId = response.data.id;
+        const newSampleId = response.data.data.id;
 
         // Handle file uploads if provided
         if (selectedCoaFile) {
@@ -252,26 +279,19 @@ const SampleInventory: React.FC = () => {
       alert('Sample saved successfully');
     } catch (err: any) {
       console.error('Error saving sample:', err);
-      const message = axios.isAxiosError(err) && err.response?.data?.error
-        ? err.response.data.error
-        : 'Failed to save sample';
-      alert(`Error: ${message}`);
+      alert(`Error: ${err.response?.data?.message || 'Failed to save sample'}`);
     }
   };
+
   const handleViewCoA = (sample: Sample) => {
     if (!sample.coa_file_path) {
       alert('No CoA file attached to this sample');
       return;
     }
-    // Check if it's a Cloudinary URL (production) or local path (development)
     if (sample.coa_file_path.startsWith('http')) {
-      // Direct Cloudinary URL - open in new tab
       window.open(sample.coa_file_path, '_blank');
     } else {
-      // Local file path - use backend download endpoint
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const token = localStorage.getItem('auth_token');
-      const url = `${baseUrl}/sample-inventory/${sample.id}/coa/download?token=${token}`;
+      const url = `http://localhost:5000/api/sample-inventory/${sample.id}/coa/download`;
       window.open(url, '_blank');
     }
   };
@@ -281,15 +301,10 @@ const SampleInventory: React.FC = () => {
       alert('No SDS file attached to this sample');
       return;
     }
-    // Check if it's a Cloudinary URL (production) or local path (development)
     if (sample.sds_file_path.startsWith('http')) {
-      // Direct Cloudinary URL - open in new tab
       window.open(sample.sds_file_path, '_blank');
     } else {
-      // Local file path - use backend download endpoint
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const token = localStorage.getItem('auth_token');
-      const url = `${baseUrl}/sample-inventory/${sample.id}/sds/download?token=${token}`;
+      const url = `http://localhost:5000/api/sample-inventory/${sample.id}/sds/download`;
       window.open(url, '_blank');
     }
   };
@@ -300,6 +315,7 @@ const SampleInventory: React.FC = () => {
       await api.delete(`/sample-inventory/${id}`);
       fetchSamples();
       fetchStats();
+      alert('Sample deleted successfully');
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to delete sample');
     }
@@ -337,6 +353,10 @@ const SampleInventory: React.FC = () => {
             <h3>{stats.with_coa}</h3>
             <p>With CoA</p>
           </div>
+          <div className="stat-card">
+            <h3>{stats.with_sds}</h3>
+            <p>With SDS</p>
+          </div>
         </div>
       )}
 
@@ -345,7 +365,7 @@ const SampleInventory: React.FC = () => {
         <div className="search-box">
           <input
             type="text"
-            placeholder="Search by sample name, sample ID, lot number..."
+            placeholder="Search by chemical name, lot number, CAS number..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -354,17 +374,9 @@ const SampleInventory: React.FC = () => {
         <div className="filters">
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="">All Statuses</option>
-            <option value="available">Available</option>
-            <option value="expired">Expired</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
             <option value="depleted">Depleted</option>
-          </select>
-
-          <select value={expirationFilter} onChange={(e) => setExpirationFilter(e.target.value)}>
-            <option value="">All Expiration</option>
-            <option value="expired">Expired</option>
-            <option value="expiring_30">Expiring (30 days)</option>
-            <option value="expiring_60">Expiring (60 days)</option>
-            <option value="expiring_90">Expiring (90 days)</option>
           </select>
         </div>
       </div>
@@ -381,18 +393,31 @@ const SampleInventory: React.FC = () => {
             <table className="samples-table">
               <thead>
                 <tr>
-                  <th onClick={() => handleSort('sample_name')}>
-                    Sample Name {sortBy === 'sample_name' && (sortOrder === 'asc' ? '↑' : '↓')}
+                  <th onClick={() => handleSort('chemical_name')}>
+                    Chemical Name {sortBy === 'chemical_name' && (sortOrder === 'asc' ? '↑' : '↓')}
                   </th>
-                  <th>Sample ID</th>
+                  <th onClick={() => handleSort('received_date')}>
+                    Received {sortBy === 'received_date' && (sortOrder === 'asc' ? '↑' : '↓')}
+                  </th>
                   <th onClick={() => handleSort('lot_number')}>
                     Lot Number {sortBy === 'lot_number' && (sortOrder === 'asc' ? '↑' : '↓')}
                   </th>
-                  <th>Type</th>
-                  <th>Volume (Current / Initial)</th>
+                  <th>Quantity</th>
+                  <th>Concentration</th>
+                  <th>DOW SDS</th>
+                  <th>CAS Number</th>
+                  <th>Have CoA</th>
+                  <th>Cert. Date</th>
+                  <th>Recert. Date</th>
                   <th onClick={() => handleSort('expiration_date')}>
                     Expiration {sortBy === 'expiration_date' && (sortOrder === 'asc' ? '↑' : '↓')}
                   </th>
+                  <th>UN Number</th>
+                  <th>Hazard</th>
+                  <th>HS Code</th>
+                  <th>Hazard Class</th>
+                  <th>Packing Group</th>
+                  <th>Packing Inst.</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -400,20 +425,23 @@ const SampleInventory: React.FC = () => {
               <tbody>
                 {samples.length === 0 ? (
                   <tr>
-                    <td colSpan={8} style={{ textAlign: 'center', padding: '40px' }}>
+                    <td colSpan={19} style={{ textAlign: 'center', padding: '40px' }}>
                       No samples found
                     </td>
                   </tr>
                 ) : (
                   samples.map((sample) => (
                     <tr key={sample.id}>
-                      <td><strong>{sample.sample_name}</strong></td>
-                      <td>{sample.sample_id}</td>
+                      <td><strong>{sample.chemical_name}</strong></td>
+                      <td>{sample.received_date ? new Date(sample.received_date).toLocaleDateString() : 'N/A'}</td>
                       <td>{sample.lot_number}</td>
-                      <td>{sample.sample_type}</td>
-                      <td>
-                        {sample.current_volume} / {sample.initial_volume} {sample.unit}
-                      </td>
+                      <td>{sample.quantity}</td>
+                      <td>{sample.concentration}</td>
+                      <td>{sample.has_dow_sds ? 'Y' : 'N'}</td>
+                      <td>{sample.cas_number}</td>
+                      <td>{sample.has_coa ? 'Y' : 'N'}</td>
+                      <td>{sample.certification_date ? new Date(sample.certification_date).toLocaleDateString() : ''}</td>
+                      <td>{sample.recertification_date ? new Date(sample.recertification_date).toLocaleDateString() : ''}</td>
                       <td>
                         {sample.expiration_date 
                           ? new Date(sample.expiration_date).toLocaleDateString() 
@@ -421,22 +449,28 @@ const SampleInventory: React.FC = () => {
                         <br />
                         {getExpirationBadge(sample.expiration_status, sample.expiration_date)}
                       </td>
+                      <td>{sample.un_number}</td>
+                      <td>{sample.hazard_description}</td>
+                      <td>{sample.hs_code}</td>
+                      <td>{sample.hazard_class}</td>
+                      <td>{sample.packing_group}</td>
+                      <td>{sample.packing_instruction}</td>
                       <td>
-                        <span className={`badge badge-${sample.status === 'available' ? 'success' : 'secondary'}`}>
+                        <span className={`badge badge-${sample.status === 'active' ? 'success' : 'secondary'}`}>
                           {sample.status}
                         </span>
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
                           {sample.coa_file_path && (
-  <button 
-    className="btn btn-sm btn-info" 
-    onClick={() => handleViewCoA(sample)}
-    title="View Certificate of Analysis"
-  >
-    CoA
-  </button>
-)}
+                            <button 
+                              className="btn btn-sm btn-info" 
+                              onClick={() => handleViewCoA(sample)}
+                              title="View Certificate of Analysis"
+                            >
+                              CoA
+                            </button>
+                          )}
                           {sample.sds_file_path && (
                             <button 
                               className="btn btn-sm btn-warning" 
@@ -494,80 +528,48 @@ const SampleInventory: React.FC = () => {
             <form onSubmit={handleSubmit}>
               <div className="form-grid">
                 <div className="form-group">
-                  <label>Sample ID *</label>
+                  <label>Chemical Name *</label>
                   <input
                     type="text"
                     required
-                    value={formData.sample_id}
-                    onChange={(e) => setFormData({ ...formData, sample_id: e.target.value })}
+                    value={formData.chemical_name}
+                    onChange={(e) => setFormData({ ...formData, chemical_name: e.target.value })}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label>Sample Name *</label>
+                  <label>Lot Number</label>
                   <input
                     type="text"
-                    required
-                    value={formData.sample_name}
-                    onChange={(e) => setFormData({ ...formData, sample_name: e.target.value })}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Sample Type</label>
-                  <input
-                    type="text"
-                    value={formData.sample_type}
-                    onChange={(e) => setFormData({ ...formData, sample_type: e.target.value })}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Lot Number *</label>
-                  <input
-                    type="text"
-                    required
                     value={formData.lot_number}
                     onChange={(e) => setFormData({ ...formData, lot_number: e.target.value })}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label>Initial Volume</label>
-                  <input
-                    type="number"
-                    step="0.001"
-                    value={formData.initial_volume}
-                    onChange={(e) => setFormData({ ...formData, initial_volume: parseFloat(e.target.value) })}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Current Volume</label>
-                  <input
-                    type="number"
-                    step="0.001"
-                    value={formData.current_volume}
-                    onChange={(e) => setFormData({ ...formData, current_volume: parseFloat(e.target.value) })}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Unit</label>
+                  <label>CAS Number</label>
                   <input
                     type="text"
-                    value={formData.unit}
-                    onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                    value={formData.cas_number}
+                    onChange={(e) => setFormData({ ...formData, cas_number: e.target.value })}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label>Low Inventory Threshold</label>
+                  <label>Quantity</label>
                   <input
-                    type="number"
-                    step="0.001"
-                    value={formData.low_inventory_threshold}
-                    onChange={(e) => setFormData({ ...formData, low_inventory_threshold: parseFloat(e.target.value) })}
+                    type="text"
+                    value={formData.quantity}
+                    onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Concentration</label>
+                  <input
+                    type="text"
+                    value={formData.concentration}
+                    onChange={(e) => setFormData({ ...formData, concentration: e.target.value })}
                   />
                 </div>
 
@@ -590,70 +592,138 @@ const SampleInventory: React.FC = () => {
                 </div>
 
                 <div className="form-group">
+                  <label>Certification Date</label>
+                  <input
+                    type="date"
+                    value={formData.certification_date}
+                    onChange={(e) => setFormData({ ...formData, certification_date: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Recertification Date</label>
+                  <input
+                    type="date"
+                    value={formData.recertification_date}
+                    onChange={(e) => setFormData({ ...formData, recertification_date: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>UN Number</label>
+                  <input
+                    type="text"
+                    value={formData.un_number}
+                    onChange={(e) => setFormData({ ...formData, un_number: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>HS Code</label>
+                  <input
+                    type="text"
+                    value={formData.hs_code}
+                    onChange={(e) => setFormData({ ...formData, hs_code: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Hazard Class</label>
+                  <input
+                    type="text"
+                    value={formData.hazard_class}
+                    onChange={(e) => setFormData({ ...formData, hazard_class: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Packing Group</label>
+                  <input
+                    type="text"
+                    value={formData.packing_group}
+                    onChange={(e) => setFormData({ ...formData, packing_group: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Packing Instruction</label>
+                  <input
+                    type="text"
+                    value={formData.packing_instruction}
+                    onChange={(e) => setFormData({ ...formData, packing_instruction: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
                   <label>Status</label>
                   <select
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                   >
-                    <option value="available">Available</option>
-                    <option value="expired">Expired</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
                     <option value="depleted">Depleted</option>
                   </select>
                 </div>
 
                 <div className="form-group full-width">
-  <label>Certificate of Analysis (CoA)</label>
-  <div style={{ marginBottom: '10px' }}>
-    {isEditing && selectedSample?.coa_file_name && !deleteCoaFile && (
-      <div style={{ marginBottom: '10px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '4px' }}>
-        <div>Current file: {selectedSample.coa_file_name}</div>
-        <label style={{ marginTop: '5px' }}>
-          <input
-            type="checkbox"
-            checked={deleteCoaFile}
-            onChange={(e) => setDeleteCoaFile(e.target.checked)}
-          />
-          {' '}Delete current file
-        </label>
-      </div>
-    )}
-    {!deleteCoaFile && (
-      <input
-        type="file"
-        accept=".pdf,.doc,.docx"
-        onChange={(e) => setSelectedCoaFile(e.target.files?.[0] || null)}
-      />
-    )}
-    {selectedCoaFile && <div style={{ marginTop: '5px', fontSize: '0.9em', color: '#666' }}>Selected: {selectedCoaFile.name}</div>}
-  </div>
-</div>
+                  <label>Hazard Description</label>
+                  <textarea
+                    rows={2}
+                    value={formData.hazard_description}
+                    onChange={(e) => setFormData({ ...formData, hazard_description: e.target.value })}
+                  />
+                </div>
 
-<div className="form-group full-width">
-  <label>Safety Data Sheet (SDS)</label>
-  <div style={{ marginBottom: '10px' }}>
-    {isEditing && selectedSample?.sds_file_name && !deleteSdsFile && (
-      <div style={{ marginBottom: '10px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '4px' }}>
-        <div>Current file: {selectedSample.sds_file_name}</div>
-        <label style={{ marginTop: '5px' }}>
-          <input
-            type="checkbox"
-            checked={deleteSdsFile}
-            onChange={(e) => setDeleteSdsFile(e.target.checked)}
-          />
-          {' '}Delete current file
-        </label>
-      </div>
-    )}
-    {!deleteSdsFile && (
-      <input
-        type="file"
-        accept=".pdf,.doc,.docx"
-        onChange={(e) => setSelectedSdsFile(e.target.files?.[0] || null)}
-      />
-    )}
-    {selectedSdsFile && <div style={{ marginTop: '5px', fontSize: '0.9em', color: '#666' }}>Selected: {selectedSdsFile.name}</div>}
-  </div>
-</div>
+                <div className="form-group full-width">
+                  <label>Certificate of Analysis (CoA)</label>
+                  {isEditing && selectedSample?.coa_file_name && !deleteCoaFile && (
+                    <div style={{ marginBottom: '10px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '4px' }}>
+                      <div>Current file: {selectedSample.coa_file_name}</div>
+                      <label style={{ marginTop: '5px' }}>
+                        <input
+                          type="checkbox"
+                          checked={deleteCoaFile}
+                          onChange={(e) => setDeleteCoaFile(e.target.checked)}
+                        />
+                        {' '}Delete current file
+                      </label>
+                    </div>
+                  )}
+                  {!deleteCoaFile && (
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      onChange={(e) => setSelectedCoaFile(e.target.files?.[0] || null)}
+                    />
+                  )}
+                  {selectedCoaFile && <div style={{ marginTop: '5px', fontSize: '0.9em', color: '#666' }}>Selected: {selectedCoaFile.name}</div>}
+                </div>
+
+                <div className="form-group full-width">
+                  <label>Safety Data Sheet (SDS)</label>
+                  {isEditing && selectedSample?.sds_file_name && !deleteSdsFile && (
+                    <div style={{ marginBottom: '10px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '4px' }}>
+                      <div>Current file: {selectedSample.sds_file_name}</div>
+                      <label style={{ marginTop: '5px' }}>
+                        <input
+                          type="checkbox"
+                          checked={deleteSdsFile}
+                          onChange={(e) => setDeleteSdsFile(e.target.checked)}
+                        />
+                        {' '}Delete current file
+                      </label>
+                    </div>
+                  )}
+                  {!deleteSdsFile && (
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      onChange={(e) => setSelectedSdsFile(e.target.files?.[0] || null)}
+                    />
+                  )}
+                  {selectedSdsFile && <div style={{ marginTop: '5px', fontSize: '0.9em', color: '#666' }}>Selected: {selectedSdsFile.name}</div>}
+                </div>
 
                 <div className="form-group full-width">
                   <label>Notes</label>
