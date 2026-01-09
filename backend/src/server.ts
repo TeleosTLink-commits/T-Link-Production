@@ -26,6 +26,7 @@ const BUILD_VERSION = '2.0.0'; // Updated with schema fixes
 app.use(helmet());
 const corsOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:3000',
+  'https://t-link-production.vercel.app', // Production Vercel
   'https://t-link-l41i.vercel.app',   // Old Vercel project
   'https://t-link-vv3r.vercel.app',   // New Vercel project
   'http://localhost:3000',
