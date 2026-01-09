@@ -3,9 +3,9 @@
 
 -- Insert default admin user (password: admin123)
 INSERT INTO users (username, email, password_hash, first_name, last_name, role) VALUES
-('admin', 'admin@telios.com', '$2a$10$YourHashedPasswordHere', 'System', 'Administrator', 'admin'),
-('lab_user', 'lab@telios.com', '$2a$10$YourHashedPasswordHere', 'Lab', 'Staff', 'lab_staff'),
-('logistics_user', 'logistics@telios.com', '$2a$10$YourHashedPasswordHere', 'Logistics', 'Staff', 'logistics');
+('admin', 'admin@teleos.com', '$2a$10$YourHashedPasswordHere', 'System', 'Administrator', 'admin'),
+('lab_user', 'lab@teleos.com', '$2a$10$YourHashedPasswordHere', 'Lab', 'Staff', 'lab_staff'),
+('logistics_user', 'logistics@teleos.com', '$2a$10$YourHashedPasswordHere', 'Logistics', 'Staff', 'logistics');
 
 -- Insert sample manufacturer companies
 INSERT INTO manufacturer_companies (company_name, contact_email, contact_phone, address) VALUES

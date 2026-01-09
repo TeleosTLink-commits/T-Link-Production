@@ -41,7 +41,7 @@ const Login: React.FC = () => {
       <div className="login-box">
         <div className="login-header">
           <h1>T-Link</h1>
-          <p>Telios Logistics & Information Network</p>
+          <p>Teleos Logistics & Information Network</p>
         </div>
         
         {error && <div className="error-message">{error}</div>}

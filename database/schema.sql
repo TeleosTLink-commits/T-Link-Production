@@ -1,5 +1,5 @@
 -- T-Link Database Schema
--- Telios Logistics & Information Network
+-- Teleos Logistics & Information Network
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

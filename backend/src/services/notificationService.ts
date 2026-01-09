@@ -67,7 +67,7 @@ export const checkExpiringCoAs = async () => {
         `;
 
         // Send to lab team
-        await sendEmail(process.env.SMTP_USER || 'lab@telios.com', subject, html);
+        await sendEmail(process.env.SMTP_USER || 'lab@teleos.com', subject, html);
 
         // Send to manufacturer if email exists
         if (coa.contact_email) {
@@ -130,7 +130,7 @@ export const checkLowInventory = async () => {
         <p>Please reorder or restock as soon as possible.</p>
       `;
 
-      await sendEmail(process.env.SMTP_USER || 'lab@telios.com', subject, html);
+      await sendEmail(process.env.SMTP_USER || 'lab@teleos.com', subject, html);
 
       // Create alert record
       await query(
@@ -196,7 +196,7 @@ export const checkLowSupplies = async () => {
         <p>Please restock these supplies to ensure smooth shipping operations.</p>
       `;
 
-      await sendEmail(process.env.SHIPMENT_NOTIFICATION_EMAIL || 'logistics@telios.com', subject, html);
+      await sendEmail(process.env.SHIPMENT_NOTIFICATION_EMAIL || 'logistics@teleos.com', subject, html);
 
       logger.info(`Sent low supply alert for ${result.rows.length} items`);
     }

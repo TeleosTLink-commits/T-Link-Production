@@ -1,8 +1,8 @@
-# T-Link: Telios Logistics & Information Network
+# T-Link: Teleos Logistics & Information Network
 
 **Centralized Quality, Inventory, & Logistics Management**
 
-T-Link is a comprehensive database solution designed for Telios, integrating laboratory quality data, real-time inventory tracking, and specialized shipping logistics into one secure, accessible platform.
+T-Link is a comprehensive database solution designed for Teleos, integrating laboratory quality data, real-time inventory tracking, and specialized shipping logistics into one secure, accessible platform.
 
 ## 🎯 Features
 
@@ -108,9 +108,9 @@ JWT_EXPIRES_IN=24h
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_SECURE=false
-SMTP_USER=your_email@telios.com
+SMTP_USER=your_email@teleos.com
 SMTP_PASSWORD=your_email_password
-EMAIL_FROM=noreply@telios.com
+EMAIL_FROM=noreply@teleos.com
 
 # File Upload
 MAX_FILE_SIZE=10485760
@@ -121,7 +121,7 @@ FRONTEND_URL=http://localhost:3000
 
 # Notification Settings
 EXPIRATION_WARNING_DAYS=30,60,90
-SHIPMENT_NOTIFICATION_EMAIL=logistics@telios.com
+SHIPMENT_NOTIFICATION_EMAIL=logistics@teleos.com
 ```
 
 #### Run Database Migrations
@@ -378,7 +378,7 @@ For issues or questions:
 
 ## 📝 License
 
-Proprietary - Telios Corporation
+Proprietary - Teleos Corporation
 
 ---
 

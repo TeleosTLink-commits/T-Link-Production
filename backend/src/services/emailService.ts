@@ -21,7 +21,7 @@ const transporter = nodemailer.createTransport({
 export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
   try {
     await transporter.sendMail({
-      from: process.env.EMAIL_FROM || 'noreply@telios.com',
+      from: process.env.EMAIL_FROM || 'noreply@teleos.com',
       to: options.to,
       subject: options.subject,
       html: options.html,

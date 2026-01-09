@@ -28,7 +28,7 @@ const Layout = () => {
       <aside className="sidebar">
         <div className="sidebar-header">
           <h1 className="sidebar-title">T-Link</h1>
-          <p className="sidebar-subtitle">Telios Logistics</p>
+          <p className="sidebar-subtitle">Teleos Logistics</p>
         </div>
 
         <nav className="sidebar-nav">

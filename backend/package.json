@@ -12,6 +12,7 @@
         "import:test-methods": "ts-node src/scripts/importTestMethods.ts",
         "migrate:cloudinary": "ts-node src/scripts/migrateCloudinary.ts",
         "upload:cloudinary:production": "ts-node src/scripts/uploadToCloudinaryProduction.ts",
+        "upload:samples": "ts-node src/scripts/uploadSampleFiles.ts",
         "verify:production": "ts-node src/scripts/verifyProduction.ts"
     },
     "dependencies": {

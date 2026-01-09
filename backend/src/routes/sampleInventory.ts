@@ -395,9 +395,18 @@ router.get('/:id/coa/download', async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ success: false, message: 'No CoA file found for this sample' });
     }
 
-    // If it's a Cloudinary URL, redirect to it
+    // If it's a Cloudinary URL, generate a signed URL for authenticated access
     if (coa_file_path.startsWith('http')) {
-      return res.redirect(coa_file_path);
+      try {
+        const { getSignedCloudinaryUrl } = require('../utils/cloudinary');
+        const signedUrl = getSignedCloudinaryUrl(coa_file_path, 3600); // 1 hour expiration
+        
+        // Redirect to the signed URL which grants temporary authenticated access
+        return res.redirect(signedUrl);
+      } catch (error: any) {
+        console.error('Error generating signed URL:', error);
+        return res.status(500).json({ success: false, message: 'Failed to generate download link' });
+      }
     }
 
     // Local file
@@ -407,7 +416,7 @@ router.get('/:id/coa/download', async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ success: false, message: 'CoA file not found on server' });
     }
 
-    res.sendFile(fullPath);
+    res.download(fullPath, coa_file_name || 'coa.pdf');
   } catch (error: any) {
     console.error('Error downloading CoA:', error);
     res.status(500).json({ success: false, message: 'Failed to download CoA', error: error.message });
@@ -430,9 +439,18 @@ router.get('/:id/sds/download', async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ success: false, message: 'No SDS file found for this sample' });
     }
 
-    // If it's a Cloudinary URL, redirect to it
+    // If it's a Cloudinary URL, generate a signed URL for authenticated access
     if (sds_file_path.startsWith('http')) {
-      return res.redirect(sds_file_path);
+      try {
+        const { getSignedCloudinaryUrl } = require('../utils/cloudinary');
+        const signedUrl = getSignedCloudinaryUrl(sds_file_path, 3600); // 1 hour expiration
+        
+        // Redirect to the signed URL which grants temporary authenticated access
+        return res.redirect(signedUrl);
+      } catch (error: any) {
+        console.error('Error generating signed URL:', error);
+        return res.status(500).json({ success: false, message: 'Failed to generate download link' });
+      }
     }
 
     // Local file
@@ -442,7 +460,7 @@ router.get('/:id/sds/download', async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ success: false, message: 'SDS file not found on server' });
     }
 
-    res.sendFile(fullPath);
+    res.download(fullPath, sds_file_name || 'sds.pdf');
   } catch (error: any) {
     console.error('Error downloading SDS:', error);
     res.status(500).json({ success: false, message: 'Failed to download SDS', error: error.message });

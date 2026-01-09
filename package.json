@@ -1,7 +1,7 @@
 {
   "name": "t-link",
   "version": "1.0.0",
-  "description": "Telios Logistics & Information Network - Centralized Quality, Inventory, & Logistics Management",
+  "description": "Teleos Logistics & Information Network - Centralized Quality, Inventory, & Logistics Management",
   "scripts": {
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
@@ -11,7 +11,7 @@
     "start": "cd backend && npm start"
   },
   "keywords": ["logistics", "quality-management", "inventory", "laboratory"],
-  "author": "Telios",
+  "author": "Teleos",
   "license": "PROPRIETARY",
   "devDependencies": {
     "concurrently": "^8.2.2"

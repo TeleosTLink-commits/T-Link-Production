@@ -1,7 +1,7 @@
 # T-Link AI Coding Assistant Instructions
 
 ## Project Overview
-T-Link (Telios Logistics & Information Network) is a **monorepo** laboratory quality management system managing test methods, certificates of analysis (CoA), sample inventory, and shipping logistics. Built for regulated environments with audit trails and version control.
+T-Link (Teleos Logistics & Information Network) is a **monorepo** laboratory quality management system managing test methods, certificates of analysis (CoA), sample inventory, and shipping logistics. Built for regulated environments with audit trails and version control.
 
 **Stack:** TypeScript, React (Vite), Express, PostgreSQL  
 **Structure:** Monorepo with `/backend` and `/frontend` subdirectories
