@@ -13,7 +13,7 @@ router.get('/', authenticate, async (req: AuthRequest, res, next) => {
     let queryText = `
       SELECT s.*,
              sam.chemical_name as sample_name,
-             sam.sample_id as sample_identifier,
+             sam.id as sample_identifier,
              ch.hazard_class,
              u1.first_name || ' ' || u1.last_name as requested_by_name,
              u2.first_name || ' ' || u2.last_name as prepared_by_name
@@ -57,8 +57,8 @@ router.get('/:id', authenticate, async (req: AuthRequest, res, next) => {
 
     const result = await query(
       `SELECT s.*, 
-              sam.sample_name,
-              sam.sample_id as sample_identifier,
+              sam.chemical_name as sample_name,
+              sam.id as sample_identifier,
               ch.hazard_class,
               ch.handling_instructions,
               u1.first_name || ' ' || u1.last_name as requested_by_name,
