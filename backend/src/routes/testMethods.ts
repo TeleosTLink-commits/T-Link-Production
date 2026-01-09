@@ -40,8 +40,9 @@ const pool = new Pool({
   user: process.env.DB_USER || 'postgres',
   host: process.env.DB_HOST || 'localhost',
   database: process.env.DB_NAME || 'tlink_db',
-  password: process.env.DB_PASSWORD || 'Ajwa8770',
+  password: process.env.DB_PASSWORD,
   port: parseInt(process.env.DB_PORT || '5432', 10),
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
 });
 
 // Get statistics
