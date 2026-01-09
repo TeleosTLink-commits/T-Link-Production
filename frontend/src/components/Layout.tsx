@@ -1,20 +1,27 @@
-import { Outlet, Link } from 'react-router-dom';
+import { Outlet, Link, useNavigate } from 'react-router-dom';
 import {
   FaHome, FaFileAlt, FaCertificate, FaBoxes,
   FaShippingFast, FaUserCircle, FaSignOutAlt
 } from 'react-icons/fa';
 import './Layout.css';
+import { useAuthStore } from '../store/authStore';
 
 const Layout = () => {
-  const userStr = localStorage.getItem('user');
-  const user = userStr ? JSON.parse(userStr) : null;
+  const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
+  const storedUserStr = localStorage.getItem('user');
+  const storedUser = storedUserStr ? JSON.parse(storedUserStr) : null;
+  const effectiveUser = user || storedUser;
 
   const handleLogout = () => {
+    // Clear both persisted store and fallback tokens
+    logout();
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user');
+    navigate('/login');
   };
 
-  const isManufacturer = user?.role === 'manufacturer';
+  const isManufacturer = effectiveUser?.role === 'manufacturer';
 
   return (
     <div className="layout">
@@ -54,8 +61,8 @@ const Layout = () => {
           <div className="user-info">
             <FaUserCircle size={24} />
             <div>
-              <div className="user-name">{user?.firstName} {user?.lastName}</div>
-              <div className="user-role">{user?.role}</div>
+              <div className="user-name">{effectiveUser?.firstName} {effectiveUser?.lastName}</div>
+              <div className="user-role">{effectiveUser?.role}</div>
             </div>
           </div>
           <button onClick={handleLogout} className="logout-btn">

@@ -112,7 +112,8 @@ const TestMethods: React.FC = () => {
     if (method.file_path && method.file_path.startsWith('http')) {
       window.open(method.file_path, '_blank');
     } else {
-      const base = (import.meta.env.VITE_API_URL as string) || 'http://localhost:5000/api';
+      const base =
+        (import.meta.env.VITE_API_URL as string) || 'https://tlink-production-backend.onrender.com/api';
       const url = `${base}/test-methods/${method.id}/download`;
       window.open(url, '_blank');
     }
