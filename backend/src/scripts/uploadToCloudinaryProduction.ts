@@ -30,6 +30,8 @@ type FileConfig = {
   updateSql: string;
 };
 
+const forceReupload = true; // re-upload even existing Cloudinary URLs to fix access
+
 async function testCloudinaryConnection(): Promise<boolean> {
   try {
     const result = await cloudinary.v2.api.resources({ max_results: 1 });
@@ -54,8 +56,11 @@ async function uploadFileToCloudinary(
     const result = await cloudinary.v2.uploader.upload(localPath, {
       folder: `tlink/${folder}`,
       resource_type: 'auto',
+      type: 'upload',
+      access_mode: 'public',
       use_filename: true,
       unique_filename: true,
+      invalidate: true,
       timeout: 60000,
     });
 
@@ -113,15 +118,32 @@ async function processFileType(config: FileConfig): Promise<void> {
       const currentPath = record[fileField];
 
       // Skip if already has valid Cloudinary URL
-      if (currentPath && currentPath.startsWith('https://res.cloudinary.com')) {
+      if (!forceReupload && currentPath && currentPath.startsWith('https://res.cloudinary.com')) {
         console.log(`  ⊘ Skipped (already Cloudinary URL): ${record.id}`);
         skipped++;
         continue;
       }
 
-      // Use corresponding local file if available
-      if (i < localFiles.length) {
-        const localFile = localFiles[i];
+      // Find matching local file by path
+      let localFile: string | undefined;
+      
+      if (currentPath) {
+        // Try to find by exact path
+        localFile = localFiles.find(f => f === currentPath);
+        
+        // If not found, try to find by filename
+        if (!localFile) {
+          const fileName = path.basename(currentPath);
+          localFile = localFiles.find(f => path.basename(f) === fileName);
+        }
+      }
+      
+      // Fallback: use index-based matching for unmatched files
+      if (!localFile && i < localFiles.length) {
+        localFile = localFiles[i];
+      }
+
+      if (localFile) {
         const fileName = path.basename(localFile);
 
         const uploadResult = await uploadFileToCloudinary(localFile, config.folder, fileName);
@@ -130,6 +152,7 @@ async function processFileType(config: FileConfig): Promise<void> {
           // Update database with the new URL
           try {
             await pool.query(config.updateSql, [uploadResult.url, record.id]);
+            console.log(`  ✓ Updated: ${fileName}`);
             uploaded++;
           } catch (dbError: any) {
             console.error(`  ✗ Database update failed for ${record.id}: ${dbError.message}`);
