@@ -291,7 +291,9 @@ const SampleInventory: React.FC = () => {
     if (sample.coa_file_path.startsWith('http')) {
       window.open(sample.coa_file_path, '_blank');
     } else {
-      const url = `http://localhost:5000/api/sample-inventory/${sample.id}/coa/download`;
+      const base = (import.meta.env.VITE_API_URL as string) || 'http://localhost:5000/api';
+      const token = localStorage.getItem('auth_token');
+      const url = `${base}/sample-inventory/${sample.id}/coa/download${token ? `?token=${token}` : ''}`;
       window.open(url, '_blank');
     }
   };
@@ -304,7 +306,9 @@ const SampleInventory: React.FC = () => {
     if (sample.sds_file_path.startsWith('http')) {
       window.open(sample.sds_file_path, '_blank');
     } else {
-      const url = `http://localhost:5000/api/sample-inventory/${sample.id}/sds/download`;
+      const base = (import.meta.env.VITE_API_URL as string) || 'http://localhost:5000/api';
+      const token = localStorage.getItem('auth_token');
+      const url = `${base}/sample-inventory/${sample.id}/sds/download${token ? `?token=${token}` : ''}`;
       window.open(url, '_blank');
     }
   };

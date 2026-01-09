@@ -109,7 +109,8 @@ const TestMethods: React.FC = () => {
       return;
     }
     // Open file in new tab using backend endpoint
-    const url = `http://localhost:5000/api/test-methods/${id}/download`;
+    const base = (import.meta.env.VITE_API_URL as string) || 'http://localhost:5000/api';
+    const url = `${base}/test-methods/${id}/download`;
     window.open(url, '_blank');
   };
 
