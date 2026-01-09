@@ -37,6 +37,8 @@ console.log('Build version:', BUILD_VERSION);
 app.use(cors({
   origin: corsOrigins,
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Authorization', 'Content-Type'],
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
