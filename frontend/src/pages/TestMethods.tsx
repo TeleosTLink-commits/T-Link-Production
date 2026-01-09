@@ -103,15 +103,19 @@ const TestMethods: React.FC = () => {
     }
   };
 
-  const handleViewDocument = (id: string | undefined) => {
-    if (!id) {
+  const handleViewDocument = (method: TestMethod) => {
+    if (!method?.id) {
       alert('No document ID available');
       return;
     }
-    // Open file in new tab using backend endpoint
-    const base = (import.meta.env.VITE_API_URL as string) || 'http://localhost:5000/api';
-    const url = `${base}/test-methods/${id}/download`;
-    window.open(url, '_blank');
+    // If Cloudinary URL present, open directly; else use backend download route
+    if (method.file_path && method.file_path.startsWith('http')) {
+      window.open(method.file_path, '_blank');
+    } else {
+      const base = (import.meta.env.VITE_API_URL as string) || 'http://localhost:5000/api';
+      const url = `${base}/test-methods/${method.id}/download`;
+      window.open(url, '_blank');
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -168,7 +172,7 @@ const TestMethods: React.FC = () => {
                   <td><span style={{padding: '4px 8px', backgroundColor: method.status === 'verified' ? '#d4edda' : '#fff3cd', borderRadius: '4px'}}>{method.status}</span></td>
                   <td>
                     {method.file_path && (
-                      <button className="btn-icon" onClick={() => handleViewDocument(method.id)} title="View Document">📄 View</button>
+                      <button className="btn-icon" onClick={() => handleViewDocument(method)} title="View Document">📄 View</button>
                     )}
                     <button className="btn-icon" onClick={() => handleEdit(method)} title="Edit">✏️ Edit</button>
                     <button className="btn-icon" onClick={() => handleDelete(method.id!)} title="Delete">🗑️ Delete</button>
