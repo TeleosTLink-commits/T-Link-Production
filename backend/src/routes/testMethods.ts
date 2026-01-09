@@ -481,7 +481,11 @@ router.get('/:id/download', async (req, res) => {
     
     const filePath = result.rows[0].file_path;
     const fileName = result.rows[0].file_name || `${result.rows[0].original_title}.pdf`;
-    
+
+    if (filePath.startsWith('http')) {
+      return res.redirect(filePath);
+    }
+
     res.download(filePath, fileName, (err) => {
       if (err) {
         console.error('Error downloading file:', err);
