@@ -10,7 +10,6 @@ import logger from './config/logger';
 // Import routes
 import authRoutes from './routes/auth';
 import testMethodsRoutes from './routes/testMethods';
-import coaRoutes from './routes/coa';
 import inventoryRoutes from './routes/inventory';
 import sampleInventoryRoutes from './routes/sampleInventory';
 import shipmentsRoutes from './routes/shipments';
@@ -57,7 +56,7 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/test-methods', testMethodsRoutes);
-app.use('/api/coa', coaRoutes);
+// CoA routes removed — functionality handled via sample-inventory
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/sample-inventory', sampleInventoryRoutes);
 app.use('/api/shipments', shipmentsRoutes);

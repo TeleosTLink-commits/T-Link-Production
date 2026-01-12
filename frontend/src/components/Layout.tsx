@@ -1,6 +1,6 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import {
-  FaHome, FaFileAlt, FaCertificate, FaBoxes,
+  FaHome, FaFileAlt, FaBoxes,
   FaShippingFast, FaUserCircle, FaSignOutAlt
 } from 'react-icons/fa';
 import './Layout.css';
@@ -40,9 +40,7 @@ const Layout = () => {
               <Link to="/test-methods" className="nav-item">
                 <FaFileAlt /> Test Methods
               </Link>
-              <Link to="/coa" className="nav-item">
-                <FaCertificate /> Certificates of Analysis
-              </Link>
+              {/* CoA page removed - use Sample Inventory for CoA management */}
               <Link to="/inventory" className="nav-item">
                 <FaBoxes /> Sample Inventory
               </Link>

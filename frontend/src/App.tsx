@@ -5,7 +5,6 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import TestMethods from './pages/TestMethods';
-import CoAManagement from './pages/CoAManagement';
 import SampleInventory from './pages/SampleInventory';
 import Shipments from './pages/Shipments';
 import ManufacturerPortal from './pages/ManufacturerPortal';
@@ -26,7 +25,6 @@ function App() {
           <Route index element={<Navigate to="/dashboard" />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="test-methods" element={<TestMethods />} />
-          <Route path="coa" element={<CoAManagement />} />
           <Route path="inventory" element={<SampleInventory />} />
           <Route path="shipments" element={<Shipments />} />
           <Route path="manufacturer" element={<ManufacturerPortal />} />

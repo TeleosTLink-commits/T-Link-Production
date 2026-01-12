@@ -4,6 +4,7 @@ import { AuthRequest, authenticate, authorize } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 
 const router = Router();
 
@@ -112,6 +113,39 @@ router.get('/lot/:lotNumber', authenticate, async (req: AuthRequest, res, next) 
   }
 });
 
+// Download CoA file by lot number
+router.get('/lot/:lotNumber/download', authenticate, async (req: AuthRequest, res, next) => {
+  try {
+    const { lotNumber } = req.params;
+
+    const result = await query(
+      'SELECT id, lot_number, file_path, file_name FROM certificates_of_analysis WHERE lot_number = $1',
+      [lotNumber]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'CoA not found' });
+    }
+
+    const { id, file_path, file_name } = result.rows[0];
+
+    if (!file_path || !fs.existsSync(file_path)) {
+      return res.status(404).json({ success: false, message: 'CoA file not found on server' });
+    }
+
+    // Audit log
+    await query(
+      `INSERT INTO document_audit_log (document_type, document_id, action, performed_by)
+       VALUES ('coa', $1, 'downloaded', $2)`,
+      [id, req.user?.id]
+    );
+
+    res.download(file_path, file_name);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Get CoA by ID
 router.get('/:id', authenticate, async (req: AuthRequest, res, next) => {
   try {
@@ -138,6 +172,39 @@ router.get('/:id', authenticate, async (req: AuthRequest, res, next) => {
     );
 
     res.json(result.rows[0]);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Download CoA file by ID
+router.get('/:id/download', authenticate, async (req: AuthRequest, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const result = await query(
+      'SELECT id, lot_number, file_path, file_name FROM certificates_of_analysis WHERE id = $1',
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'CoA not found' });
+    }
+
+    const { file_path, file_name } = result.rows[0];
+
+    if (!file_path || !fs.existsSync(file_path)) {
+      return res.status(404).json({ success: false, message: 'CoA file not found on server' });
+    }
+
+    // Audit log
+    await query(
+      `INSERT INTO document_audit_log (document_type, document_id, action, performed_by)
+       VALUES ('coa', $1, 'downloaded', $2)`,
+      [id, req.user?.id]
+    );
+
+    res.download(file_path, file_name);
   } catch (error) {
     next(error);
   }

@@ -40,30 +40,21 @@ const CoAManagement: React.FC = () => {
 
   const handleViewCoa = async (coa: CoA) => {
     try {
-      // Try to download from the sample-inventory route first (where files are stored)
-      const sampleResponse = await api.get('/sample-inventory', { 
-        params: { search: coa.lot_number } 
+      // Download directly from the CoA route using the ID
+      const response = await api.get(`/coa/${coa.id}/download`, {
+        responseType: 'blob'
       });
-      
-      if (sampleResponse.data.data?.samples?.length > 0) {
-        const sample = sampleResponse.data.data.samples[0];
-        const response = await api.get(`/sample-inventory/${sample.id}/coa/download`, {
-          responseType: 'blob'
-        });
 
-        const blob = new Blob([response.data], { type: 'application/pdf' });
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-      } else {
-        alert('CoA file not found');
-      }
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
     } catch (err: any) {
       alert('Failed to open CoA: ' + (err.response?.data?.message || err.message));
       console.error('Error opening CoA:', err);

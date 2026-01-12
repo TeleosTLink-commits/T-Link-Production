@@ -81,36 +81,16 @@ CREATE TABLE sops (
 );
 
 -- Certificates of Analysis
-CREATE TABLE certificates_of_analysis (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    lot_number VARCHAR(100) NOT NULL UNIQUE,
-    product_name VARCHAR(255) NOT NULL,
-    manufacturer_id UUID REFERENCES manufacturer_companies(id),
-    issue_date DATE NOT NULL,
-    expiration_date DATE NOT NULL,
-    file_path VARCHAR(500) NOT NULL,
-    file_name VARCHAR(255) NOT NULL,
-    status VARCHAR(50) DEFAULT 'valid' CHECK (status IN ('valid', 'expiring_soon', 'expired')),
-    notes TEXT,
-    created_by UUID REFERENCES users(id),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- CoA Expiration Notifications Log
-CREATE TABLE coa_expiration_notifications (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    coa_id UUID REFERENCES certificates_of_analysis(id) ON DELETE CASCADE,
-    notification_type VARCHAR(50) NOT NULL CHECK (notification_type IN ('30_days', '60_days', '90_days')),
-    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    sent_to VARCHAR(255) NOT NULL,
-    status VARCHAR(50) DEFAULT 'sent' CHECK (status IN ('sent', 'failed'))
-);
+-- Certificates of Analysis removed: handled by Sample Inventory
+-- The `certificates_of_analysis` and related notification table have been
+-- consolidated into the `samples` / sample-inventory workflow.
+-- If you need to drop the old table from an existing database, use the
+-- migration script located at: database/migrations/999_drop_certificates_of_analysis.sql
 
 -- Document Audit Trail
 CREATE TABLE document_audit_log (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    document_type VARCHAR(50) NOT NULL CHECK (document_type IN ('test_method', 'sop', 'coa')),
+    document_type VARCHAR(50) NOT NULL CHECK (document_type IN ('test_method', 'sop')),
     document_id UUID NOT NULL,
     action VARCHAR(50) NOT NULL CHECK (action IN ('created', 'updated', 'viewed', 'downloaded', 'deleted', 'version_changed')),
     performed_by UUID REFERENCES users(id),
@@ -153,7 +133,6 @@ CREATE TABLE samples (
     lot_number VARCHAR(100),
     sample_name VARCHAR(255) NOT NULL,
     sample_type VARCHAR(100) NOT NULL,
-    coa_id UUID REFERENCES certificates_of_analysis(id),
     initial_volume DECIMAL(10, 3) NOT NULL,
     current_volume DECIMAL(10, 3) NOT NULL,
     unit VARCHAR(20) NOT NULL CHECK (unit IN ('mL', 'L', 'g', 'kg', 'mg', 'units')),
@@ -332,10 +311,7 @@ CREATE INDEX idx_tm_current ON test_methods(is_current_version);
 CREATE INDEX idx_tm_status ON test_methods(status);
 
 -- CoA
-CREATE INDEX idx_coa_lot ON certificates_of_analysis(lot_number);
-CREATE INDEX idx_coa_exp_date ON certificates_of_analysis(expiration_date);
-CREATE INDEX idx_coa_status ON certificates_of_analysis(status);
-CREATE INDEX idx_coa_manufacturer ON certificates_of_analysis(manufacturer_id);
+-- Certificates of Analysis indexes removed (table consolidated into samples)
 
 -- Samples
 CREATE INDEX idx_samples_id ON samples(sample_id);
@@ -377,30 +353,13 @@ CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECU
 CREATE TRIGGER update_manufacturer_companies_updated_at BEFORE UPDATE ON manufacturer_companies FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_test_methods_updated_at BEFORE UPDATE ON test_methods FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_sops_updated_at BEFORE UPDATE ON sops FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_coa_updated_at BEFORE UPDATE ON certificates_of_analysis FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_freezers_updated_at BEFORE UPDATE ON freezers FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_samples_updated_at BEFORE UPDATE ON samples FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_shipping_supplies_updated_at BEFORE UPDATE ON shipping_supplies FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_shipments_updated_at BEFORE UPDATE ON shipments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Auto-update CoA status based on expiration
-CREATE OR REPLACE FUNCTION update_coa_status()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF NEW.expiration_date <= CURRENT_DATE THEN
-        NEW.status = 'expired';
-    ELSIF NEW.expiration_date <= CURRENT_DATE + INTERVAL '30 days' THEN
-        NEW.status = 'expiring_soon';
-    ELSE
-        NEW.status = 'valid';
-    END IF;
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
-
-CREATE TRIGGER update_coa_status_trigger 
-BEFORE INSERT OR UPDATE ON certificates_of_analysis 
-FOR EACH ROW EXECUTE FUNCTION update_coa_status();
+-- Auto-update CoA status removed (handled on sample inventory if needed)
 
 -- Auto-update sample status based on volume
 CREATE OR REPLACE FUNCTION update_sample_status()
