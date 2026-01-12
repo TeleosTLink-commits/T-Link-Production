@@ -339,8 +339,26 @@ router.post('/:id/coa/upload', authenticate, upload.single('file'), async (req: 
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
 
-    const filePath = file.path;
+    let filePath = file.path;
     const fileName = file.originalname;
+
+    // In production, upload to Cloudinary instead of using local disk
+    if (process.env.NODE_ENV === 'production') {
+      const { uploadToCloudinary } = require('../utils/cloudinary');
+      try {
+        filePath = await uploadToCloudinary(file.path, 'sample-inventory/coa');
+        if (!filePath) {
+          return res.status(500).json({ success: false, message: 'Failed to upload CoA to cloud' });
+        }
+        // Delete the temporary file after uploading to Cloudinary
+        fs.unlink(file.path, (err) => {
+          if (err) console.error('Error deleting temp file:', err);
+        });
+      } catch (cloudError: any) {
+        console.error('Cloudinary upload error:', cloudError);
+        return res.status(500).json({ success: false, message: 'Failed to upload to cloud storage', error: cloudError.message });
+      }
+    }
 
     await pool.query(
       'UPDATE samples SET coa_file_path = $1, coa_file_name = $2, has_coa = true, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
@@ -364,8 +382,26 @@ router.post('/:id/sds/upload', authenticate, upload.single('file'), async (req: 
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
 
-    const filePath = file.path;
+    let filePath = file.path;
     const fileName = file.originalname;
+
+    // In production, upload to Cloudinary instead of using local disk
+    if (process.env.NODE_ENV === 'production') {
+      const { uploadToCloudinary } = require('../utils/cloudinary');
+      try {
+        filePath = await uploadToCloudinary(file.path, 'sample-inventory/sds');
+        if (!filePath) {
+          return res.status(500).json({ success: false, message: 'Failed to upload SDS to cloud' });
+        }
+        // Delete the temporary file after uploading to Cloudinary
+        fs.unlink(file.path, (err) => {
+          if (err) console.error('Error deleting temp file:', err);
+        });
+      } catch (cloudError: any) {
+        console.error('Cloudinary upload error:', cloudError);
+        return res.status(500).json({ success: false, message: 'Failed to upload to cloud storage', error: cloudError.message });
+      }
+    }
 
     await pool.query(
       'UPDATE samples SET sds_file_path = $1, sds_file_name = $2, has_dow_sds = true, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
