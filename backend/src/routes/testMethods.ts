@@ -446,8 +446,26 @@ router.post('/:id/upload', authenticate, authorize('admin', 'lab_user'), upload.
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
 
-    const filePath = req.file.path;
+    let filePath = req.file.path;
     const fileName = req.file.originalname;
+
+    // In production, upload to Cloudinary instead of using local disk
+    if (process.env.NODE_ENV === 'production') {
+      const { uploadToCloudinary } = require('../utils/cloudinary');
+      try {
+        filePath = await uploadToCloudinary(req.file.path, 'test-methods');
+        if (!filePath) {
+          return res.status(500).json({ success: false, message: 'Failed to upload file to cloud' });
+        }
+        // Delete the temporary file after uploading to Cloudinary
+        fs.unlink(req.file.path, (err) => {
+          if (err) console.error('Error deleting temp file:', err);
+        });
+      } catch (cloudError: any) {
+        console.error('Cloudinary upload error:', cloudError);
+        return res.status(500).json({ success: false, message: 'Failed to upload to cloud storage', error: cloudError.message });
+      }
+    }
 
     const result = await pool.query(
       'UPDATE test_methods SET file_path = $1, file_name = $2 WHERE id = $3 RETURNING *',
@@ -456,7 +474,7 @@ router.post('/:id/upload', authenticate, authorize('admin', 'lab_user'), upload.
 
     if (result.rows.length === 0) {
       // Delete uploaded file if test method not found
-      fs.unlinkSync(filePath);
+      fs.unlinkSync(req.file.path);
       return res.status(404).json({ success: false, message: 'Test method not found' });
     }
 
