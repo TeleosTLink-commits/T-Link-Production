@@ -1,0 +1,89 @@
+
+# T-Link Email Database Management Instructions (Production)
+
+## 1. Connect to Production Database
+
+Open PowerShell and run:
+
+    psql -h dpg-d5g3r0qli9vc7398d08g-a.oregon-postgres.render.com `
+         -U tlink_user `
+         -d tlink_db_zlsw `
+         -p 5432
+
+Password: illvriAUF5XcsXFPFuPeuK8YfQplyCJz
+
+Or use the connection string:
+
+    postgresql://tlink_user:illvriAUF5XcsXFPFuPeuK8YfQplyCJz@dpg-d5g3r0qli9vc7398d08g-a.oregon-postgres.render.com:5432/tlink_db_zlsw?sslmode=require
+
+---
+
+## 2. Using psql: Interactive vs Shell Commands
+
+**If you are inside the psql interactive shell (prompt looks like `tlink_db_zlsw=>`):**
+
+- Type SQL statements directly, without the `psql -h ...` prefix.
+- Example:
+
+      SELECT email, role, is_active FROM users;
+
+- To add, delete, or update users, enter the SQL directly:
+
+      UPDATE users SET role = 'admin' WHERE email = 'user@example.com';
+
+- To exit psql, type:
+
+      \q
+
+**If you are in PowerShell (not inside psql):**
+
+- Use the full psql command with `-c` and quotes:
+
+      psql -h dpg-d5g3r0qli9vc7398d08g-a.oregon-postgres.render.com -U tlink_user -d tlink_db_zlsw -c "SELECT email, role, is_active FROM users;"
+
+---
+
+## 3. View All Users (Emails)
+
+    SELECT email, role, is_active FROM users;
+
+---
+
+## 4. Add a New User (Email)
+
+    INSERT INTO users (id, username, email, password_hash, first_name, last_name, role, is_active)
+    VALUES (uuid_generate_v4(), 'username', 'user@example.com', 'hashed_password', 'First', 'Last', 'lab_staff', true);
+
+---
+
+## 5. Delete a User (Email)
+
+    DELETE FROM users WHERE email = 'user@example.com';
+
+---
+
+## 6. Change a User's Role
+
+    UPDATE users SET role = 'admin' WHERE email = 'user@example.com';
+
+---
+
+## 7. Deactivate a User
+
+    UPDATE users SET is_active = false WHERE email = 'user@example.com';
+
+---
+
+## 8. View Users by Role
+
+    SELECT email FROM users WHERE role = 'lab_staff';
+
+---
+
+## Notes
+- Replace 'user@example.com', 'username', etc. with actual values.
+- All commands require you to be connected to the production database.
+- For password_hash, use a secure hash (not plain text).
+- Only use these commands if you have admin access.
+
+For more details, see QUICK_REFERENCE.md or PRODUCTION_DEPLOYMENT_SUMMARY.md.
