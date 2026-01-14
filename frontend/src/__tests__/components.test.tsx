@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
@@ -161,7 +161,7 @@ describe('Manufacturer Portal Components', () => {
           <div>
             <input placeholder="Lot Number" type="text" />
             <button onClick={handleSearch}>Search</button>
-            {results.map((result) => (
+            {results.map((result: any) => (
               <div key={result.id}>{result.lot} - {result.sample}</div>
             ))}
           </div>
@@ -327,14 +327,14 @@ describe('Manufacturer Portal Components', () => {
           { id: '3', status: 'delivered' },
         ];
 
-        const filtered = filter === 'all' ? allShipments : allShipments.filter(s => s.status === filter);
+        const filtered = filter === 'all' ? allShipments : allShipments.filter((s: any) => s.status === filter);
 
         return (
           <div>
             <button onClick={() => setFilter('all')}>All</button>
             <button onClick={() => setFilter('shipped')}>Shipped</button>
             <div>
-              {filtered.map(s => (
+              {filtered.map((s: any) => (
                 <div key={s.id}>{s.status}</div>
               ))}
             </div>
@@ -514,8 +514,8 @@ describe('Lab Staff Components', () => {
 
         return (
           <div>
-            <button onClick={() => setQuantity(q => q + 1)}>+</button>
-            <button onClick={() => setQuantity(q => q - 1)}>-</button>
+            <button onClick={() => setQuantity((q: number) => q + 1)}>+</button>
+            <button onClick={() => setQuantity((q: number) => q - 1)}>-</button>
             <span>{quantity}</span>
           </div>
         );

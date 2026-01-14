@@ -34,7 +34,7 @@ if (-not (Test-Path $backupDir)) {
 
 Write-Host "Creating backup..." -ForegroundColor Yellow
 $env:PGPASSWORD = $dbPassword
-& pg_dump -h $dbHost -U $dbUser -d $dbName -f $backupFile
+& pg_dump -h $dbHost -p $dbPort -U $dbUser -d $dbName -f $backupFile
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "✓ Backup created: $backupFile" -ForegroundColor Green
@@ -48,7 +48,7 @@ Write-Host "Applying migration..." -ForegroundColor Yellow
 
 # Apply the migration
 $env:PGPASSWORD = $dbPassword
-& psql -h $dbHost -U $dbUser -d $dbName -f $migrationFile
+& psql -h $dbHost -p $dbPort -U $dbUser -d $dbName -f $migrationFile
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "✓ Migration applied successfully!" -ForegroundColor Green
