@@ -14,8 +14,7 @@ export async function uploadToCloudinary(filePath: string, folder: string): Prom
       folder: `tlink/${folder}`,
       resource_type: 'auto',
       use_filename: true,
-      unique_filename: true,
-      access_control: [{ access_type: 'public' }]
+      unique_filename: true
     });
     return result.secure_url;
   } catch (error: any) {
@@ -29,7 +28,10 @@ export async function uploadToCloudinary(filePath: string, folder: string): Prom
  */
 export async function uploadBufferToCloudinary(buffer: Buffer, originalFilename: string, folder: string): Promise<string | null> {
   try {
-    const baseName = originalFilename.replace(/\.[^/.]+$/, '');
+    const baseName = originalFilename
+      .replace(/\.[^/.]+$/, '')
+      .replace(/[^a-zA-Z0-9_-]+/g, '-')
+      .toLowerCase();
     const result: any = await new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         {
@@ -37,8 +39,7 @@ export async function uploadBufferToCloudinary(buffer: Buffer, originalFilename:
           resource_type: 'auto',
           use_filename: true,
           unique_filename: true,
-          public_id: baseName,
-          access_control: [{ access_type: 'public' }]
+          public_id: baseName
         },
         (error, result) => {
           if (error) return reject(error);
