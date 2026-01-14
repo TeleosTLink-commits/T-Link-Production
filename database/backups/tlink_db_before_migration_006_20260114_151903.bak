@@ -1,0 +1,2028 @@
+--
+-- PostgreSQL database dump
+--
+
+\restrict 0rc0reOvweVR2kNQo6a84JF3ensVdr4a1ugOow05osawaA5Fzbiyc7oy2gpCyvz
+
+-- Dumped from database version 18.1
+-- Dumped by pg_dump version 18.1
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+--
+-- Name: uuid-ossp; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION "uuid-ossp"; Type: COMMENT; Schema: -; Owner: 
+--
+
+COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UUIDs)';
+
+
+--
+-- Name: samples_search_trigger(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.samples_search_trigger() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    NEW.search_vector :=
+        setweight(to_tsvector('english', COALESCE(NEW.chemical_name, '')), 'A') ||
+        setweight(to_tsvector('english', COALESCE(NEW.lot_number, '')), 'B') ||
+        setweight(to_tsvector('english', COALESCE(NEW.cas_number, '')), 'C') ||
+        setweight(to_tsvector('english', COALESCE(NEW.hazard_description, '')), 'D');
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.samples_search_trigger() OWNER TO postgres;
+
+--
+-- Name: test_methods_search_trigger(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.test_methods_search_trigger() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    NEW.search_vector := 
+        setweight(to_tsvector('english', COALESCE(NEW.legacy_number, '')), 'A') ||
+        setweight(to_tsvector('english', COALESCE(NEW.official_number, '')), 'A') ||
+        setweight(to_tsvector('english', COALESCE(NEW.original_title, '')), 'A') ||
+        setweight(to_tsvector('english', COALESCE(NEW.official_title, '')), 'A') ||
+        setweight(to_tsvector('english', COALESCE(NEW.purpose, '')), 'B') ||
+        setweight(to_tsvector('english', COALESCE(NEW.scope, '')), 'C');
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.test_methods_search_trigger() OWNER TO postgres;
+
+--
+-- Name: update_coa_status(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.update_coa_status() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF NEW.expiration_date <= CURRENT_DATE THEN
+        NEW.status = 'expired';
+    ELSIF NEW.expiration_date <= CURRENT_DATE + INTERVAL '30 days' THEN
+        NEW.status = 'expiring_soon';
+    ELSE
+        NEW.status = 'valid';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.update_coa_status() OWNER TO postgres;
+
+--
+-- Name: update_sample_status(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.update_sample_status() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF NEW.current_volume <= 0 THEN
+        NEW.status = 'depleted';
+    ELSIF NEW.current_volume <= NEW.low_inventory_threshold THEN
+        NEW.status = 'low';
+    ELSIF NEW.expiration_date IS NOT NULL AND NEW.expiration_date <= CURRENT_DATE THEN
+        NEW.status = 'expired';
+    ELSE
+        NEW.status = 'available';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.update_sample_status() OWNER TO postgres;
+
+--
+-- Name: update_supply_status(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.update_supply_status() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF NEW.current_quantity <= 0 THEN
+        NEW.status = 'out_of_stock';
+    ELSIF NEW.current_quantity <= NEW.low_stock_threshold THEN
+        NEW.status = 'low_stock';
+    ELSE
+        NEW.status = 'in_stock';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.update_supply_status() OWNER TO postgres;
+
+--
+-- Name: update_test_methods_timestamp(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.update_test_methods_timestamp() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.update_test_methods_timestamp() OWNER TO postgres;
+
+--
+-- Name: update_updated_at_column(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.update_updated_at_column() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.update_updated_at_column() OWNER TO postgres;
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- Name: authorized_emails; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.authorized_emails (
+    id integer NOT NULL,
+    email character varying(255) NOT NULL,
+    role character varying(50) DEFAULT 'viewer'::character varying NOT NULL,
+    department character varying(100),
+    added_by uuid,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    notes text
+);
+
+
+ALTER TABLE public.authorized_emails OWNER TO postgres;
+
+--
+-- Name: TABLE authorized_emails; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON TABLE public.authorized_emails IS 'Pre-approved email addresses that can register for system access';
+
+
+--
+-- Name: authorized_emails_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.authorized_emails_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.authorized_emails_id_seq OWNER TO postgres;
+
+--
+-- Name: authorized_emails_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.authorized_emails_id_seq OWNED BY public.authorized_emails.id;
+
+
+--
+-- Name: certificates_of_analysis; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.certificates_of_analysis (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    lot_number character varying(100) NOT NULL,
+    product_name character varying(255),
+    manufacturer_id uuid,
+    issue_date date,
+    expiration_date date,
+    file_path character varying(500),
+    file_name character varying(255),
+    status character varying(50) DEFAULT 'valid'::character varying,
+    notes text,
+    created_by uuid,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT certificates_of_analysis_status_check CHECK (((status)::text = ANY ((ARRAY['valid'::character varying, 'expiring_soon'::character varying, 'expired'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.certificates_of_analysis OWNER TO postgres;
+
+--
+-- Name: chemical_hazards; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.chemical_hazards (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    hazard_class character varying(100) NOT NULL,
+    un_number character varying(20),
+    packing_group character varying(10),
+    label_requirements text,
+    packaging_requirements text,
+    handling_instructions text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.chemical_hazards OWNER TO postgres;
+
+--
+-- Name: coa_expiration_notifications; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.coa_expiration_notifications (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    coa_id uuid,
+    notification_type character varying(50) NOT NULL,
+    sent_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    sent_to character varying(255) NOT NULL,
+    status character varying(50) DEFAULT 'sent'::character varying,
+    CONSTRAINT coa_expiration_notifications_notification_type_check CHECK (((notification_type)::text = ANY ((ARRAY['30_days'::character varying, '60_days'::character varying, '90_days'::character varying])::text[]))),
+    CONSTRAINT coa_expiration_notifications_status_check CHECK (((status)::text = ANY ((ARRAY['sent'::character varying, 'failed'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.coa_expiration_notifications OWNER TO postgres;
+
+--
+-- Name: document_audit_log; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.document_audit_log (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    document_type character varying(50) NOT NULL,
+    document_id uuid NOT NULL,
+    action character varying(50) NOT NULL,
+    performed_by uuid,
+    previous_values jsonb,
+    new_values jsonb,
+    ip_address character varying(45),
+    user_agent text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT document_audit_log_action_check CHECK (((action)::text = ANY ((ARRAY['created'::character varying, 'updated'::character varying, 'viewed'::character varying, 'downloaded'::character varying, 'deleted'::character varying, 'version_changed'::character varying])::text[]))),
+    CONSTRAINT document_audit_log_document_type_check CHECK (((document_type)::text = ANY ((ARRAY['test_method'::character varying, 'sop'::character varying, 'coa'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.document_audit_log OWNER TO postgres;
+
+--
+-- Name: freezer_shelves; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.freezer_shelves (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    freezer_id uuid,
+    shelf_number character varying(20) NOT NULL,
+    position_description character varying(255),
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.freezer_shelves OWNER TO postgres;
+
+--
+-- Name: freezers; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.freezers (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    freezer_name character varying(100) NOT NULL,
+    location character varying(255) NOT NULL,
+    temperature_range character varying(50),
+    capacity_description text,
+    is_active boolean DEFAULT true,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.freezers OWNER TO postgres;
+
+--
+-- Name: inventory_alerts; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.inventory_alerts (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    sample_id uuid,
+    alert_type character varying(50) NOT NULL,
+    alert_message text NOT NULL,
+    current_volume numeric(10,3),
+    threshold_volume numeric(10,3),
+    is_resolved boolean DEFAULT false,
+    resolved_at timestamp without time zone,
+    resolved_by uuid,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT inventory_alerts_alert_type_check CHECK (((alert_type)::text = ANY ((ARRAY['low_inventory'::character varying, 'depleted'::character varying, 'expiring_soon'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.inventory_alerts OWNER TO postgres;
+
+--
+-- Name: manufacturer_companies; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.manufacturer_companies (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    company_name character varying(255) NOT NULL,
+    contact_email character varying(255) NOT NULL,
+    contact_phone character varying(50),
+    address text,
+    is_active boolean DEFAULT true,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.manufacturer_companies OWNER TO postgres;
+
+--
+-- Name: manufacturer_users; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.manufacturer_users (
+    user_id uuid NOT NULL,
+    company_id uuid NOT NULL
+);
+
+
+ALTER TABLE public.manufacturer_users OWNER TO postgres;
+
+--
+-- Name: notifications; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.notifications (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    notification_type character varying(100) NOT NULL,
+    subject character varying(500) NOT NULL,
+    message text NOT NULL,
+    recipient_user_id uuid,
+    recipient_email character varying(255),
+    is_read boolean DEFAULT false,
+    read_at timestamp without time zone,
+    sent_via character varying(50),
+    status character varying(50) DEFAULT 'pending'::character varying,
+    related_entity_type character varying(50),
+    related_entity_id uuid,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT notifications_notification_type_check CHECK (((notification_type)::text = ANY ((ARRAY['coa_expiration'::character varying, 'low_inventory'::character varying, 'shipment_request'::character varying, 'supply_low_stock'::character varying, 'sample_depleted'::character varying, 'general'::character varying])::text[]))),
+    CONSTRAINT notifications_sent_via_check CHECK (((sent_via)::text = ANY ((ARRAY['email'::character varying, 'in_app'::character varying, 'both'::character varying])::text[]))),
+    CONSTRAINT notifications_status_check CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'sent'::character varying, 'failed'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.notifications OWNER TO postgres;
+
+--
+-- Name: sample_transactions; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.sample_transactions (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    sample_id uuid,
+    transaction_type character varying(50) NOT NULL,
+    quantity_change character varying(100),
+    performed_by uuid,
+    transaction_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    purpose text,
+    reference_number character varying(100),
+    notes text,
+    CONSTRAINT sample_transactions_transaction_type_check CHECK (((transaction_type)::text = ANY ((ARRAY['received'::character varying, 'used'::character varying, 'adjusted'::character varying, 'depleted'::character varying, 'expired'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.sample_transactions OWNER TO postgres;
+
+--
+-- Name: samples; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.samples (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    chemical_name character varying(255) NOT NULL,
+    received_date date,
+    lot_number character varying(100),
+    quantity character varying(100),
+    concentration character varying(50),
+    has_dow_sds boolean DEFAULT false,
+    cas_number character varying(50),
+    has_coa boolean DEFAULT false,
+    certification_date date,
+    recertification_date date,
+    expiration_date date,
+    un_number character varying(20),
+    hazard_description text,
+    hs_code character varying(50),
+    hazard_class character varying(50),
+    packing_group character varying(10),
+    packing_instruction character varying(50),
+    status character varying(50) DEFAULT 'active'::character varying,
+    notes text,
+    created_by uuid,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    search_vector tsvector,
+    coa_file_path character varying(500),
+    coa_file_name character varying(255),
+    sds_file_path character varying(500),
+    sds_file_name character varying(255),
+    CONSTRAINT samples_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'depleted'::character varying, 'expired'::character varying, 'archived'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.samples OWNER TO postgres;
+
+--
+-- Name: TABLE samples; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON TABLE public.samples IS 'Sample inventory with hazmat information';
+
+
+--
+-- Name: COLUMN samples.quantity; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.samples.quantity IS 'Quantity as text (e.g., "12.86g" or "1: 0.91g, 2: 3.91g")';
+
+
+--
+-- Name: COLUMN samples.has_dow_sds; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.samples.has_dow_sds IS 'Whether DOW SDS is available';
+
+
+--
+-- Name: COLUMN samples.has_coa; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.samples.has_coa IS 'Whether Certificate of Analysis is available';
+
+
+--
+-- Name: COLUMN samples.hazard_description; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.samples.hazard_description IS 'Hazard description (e.g., "flammable liquid; toxic")';
+
+
+--
+-- Name: COLUMN samples.packing_instruction; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.samples.packing_instruction IS 'Packing instruction code';
+
+
+--
+-- Name: COLUMN samples.coa_file_path; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.samples.coa_file_path IS 'File system path to the Certificate of Analysis document';
+
+
+--
+-- Name: COLUMN samples.coa_file_name; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.samples.coa_file_name IS 'Original filename of the COA document';
+
+
+--
+-- Name: COLUMN samples.sds_file_path; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.samples.sds_file_path IS 'File system path to the Safety Data Sheet document';
+
+
+--
+-- Name: COLUMN samples.sds_file_name; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.samples.sds_file_name IS 'Original filename of the SDS document';
+
+
+--
+-- Name: samples_with_status; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.samples_with_status AS
+ SELECT id,
+    chemical_name,
+    received_date,
+    lot_number,
+    quantity,
+    concentration,
+    has_dow_sds,
+    cas_number,
+    has_coa,
+    certification_date,
+    recertification_date,
+    expiration_date,
+    un_number,
+    hazard_description,
+    hs_code,
+    hazard_class,
+    packing_group,
+    packing_instruction,
+    status,
+    notes,
+    created_by,
+    created_at,
+    updated_at,
+    search_vector,
+        CASE
+            WHEN ((status)::text = 'depleted'::text) THEN 'Depleted'::text
+            WHEN ((status)::text = 'archived'::text) THEN 'Archived'::text
+            WHEN (expiration_date IS NULL) THEN 'Active'::text
+            WHEN (expiration_date < CURRENT_DATE) THEN 'Expired'::text
+            WHEN (expiration_date < (CURRENT_DATE + '30 days'::interval)) THEN 'Expiring Soon (30 days)'::text
+            WHEN (expiration_date < (CURRENT_DATE + '60 days'::interval)) THEN 'Expiring Soon (60 days)'::text
+            WHEN (expiration_date < (CURRENT_DATE + '90 days'::interval)) THEN 'Expiring Soon (90 days)'::text
+            ELSE 'Active'::text
+        END AS expiration_status,
+        CASE
+            WHEN ((expiration_date IS NOT NULL) AND (expiration_date < CURRENT_DATE)) THEN (expiration_date - CURRENT_DATE)
+            ELSE NULL::integer
+        END AS days_until_expiration
+   FROM public.samples s;
+
+
+ALTER VIEW public.samples_with_status OWNER TO postgres;
+
+--
+-- Name: shipment_chain_of_custody; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.shipment_chain_of_custody (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    shipment_id uuid,
+    event_type character varying(100) NOT NULL,
+    performed_by uuid,
+    event_timestamp timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    location character varying(255),
+    notes text,
+    signature_path character varying(500),
+    CONSTRAINT shipment_chain_of_custody_event_type_check CHECK (((event_type)::text = ANY ((ARRAY['created'::character varying, 'prepared'::character varying, 'quality_check'::character varying, 'packed'::character varying, 'shipped'::character varying, 'in_transit'::character varying, 'delivered'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.shipment_chain_of_custody OWNER TO postgres;
+
+--
+-- Name: shipment_supplies_used; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.shipment_supplies_used (
+    shipment_id uuid NOT NULL,
+    supply_id uuid NOT NULL,
+    quantity_used integer NOT NULL
+);
+
+
+ALTER TABLE public.shipment_supplies_used OWNER TO postgres;
+
+--
+-- Name: shipments; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.shipments (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    shipment_number character varying(100) NOT NULL,
+    status character varying(50) DEFAULT 'pending'::character varying,
+    sample_id uuid,
+    lot_number character varying(100),
+    amount_shipped numeric(10,3) NOT NULL,
+    unit character varying(20) NOT NULL,
+    hazard_id uuid,
+    recipient_name character varying(255) NOT NULL,
+    recipient_company character varying(255),
+    destination_address text NOT NULL,
+    destination_city character varying(100),
+    destination_state character varying(50),
+    destination_zip character varying(20),
+    destination_country character varying(100),
+    carrier character varying(100),
+    tracking_number character varying(100),
+    shipping_label_path character varying(500),
+    special_instructions text,
+    requested_by uuid,
+    prepared_by uuid,
+    shipped_date timestamp without time zone,
+    estimated_delivery timestamp without time zone,
+    actual_delivery timestamp without time zone,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT shipments_status_check CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'in_progress'::character varying, 'shipped'::character varying, 'delivered'::character varying, 'cancelled'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.shipments OWNER TO postgres;
+
+--
+-- Name: shipping_supplies; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.shipping_supplies (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    un_box_type character varying(50),
+    inner_packing_type character varying(100),
+    dot_sp_number character varying(50),
+    item_number character varying(100),
+    purchased_from character varying(255),
+    price_per_unit character varying(50),
+    count integer,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.shipping_supplies OWNER TO postgres;
+
+--
+-- Name: sops; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.sops (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    sop_number character varying(50) NOT NULL,
+    title character varying(500) NOT NULL,
+    description text,
+    file_path character varying(500) NOT NULL,
+    file_name character varying(255) NOT NULL,
+    version character varying(20) NOT NULL,
+    effective_date date NOT NULL,
+    review_date date,
+    status character varying(50) DEFAULT 'active'::character varying,
+    created_by uuid,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT sops_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'under_review'::character varying, 'archived'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.sops OWNER TO postgres;
+
+--
+-- Name: supply_transactions; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.supply_transactions (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    supply_id uuid,
+    transaction_type character varying(50) NOT NULL,
+    quantity_change integer NOT NULL,
+    quantity_before integer NOT NULL,
+    quantity_after integer NOT NULL,
+    performed_by uuid,
+    transaction_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    notes text,
+    CONSTRAINT supply_transactions_transaction_type_check CHECK (((transaction_type)::text = ANY ((ARRAY['restock'::character varying, 'usage'::character varying, 'adjustment'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.supply_transactions OWNER TO postgres;
+
+--
+-- Name: test_method_categories; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.test_method_categories (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    category_name character varying(100) NOT NULL,
+    description text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.test_method_categories OWNER TO postgres;
+
+--
+-- Name: test_method_files; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.test_method_files (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    test_method_id uuid,
+    file_name character varying(255) NOT NULL,
+    file_path character varying(500) NOT NULL,
+    file_type character varying(50),
+    file_size integer,
+    file_category character varying(50),
+    version character varying(20),
+    uploaded_by uuid,
+    uploaded_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    notes text
+);
+
+
+ALTER TABLE public.test_method_files OWNER TO postgres;
+
+--
+-- Name: test_method_versions; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.test_method_versions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    test_method_id uuid,
+    version_number character varying(20) NOT NULL,
+    change_type character varying(50) NOT NULL,
+    change_description text NOT NULL,
+    legacy_number character varying(100),
+    official_number character varying(50),
+    title character varying(255),
+    status character varying(50),
+    changed_by uuid,
+    change_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    previous_values jsonb,
+    new_values jsonb,
+    notes text
+);
+
+
+ALTER TABLE public.test_method_versions OWNER TO postgres;
+
+--
+-- Name: test_methods; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.test_methods (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    legacy_number character varying(100),
+    legacy_lab_source character varying(100),
+    original_title character varying(255),
+    official_number character varying(50),
+    official_title character varying(255),
+    category_id uuid,
+    method_type character varying(100),
+    status character varying(50) DEFAULT 'draft'::character varying,
+    verification_status character varying(50) DEFAULT 'pending'::character varying,
+    verified_by uuid,
+    verified_date date,
+    verification_notes text,
+    purpose text,
+    scope text,
+    principle text,
+    equipment_required text,
+    reagents_required text,
+    procedure text,
+    calculations text,
+    acceptance_criteria text,
+    method_references text,
+    current_version character varying(20) DEFAULT '1.0'::character varying,
+    version_notes text,
+    supersedes_method_id uuid,
+    superseded_by_method_id uuid,
+    effective_date date,
+    review_date date,
+    next_review_date date,
+    created_by uuid,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    sample_matrix character varying(200),
+    analyte character varying(200),
+    test_purpose character varying(100),
+    file_path character varying(500),
+    file_name character varying(255)
+);
+
+
+ALTER TABLE public.test_methods OWNER TO postgres;
+
+--
+-- Name: test_methods_full; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.test_methods_full AS
+ SELECT id,
+    legacy_number,
+    legacy_lab_source,
+    original_title,
+    official_number,
+    official_title,
+    COALESCE(official_title, original_title) AS display_title,
+    COALESCE(official_number, legacy_number) AS display_number,
+    status,
+    verification_status,
+    current_version,
+    method_type,
+    effective_date,
+    verified_date AS aal_verification_date,
+    created_at,
+    updated_at,
+    file_path,
+    file_name,
+        CASE
+            WHEN (official_number IS NOT NULL) THEN true
+            ELSE false
+        END AS is_standardized
+   FROM public.test_methods tm;
+
+
+ALTER VIEW public.test_methods_full OWNER TO postgres;
+
+--
+-- Name: users; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.users (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    username character varying(100) NOT NULL,
+    email character varying(255) NOT NULL,
+    password_hash character varying(255) NOT NULL,
+    first_name character varying(100) NOT NULL,
+    last_name character varying(100) NOT NULL,
+    role character varying(50) NOT NULL,
+    is_active boolean DEFAULT true,
+    last_login timestamp without time zone,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    email_verified boolean DEFAULT false,
+    failed_login_attempts integer DEFAULT 0,
+    locked_until timestamp without time zone,
+    CONSTRAINT users_role_check CHECK (((role)::text = ANY ((ARRAY['admin'::character varying, 'lab_staff'::character varying, 'logistics'::character varying, 'manufacturer'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.users OWNER TO postgres;
+
+--
+-- Name: COLUMN users.password_hash; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.users.password_hash IS 'Bcrypt hashed password';
+
+
+--
+-- Name: COLUMN users.is_active; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.users.is_active IS 'Whether user account is active';
+
+
+--
+-- Name: COLUMN users.email_verified; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.users.email_verified IS 'Whether email has been verified';
+
+
+--
+-- Name: COLUMN users.failed_login_attempts; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.users.failed_login_attempts IS 'Counter for failed login attempts (locks at 5)';
+
+
+--
+-- Name: authorized_emails id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.authorized_emails ALTER COLUMN id SET DEFAULT nextval('public.authorized_emails_id_seq'::regclass);
+
+
+--
+-- Data for Name: authorized_emails; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.authorized_emails (id, email, role, department, added_by, created_at, notes) FROM stdin;
+1	admin@tlink.com	admin	Administration	\N	2026-01-06 09:11:28.246847	System Administrator
+2	manager@tlink.com	manager	Operations	\N	2026-01-06 09:11:28.246847	Operations Manager
+3	tech@tlink.com	technician	Laboratory	\N	2026-01-06 09:11:28.246847	Lab Technician
+4	viewer@tlink.com	viewer	General	\N	2026-01-06 09:11:28.246847	Read-only access
+5	jhunzie@ajwalabs.com	admin	Administration	\N	2026-01-06 09:21:22.33369	Admin User
+6	eboak@ajwalabs.com	admin	Administration	\N	2026-01-06 09:21:22.33369	Admin User
+7	mstanghellini@trical.com	admin	Administration	\N	2026-01-06 09:21:22.33369	Admin User
+8	rxuan@ajwalabs.com	viewer	General	\N	2026-01-06 09:21:22.33369	Standard User
+9	mguzman@ajwalabs.com	lab_staff	Laboratory	\N	2026-01-09 14:00:39.603731	Lab Staff Member
+10	mnascimento@ajwalabs.com	lab_staff	Laboratory	\N	2026-01-09 14:00:39.603731	Lab Staff Member
+11	wbailes@ajwalabs.com	lab_staff	Laboratory	\N	2026-01-09 14:00:39.603731	Lab Staff Member
+12	lbui@ajwalabs.com	lab_staff	Laboratory	\N	2026-01-09 14:06:36.289807	Lab Staff Member
+13	haajwa@gmail.com	admin	Administration	\N	2026-01-09 14:08:07.318877	System Admin
+\.
+
+
+--
+-- Data for Name: certificates_of_analysis; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.certificates_of_analysis (id, lot_number, product_name, manufacturer_id, issue_date, expiration_date, file_path, file_name, status, notes, created_by, created_at, updated_at) FROM stdin;
+8f4499c2-b809-40bf-8bae-faa0c7b36c86	60RNLD D7218-2	1,2-dichloropropane	\N	\N	\N	C:\\T_Link\\backend\\uploads\\sample-documents\\file-1767650523681-118493666.pdf	1,2-dichloropropane_Lot60RNLD D7218-2_25b.pdf	valid	\N	\N	2026-01-05 15:47:50.142354	2026-01-05 15:47:50.142354
+ace5c657-ec0d-48d7-adec-29f1e429da50	57609AP	1,3-dichloropropane	\N	\N	\N	C:\\T_Link\\backend\\uploads\\sample-documents\\file-1767650642992-461069355.pdf	1,3-dichloropropane-Lot57609AP_25b.pdf	valid	\N	\N	2026-01-05 15:47:50.142354	2026-01-05 15:47:50.142354
+8a49d173-589b-49a5-8e30-a6740c4eefe3	V43-038175-28	2-chloro-1,5-hexadiene	\N	\N	\N	C:\\T_Link\\backend\\uploads\\sample-documents\\file-1767650682335-356579419.pdf	2-chloro-1,5-hexadiene_LotV43-038175-28_25a.pdf	valid	\N	\N	2026-01-05 15:47:50.142354	2026-01-05 15:47:50.142354
+32b986e7-df74-4e85-859a-e08569461003	XP3-124113-22	2-chloro-2,3-dimethylbutane	\N	\N	\N	C:\\T_Link\\backend\\uploads\\sample-documents\\file-1767654172641-945110493.pdf	2-chloro-2,3-dimethylbutane_LotXP3-124113-22_25b.pdf	valid	\N	\N	2026-01-05 15:47:50.142354	2026-01-05 15:47:50.142354
+c17a6a93-291f-45a7-97c3-1f42024f229a	SYN-FS09270-032	3-chloro-2-methylpentane	\N	\N	\N	C:\\T_Link\\backend\\uploads\\sample-documents\\file-1767654515916-857606324.pdf	3-chloro-2-methylpentane_LotSYN-FS09270-032_25a.pdf	valid	\N	\N	2026-01-05 15:47:50.142354	2026-01-05 15:47:50.142354
+8b3ea92b-fa1d-441d-a8cc-af68ae79e2de	SYN-FS08669-066	4-chloro-4-methylpent-1-ene	\N	\N	\N	C:\\T_Link\\backend\\uploads\\sample-documents\\file-1767656405204-161946490.pdf	4-chloro-4-methylpent-1-ene_LotSYN-FS08669-066_25a.pdf	valid	\N	\N	2026-01-05 15:47:50.142354	2026-01-05 15:47:50.142354
+108c03be-f5c0-410c-a6a9-76d124bcb690	A2B23-1380495-1	3,3-Dichloro-1-propene	\N	\N	\N	C:\\T_Link\\backend\\uploads\\sample-documents\\file-1767654669037-542106341.pdf	3,3-dichloro-1-propene_LotA2B23-1380495-1_25b-d.pdf	valid	\N	\N	2026-01-05 15:47:50.142354	2026-01-05 15:47:50.142354
+60c6fae2-0018-4721-ac32-1f1d6a537564	8979896	3,3-Dichloro-1-propene	\N	\N	\N	C:\\T_Link\\backend\\uploads\\sample-documents\\file-1767654697569-404796796.pdf	3,3-dichloro-1-propene_Lot8979896_25a.pdf	valid	\N	\N	2026-01-05 15:47:50.142354	2026-01-05 15:47:50.142354
+cd523c7a-6408-4b41-8d45-c5808cf5506c	XP9-37136-10	3,3-Dichloro-1-propene	\N	\N	\N	C:\\T_Link\\backend\\uploads\\sample-documents\\file-1767654726339-757346532.pdf	3,3-dichloro-1-propene_LotXP9-37136-10_25c.pdf	valid	\N	\N	2026-01-05 15:47:50.142354	2026-01-05 15:47:50.142354
+0b7f2409-c1cf-409b-a004-315692d54adb	TSP-87-040-A	Cis-1,3,3-trichloro-1-propene	\N	\N	\N	C:\\T_Link\\backend\\uploads\\sample-documents\\file-1767656537075-760459693.pdf	cis-1,3,3-trichloro-1-propene_LotTSP-87-040-A_25a.pdf	valid	\N	\N	2026-01-05 15:47:50.142354	2026-01-05 15:47:50.142354
+283479d2-eebf-4634-8c61-fd6c701d2bf2	TSP-87-040-B	Trans-1,3,3-trichloro-1-propene	\N	\N	\N	C:\\T_Link\\backend\\uploads\\sample-documents\\file-1767656753854-619196918.pdf	trans-1,3,3-trichloro-1-propene_LotTSP-87-040-B_25a.pdf	valid	\N	\N	2026-01-05 15:47:50.142354	2026-01-05 15:47:50.142354
+af9d616a-4506-46d4-9944-e8375bce2707	SYN-FS08669-044	1-chloro-1-methylcyclopentane	\N	\N	\N	C:\\T_Link\\backend\\uploads\\sample-documents\\file-1767650034610-332449686.pdf	1-chloro-1-methylcyclopentane_LotSYN-FS08669-044_25a.pdf	valid	\N	\N	2026-01-05 15:47:50.142354	2026-01-05 15:47:50.142354
+f8f63446-af35-4625-b914-5767337a393e	SYN-FS09005-089	1-chloro-1,5-hexadiene	\N	\N	\N	C:\\T_Link\\backend\\uploads\\sample-documents\\file-1767650279961-638801854.pdf	1-chloro-1,5-hexadiene_LotSYN-FS09005-089_25a.pdf	valid	\N	\N	2026-01-05 15:47:50.142354	2026-01-05 15:47:50.142354
+d82cd42f-8d92-4657-8509-4cca286d2091	YC2-106153-90	1,2,2-trichloropropane	\N	\N	\N	C:\\T_Link\\backend\\uploads\\sample-documents\\file-1767650597418-527413164.pdf	1,2,2-trichloropropane_LotYC2-106153-90_25a.pdf	valid	\N	\N	2026-01-05 15:47:50.142354	2026-01-05 15:47:50.142354
+5d05fbb4-9d39-437c-b236-8d952d542ab0	FS-SYE2400286-30	3-chloroprop-2-en-1-ol	\N	\N	\N	C:\\T_Link\\backend\\uploads\\sample-documents\\file-1767654559814-329273206.pdf	3-chloroprop-2-en-1-ol_LotFS-SYE1200286-30_25a.pdf	valid	\N	\N	2026-01-05 15:47:50.142354	2026-01-05 15:47:50.142354
+deb0b967-5a6d-4bde-bd60-a45f4a5d5b76	2C2MP26Mar87	2-chloro-2-methylpentane	\N	\N	\N	C:\\T_Link\\backend\\uploads\\sample-documents\\file-1767654110589-937603278.pdf	2-chloro-2-methylpentane_Lot2C2MP26Mar87_25a.pdf	valid	\N	\N	2026-01-05 15:47:50.142354	2026-01-05 15:47:50.142354
+6cfef116-ad72-48d3-a681-df973eba3764	HC2116288B	Cis-1,3-dichloropropene	\N	\N	\N	C:\\T_Link\\backend\\uploads\\sample-documents\\file-1767656493602-183408063.pdf	cis-1,3-dichloropropene_LotHC2116288B_25f.pdf	valid	\N	\N	2026-01-05 15:47:50.142354	2026-01-05 15:47:50.142354
+20bdbd8b-7159-4690-b46f-1f382de2067b	LC03034	Cis and Trans 1,3-Dichloropropene (Telone)	\N	\N	\N	C:\\T_Link\\backend\\uploads\\sample-documents\\file-1767656565685-631225506.pdf	cis+trans-1,3-dichloropropene_LotLC03034_25b-ak.pdf	valid	\N	\N	2026-01-05 15:47:50.142354	2026-01-05 15:47:50.142354
+46fa7dd0-15bd-4e1a-9266-98df2de96bde	ZA0-171582-092	Trans-1,3-dichloropropene	\N	\N	\N	C:\\T_Link\\backend\\uploads\\sample-documents\\file-1767656677267-372145292.pdf	trans-1,3-dichloropropene_LotZA0-171582-092_25c.pdf	valid	\N	\N	2026-01-05 15:47:50.142354	2026-01-05 15:47:50.142354
+8b7ca9d9-10b1-48c8-83a9-313029fe1dcf	SYN-FS09225-064	2-chloro-4-methylpentane	\N	\N	\N	C:\\T_Link\\backend\\uploads\\sample-documents\\file-1767654288092-827559.pdf	2-chloro-4-methylpentane_LotSYN-FS09225-064_25a.pdf	valid	\N	\N	2026-01-05 15:47:50.142354	2026-01-05 15:47:50.142354
+c970a547-d7a7-42fb-90b3-ab064aa2d70b	SYN-FS09225-051 F-1	3-chloro-1-methylcyclopentane	\N	\N	\N	C:\\T_Link\\backend\\uploads\\sample-documents\\file-1767654334256-627847001.pdf	3-chloro-1-methylcyclopentane_LotSYN-FS09225-051 F-1_25a.pdf	valid	\N	\N	2026-01-05 15:47:50.142354	2026-01-05 15:47:50.142354
+3bbd5562-4802-47a1-854e-0a69dc8aa973	SYN-FS09270-030	3-chloro-1,5-hexadiene	\N	\N	\N	C:\\T_Link\\backend\\uploads\\sample-documents\\file-1767654466182-173475063.pdf	3-chloro-1,5-hexadiene_LotSYN-FS09270-030_25a.pdf	valid	\N	\N	2026-01-05 15:47:50.142354	2026-01-05 15:47:50.142354
+c9a91452-a96d-4423-94ee-a8fb8c61b375	43-037044-86	5-chloro-1-hexene	\N	\N	\N	C:\\T_Link\\backend\\uploads\\sample-documents\\file-1767656454976-941297328.pdf	5-chloro-1-hexene_Lot43-037044-86_25a.pdf	valid	\N	\N	2026-01-05 15:47:50.142354	2026-01-05 15:47:50.142354
+bfe9ae69-7364-4b12-a8d6-ab8c1371d1fb	SYN-FS11130-001	Cis and Trans 2-chloro-3(chloromethyl)oxirane	\N	\N	\N	C:\\T_Link\\backend\\uploads\\sample-documents\\file-1767656642674-373156522.pdf	cis+trans-2-chloro-3(chloromethyl)oxirane_LotSYN-FS11130-001_25a.pdf	valid	\N	\N	2026-01-05 15:47:50.142354	2026-01-05 15:47:50.142354
+\.
+
+
+--
+-- Data for Name: chemical_hazards; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.chemical_hazards (id, hazard_class, un_number, packing_group, label_requirements, packaging_requirements, handling_instructions, created_at) FROM stdin;
+1b3a3056-a4c4-40b5-8072-5951c9d01a7a	Flammable Liquid	UN1170	II	Flammable Liquid Label, Class 3	UN-approved containers, secondary containment	Keep away from heat/sparks/open flames. Use explosion-proof equipment.	2025-12-16 14:08:28.173419
+52dc42ee-8d71-4f8a-a778-74881049d958	Corrosive	UN1789	II	Corrosive Label, Class 8	Acid-resistant containers, leak-proof packaging	Wear protective gloves/clothing/eye protection. Do not mix with incompatible materials.	2025-12-16 14:08:28.173419
+41326e18-a952-4c48-8b2a-61e446c99202	Oxidizer	UN1479	III	Oxidizer Label, Class 5.1	Non-combustible packaging, ventilated	Keep away from combustible materials. Store in cool, well-ventilated area.	2025-12-16 14:08:28.173419
+f56acbf0-a43a-49c6-af8b-aad0ceee2ab7	Toxic Substance	UN2810	II	Toxic Label, Class 6.1	Sealed containers, double packaging	Avoid inhalation and skin contact. Use in fume hood.	2025-12-16 14:08:28.173419
+5bc26c7d-44e2-4613-842e-f327384f8d2a	Non-Hazardous	\N	\N	No special labeling required	Standard packaging	Follow standard laboratory safety procedures.	2025-12-16 14:08:28.173419
+\.
+
+
+--
+-- Data for Name: coa_expiration_notifications; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.coa_expiration_notifications (id, coa_id, notification_type, sent_at, sent_to, status) FROM stdin;
+\.
+
+
+--
+-- Data for Name: document_audit_log; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.document_audit_log (id, document_type, document_id, action, performed_by, previous_values, new_values, ip_address, user_agent, created_at) FROM stdin;
+115d5f18-3b1e-4fc4-bdca-fb1ada13b322	coa	ef507fe8-0ebd-4e2d-ab17-9fe26f894b35	downloaded	3a68bc14-22a9-464a-8423-9964d87b067d	\N	\N	\N	\N	2026-01-05 13:56:38.129533
+26411684-1f7f-4e1c-bf5b-9058edc7b0b9	coa	27cbff34-f581-4678-99cb-cfb6e896123d	downloaded	3a68bc14-22a9-464a-8423-9964d87b067d	\N	\N	\N	\N	2026-01-05 13:59:58.927945
+b03ce588-f126-4332-972c-12e90f43ce7c	coa	1fdbb76e-eae8-4c89-83ca-03353387aea5	downloaded	3a68bc14-22a9-464a-8423-9964d87b067d	\N	\N	\N	\N	2026-01-05 14:02:19.742598
+1b4285a1-d7be-4d8f-bad1-ea2ac1b223df	coa	89054bb6-151d-4c6e-898f-99008883f542	downloaded	3a68bc14-22a9-464a-8423-9964d87b067d	\N	\N	\N	\N	2026-01-05 14:06:41.352601
+\.
+
+
+--
+-- Data for Name: freezer_shelves; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.freezer_shelves (id, freezer_id, shelf_number, position_description, created_at) FROM stdin;
+9a936502-f735-4949-8df2-56f54e3cdcdd	0687a425-7c2a-420b-9608-93b7618fef88	A1	Shelf 1 - Top Section	2025-12-16 14:08:28.173419
+450b6cb3-dc0e-4323-8a0b-d6de1bcd2a47	0687a425-7c2a-420b-9608-93b7618fef88	A2	Shelf 2 - Top Section	2025-12-16 14:08:28.173419
+673a5f4b-23f4-45b4-b61b-a4010b2d47d9	0687a425-7c2a-420b-9608-93b7618fef88	A3	Shelf 3 - Top Section	2025-12-16 14:08:28.173419
+1063e379-f124-4fb1-b4f1-852d57b19986	0687a425-7c2a-420b-9608-93b7618fef88	A4	Shelf 4 - Top Section	2025-12-16 14:08:28.173419
+20ffb1b7-7130-4d03-b728-0ba5c9b5f842	0687a425-7c2a-420b-9608-93b7618fef88	A5	Shelf 5 - Top Section	2025-12-16 14:08:28.173419
+7078ecd3-900a-4f84-8de9-2eacf704ad46	0687a425-7c2a-420b-9608-93b7618fef88	A6	Shelf 6 - Top Section	2025-12-16 14:08:28.173419
+15e66d55-f5cb-4cf6-b63a-b25aa8dee6df	0687a425-7c2a-420b-9608-93b7618fef88	A7	Shelf 7 - Top Section	2025-12-16 14:08:28.173419
+fc785c6e-241c-475b-b3b0-b4cfa017a484	0687a425-7c2a-420b-9608-93b7618fef88	A8	Shelf 8 - Top Section	2025-12-16 14:08:28.173419
+df020dc4-2443-4cfb-a65f-1df645934746	0687a425-7c2a-420b-9608-93b7618fef88	A9	Shelf 9 - Top Section	2025-12-16 14:08:28.173419
+7a88086f-40f4-4b84-9596-2c39c1039413	0687a425-7c2a-420b-9608-93b7618fef88	A10	Shelf 10 - Top Section	2025-12-16 14:08:28.173419
+c89b7318-d44c-4269-a47a-413d9c09d58f	0687a425-7c2a-420b-9608-93b7618fef88	A11	Shelf 11 - Top Section	2025-12-16 14:08:28.173419
+1a863d42-3c86-4fb5-8a57-248132b4c0f3	0687a425-7c2a-420b-9608-93b7618fef88	A12	Shelf 12 - Top Section	2025-12-16 14:08:28.173419
+\.
+
+
+--
+-- Data for Name: freezers; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.freezers (id, freezer_name, location, temperature_range, capacity_description, is_active, created_at, updated_at) FROM stdin;
+0687a425-7c2a-420b-9608-93b7618fef88	Freezer A-1	Lab Room 101	-20°C to -25°C	Walk-in freezer, 12 shelf units	t	2025-12-16 14:08:28.173419	2025-12-16 14:08:28.173419
+1bec5ffa-7767-43ae-a2e3-919a7af2edec	Freezer B-2	Lab Room 102	-80°C to -85°C	Ultra-low temperature, 8 shelf units	t	2025-12-16 14:08:28.173419	2025-12-16 14:08:28.173419
+91c1a04c-0d92-43e5-b002-6a75d62f8a69	Freezer C-3	Storage Room 201	-20°C	Standard upright freezer, 5 shelves	t	2025-12-16 14:08:28.173419	2025-12-16 14:08:28.173419
+\.
+
+
+--
+-- Data for Name: inventory_alerts; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.inventory_alerts (id, sample_id, alert_type, alert_message, current_volume, threshold_volume, is_resolved, resolved_at, resolved_by, created_at) FROM stdin;
+\.
+
+
+--
+-- Data for Name: manufacturer_companies; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.manufacturer_companies (id, company_name, contact_email, contact_phone, address, is_active, created_at, updated_at) FROM stdin;
+d26e1a4c-9299-442d-994c-bd7a94b79e8d	Sigma-Aldrich	contact@sigmaaldrich.com	1-800-325-3010	3050 Spruce Street, St. Louis, MO 63103	t	2025-12-16 14:08:28.173419	2025-12-16 14:08:28.173419
+f6898d7d-814f-4321-ad4e-ebdcbeaaf2c6	Fisher Scientific	info@fishersci.com	1-800-766-7000	300 Industry Drive, Pittsburgh, PA 15275	t	2025-12-16 14:08:28.173419	2025-12-16 14:08:28.173419
+f6a01711-bf4e-4352-a7c7-0ab3cf18a595	VWR International	support@vwr.com	1-800-932-5000	100 Matsonford Road, Radnor, PA 19087	t	2025-12-16 14:08:28.173419	2025-12-16 14:08:28.173419
+\.
+
+
+--
+-- Data for Name: manufacturer_users; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.manufacturer_users (user_id, company_id) FROM stdin;
+\.
+
+
+--
+-- Data for Name: notifications; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.notifications (id, notification_type, subject, message, recipient_user_id, recipient_email, is_read, read_at, sent_via, status, related_entity_type, related_entity_id, created_at) FROM stdin;
+\.
+
+
+--
+-- Data for Name: sample_transactions; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.sample_transactions (id, sample_id, transaction_type, quantity_change, performed_by, transaction_date, purpose, reference_number, notes) FROM stdin;
+\.
+
+
+--
+-- Data for Name: samples; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.samples (id, chemical_name, received_date, lot_number, quantity, concentration, has_dow_sds, cas_number, has_coa, certification_date, recertification_date, expiration_date, un_number, hazard_description, hs_code, hazard_class, packing_group, packing_instruction, status, notes, created_by, created_at, updated_at, search_vector, coa_file_path, coa_file_name, sds_file_path, sds_file_name) FROM stdin;
+0328beeb-ccc5-4d0a-9397-2f0323b7009b	2-chloro-2-methylpentane	2025-10-23	ESV607	25g		t	4325-48-8	f	\N	\N	\N	1993	flammable liquid; toxic	2903.19.90	3	II	353	active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.707519	2026-01-08 15:02:59.239243	'-2':3A '-48':7C '-8':8C '2':1A '4325':6C 'chloro':2A 'esv607':5B 'flammabl':9 'liquid':10 'methylpentan':4A 'toxic':11	\N	\N	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913440/tlink/samples/sds/file-1767653674384-451772952_rqec1y.pdf	DOW_2-chloro-2-methylpentane2.pdf
+2c91ea07-9ee0-4217-9a96-6ea520a7d5e5	1-chloro-1,5-hexadiene	2025-11-12	FS-SYE2400286-35	13.95g		t	69578-08-1	f	\N	\N	\N	1992	flammable liquid; toxic; poison if injested	2903.29.0000	3(6.1)	III	355	active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.717871	2026-01-08 15:03:01.848765	'-08':11C '-1':3A,12C '1':1A '35':9B '5':4A '69578':10C 'chloro':2A 'flammabl':13 'fs':7B 'fs-sye2400286':6B 'hexadien':5A 'injest':18 'liquid':14 'poison':16 'sye2400286':8B 'toxic':15	\N	\N	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913443/tlink/samples/sds/file-1767653973049-574798339_uxtaep.pdf	DOW_1-chloro-1,5-hexadiene.pdf
+b50363e9-e0e3-4998-8992-b068f9d47087	5-chloro-1-hexene	2025-11-12	FS-SYE2400286-32	15.00g		t	927-54-8	f	\N	\N	\N	1993	flammable liquid	2901.29.1010	3	II	Y341	active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.746646	2026-01-08 15:03:13.375063	'-1':3A '-54':10C '-8':11C '32':8B '5':1A '927':9C 'chloro':2A 'flammabl':12 'fs':6B 'fs-sye2400286':5B 'hexen':4A 'liquid':13 'sye2400286':7B	\N	\N	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913455/tlink/samples/sds/file-1767656472618-657104555_dgawk4.pdf	DOW_5-chloro-1-hexene.pdf
+1fdbb76e-eae8-4c89-83ca-03353387aea5	1,2-dichloropropane	2025-10-21	60RNLD D7218-2	194.58g		t	78-87-5	t	2024-10-10	2027-10-31	2026-10-09	1279	flammable	2903.19.0500	3	II	353	active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.668812	2026-01-08 15:03:57.26846	'-2':6B '-5':9C '-87':8C '1':1A '2':2A '60rnld':4B '78':7C 'd7218':5B 'dichloropropan':3A 'flammabl':10	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913499/tlink/samples/coa/file-1767650523681-118493666_jdzsil.pdf	1,2-dichloropropane_Lot60RNLD D7218-2_25b.pdf	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913430/tlink/samples/sds/file-1767650523966-814639998_avnwo8.pdf	ThermoFischer_1,2-dichloropropane.pdf
+ea59be07-f263-42d0-9b88-771602cc43fe	1,3-dichloropropane	2025-11-12	57609AP	47.74g	99.50%	t	142-28-9	t	2024-10-10	2027-10-31	2026-10-30	1993	flammable	2903.19.6050	3	II	Y341	active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.753193	2026-01-08 15:03:57.990375	'-28':6C '-9':7C '1':1A '142':5C '3':2A '57609ap':4B 'dichloropropan':3A 'flammabl':8	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913499/tlink/samples/coa/file-1767650642992-461069355_ckwxmg.pdf	1,3-dichloropropane-Lot57609AP_25b.pdf	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913433/tlink/samples/sds/file-1767650643260-833833608_paxkio.pdf	1,3-Dichloropropene D4 cistrans mix.pdf
+a7593278-c4e7-4f5b-9495-edc9c7c8c2d9	2-chloro-2,3-dimethylbutane	2025-11-03	XP3-124113-22	64.35g	92.25%	t	594-57-0	t	2024-10-10	2027-10-31	2026-10-16	1992	flammable	2901.10.1030	3(6.1)	II	352	active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.72241	2026-01-08 15:03:58.899034	'-0':11C '-124113':7B '-2':3A '-22':8B '-57':10C '2':1A '3':4A '594':9C 'chloro':2A 'dimethylbutan':5A 'flammabl':12 'xp3':6B	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913500/tlink/samples/coa/file-1767654172641-945110493_mir5db.pdf	2-chloro-2,3-dimethylbutane_LotXP3-124113-22_25b.pdf	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913439/tlink/samples/sds/file-1767654172662-9572805_iscwwi.pdf	DOW_2-chloro-2,3-dimethylbutane.pdf
+ff6e87c6-a5a4-4e5f-b6de-e34661477d57	3-chloro-2-methylpentane	2025-11-12	SYN-FS09270-032	19.32g	79%	t	38384-05-3	t	2023-03-07	2025-04-05	2026-10-23	1993	flammable liquid; toxic	2901.10.6000	3	II	Y341	active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.741282	2026-01-08 15:04:00.907218	'-05':10C '-2':3A '-3':11C '032':8B '3':1A '38384':9C 'chloro':2A 'flammabl':12 'fs09270':7B 'liquid':13 'methylpentan':4A 'syn':6B 'syn-fs09270':5B 'toxic':14	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913501/tlink/samples/coa/file-1767654515916-857606324_t1wpfq.pdf	3-chloro-2-methylpentane_LotSYN-FS09270-032_25a.pdf	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913446/tlink/samples/sds/file-1767654515932-334711342_f6ygmy.pdf	DOW_3-chloro-2-methylpentane.pdf
+732fabaa-e9e5-422c-96ae-64cf3096353f	Cis-1,3,3-trichloro-1-propene	2025-11-12	TSP-87-040-A	10.26g	93%	t	2953-50-6	t	2024-10-10	2026-10-18	2026-10-18	1992	flammable liquid; toxic; poison if injested	2903.19.6050	3(6.1)	II	352	active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.763659	2026-01-08 15:04:02.258818	'-040':10B '-1':2A,6A '-50':12C '-6':13C '-87':9B '2953':11C '3':3A,4A 'cis':1A 'flammabl':14 'injest':19 'liquid':15 'poison':17 'propen':7A 'toxic':16 'trichloro':5A 'tsp':8B	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913504/tlink/samples/coa/file-1767656537075-760459693_p6jgy5.pdf	cis-1,3,3-trichloro-1-propene_LotTSP-87-040-A_25a.pdf	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913452/tlink/samples/sds/file-1767656537099-216763718_punedi.pdf	DOW_cis-1,3,3-trichloro-1-propene.pdf
+3b826b86-ee8d-4d97-9bbe-e5a5d7885e80	3,3-Dichloro-1-propene	2025-10-21	A2B23-1380495-1	1: 0.91g, 2: 3.91g	82%	f	563-57-5	t	2024-10-10	2027-10-31	2026-10-09	2047	toxic	2903.29.90				active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.730378	2026-01-08 15:04:03.265268	'-1':4A,8B '-1380495':7B '-5':11C '-57':10C '3':1A,2A '563':9C 'a2b23':6B 'dichloro':3A 'propen':5A 'toxic':12	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913504/tlink/samples/coa/file-1767654669037-542106341_as5qvl.pdf	3,3-dichloro-1-propene_LotA2B23-1380495-1_25b-d.pdf	\N	\N
+fc4207ee-c8f0-4ffb-9c81-82a0052bba88	3,3-Dichloro-1-propene	2025-10-21	8979896	1.07g		f	563-57-5	t	\N	\N	2026-10-09	2047	toxic	2903.29.90				active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.726264	2026-01-08 15:04:04.192483	'-1':4A '-5':9C '-57':8C '3':1A,2A '563':7C '8979896':6B 'dichloro':3A 'propen':5A 'toxic':10	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913505/tlink/samples/coa/file-1767654697569-404796796_lz6tet.pdf	3,3-dichloro-1-propene_Lot8979896_25a.pdf	\N	\N
+9b2e660e-eb17-457c-b3cb-5aa550d0fe0c	3,3-Dichloro-1-propene	2025-10-21	XP9-37136-10	1.38g		f	563-57-5	t	2023-03-07	2024-03-28	2026-10-09	2047	toxic	2903.29.90				active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.734442	2026-01-08 15:04:05.489296	'-1':4A '-10':8B '-37136':7B '-5':11C '-57':10C '3':1A,2A '563':9C 'dichloro':3A 'propen':5A 'toxic':12 'xp9':6B	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913507/tlink/samples/coa/file-1767654726339-757346532_gpl1gj.pdf	3,3-dichloro-1-propene_LotXP9-37136-10_25c.pdf	\N	\N
+79af5fe9-0de3-4c63-a810-b6e360ab3c53	Cis and Trans 1,3-Dichloropropene (Telone)	2025-11-12	PR-19615	0.10g	\N	f	202656-23-3	f	\N	\N	\N	2903; 1992	flammable liquid; toxic; poison if injested	2903.29.0000	6.1(3)	II	654	active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.808478	2025-12-17 12:12:10.808478	'-19615':9B '-23':11C '-3':12C '1':4A '202656':10C '3':5A 'cis':1A 'dichloropropen':6A 'flammabl':13 'injest':18 'liquid':14 'poison':16 'pr':8B 'telon':7A 'toxic':15 'tran':3A	\N	\N	\N	\N
+948c2dbc-80ac-4592-bcef-c7d843b04978	Telone Acid (cis/trans-3-chloroacrylic acid)	2025-12-09	E-0436-65	2 x 5g	\N	f	625-40-1	f	\N	\N	2026-11-07	\N	\N	\N	\N	\N	\N	active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.817549	2025-12-17 12:12:10.817549	'-0436':6B '-1':10C '-40':9C '-65':7B '625':8C 'acid':2A,4A 'cis/trans-3-chloroacrylic':3A 'e':5B 'telon':1A	\N	\N	\N	\N
+7548eb21-3de6-41b0-b31a-7b3485c226fe	2-chloro-4-methylpentane	2025-10-31	FS-SYE2400264-12	15g		t	25346-32-1	f	\N	\N	\N	1993	flammable liquid	2903.19.6050	3	II	353	active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.792808	2026-01-08 15:03:42.405804	'-1':11C '-32':10C '-4':3A '12':8B '2':1A '25346':9C 'chloro':2A 'flammabl':12 'fs':6B 'fs-sye2400264':5B 'liquid':13 'methylpentan':4A 'sye2400264':7B	\N	\N	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913483/tlink/samples/sds/file-1767654243281-72725162_gzlu5s.pdf	DOW_2-chloro-4-methylpentane.pdf
+ef507fe8-0ebd-4e2d-ab17-9fe26f894b35	1-chloro-1-methylcyclopentane	2025-11-12	SYN-FS08669-044	86.69g	100%	t	6169-85-6	t	2024-10-10	2027-10-31	2026-10-16	1993	flammable liquid; toxic	2902.19.0000	3	II	Y341	active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.749328	2026-01-08 15:04:07.326994	'-1':3A '-6':11C '-85':10C '044':8B '1':1A '6169':9C 'chloro':2A 'flammabl':12 'fs08669':7B 'liquid':13 'methylcyclopentan':4A 'syn':6B 'syn-fs08669':5B 'toxic':14	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913508/tlink/samples/coa/file-1767650034610-332449686_umcqao.pdf	1-chloro-1-methylcyclopentane_LotSYN-FS08669-044_25a.pdf	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913463/tlink/samples/sds/file-1767650034841-681672312_kcgcw0.pdf	DOW_1-chloro-1-methylcyclopentane.pdf
+27cbff34-f581-4678-99cb-cfb6e896123d	1-chloro-1,5-hexadiene	2025-11-12	SYN-FS09005-089	6.26g	95%	t	69578-08-1	t	2024-10-10	2027-10-31	2026-10-16	1992	flammable liquid; toxic; poison if injested	2903.29.0000	3(6.1)	III	355	active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.714519	2026-01-08 15:04:08.327425	'-08':11C '-1':3A,12C '089':9B '1':1A '5':4A '69578':10C 'chloro':2A 'flammabl':13 'fs09005':8B 'hexadien':5A 'injest':18 'liquid':14 'poison':16 'syn':7B 'syn-fs09005':6B 'toxic':15	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913509/tlink/samples/coa/file-1767650279961-638801854_m6gwgw.pdf	1-chloro-1,5-hexadiene_LotSYN-FS09005-089_25a.pdf	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913466/tlink/samples/sds/file-1767650280261-329869908_n6b8wj.pdf	DOW_2-chloro-1,5-hexadiene.pdf
+24e35af2-4194-4fa2-9bf9-332014569407	1,2,2-trichloropropane	2025-11-12	YC2-106153-90	56.51g	97%	t	3175-23-3	t	2019-06-28	2027-08-07	2027-08-07	1992	flammable liquid; toxic; poison if injested	2903.19.6050	3(6.1)	III	355	active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.757005	2026-01-08 15:04:09.159803	'-106153':6B '-23':9C '-3':10C '-90':7B '1':1A '2':2A,3A '3175':8C 'flammabl':11 'injest':16 'liquid':12 'poison':14 'toxic':13 'trichloropropan':4A 'yc2':5B	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913511/tlink/samples/coa/file-1767650597418-527413164_z4pjtl.pdf	1,2,2-trichloropropane_LotYC2-106153-90_25a.pdf	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913471/tlink/samples/sds/file-1767650597743-898209417_kr6deo.pdf	DOW-1,2,2-trichloropropane.pdf
+338445ac-927c-4b33-b171-6587f8e34508	3-chloroprop-2-en-1-ol	2025-11-12	FS-SYE2400286-30	13.95g		t	29560-84-7	t	2024-05-24	2026-05-24	2026-12-13	1992	flammable liquid; toxic	2905.59.00	3(6.1)	III	355	active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.781753	2026-01-08 15:04:09.776074	'-1':5A '-2':3A '-7':13C '-84':12C '29560':11C '3':1A '30':10B 'chloroprop':2A 'en':4A 'flammabl':14 'fs':8B 'fs-sye2400286':7B 'liquid':15 'ol':6A 'sye2400286':9B 'toxic':16	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913511/tlink/samples/coa/file-1767654559814-329273206_yjceph.pdf	3-chloroprop-2-en-1-ol_LotFS-SYE1200286-30_25a.pdf	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913478/tlink/samples/sds/file-1767654559834-287436161_lwsl2q.pdf	DOW_3-chloroprop-2-en-1-ol.pdf
+f820ef73-e566-4b08-8cff-ecfe5fb2cc39	2-chloro-2-methylpentane	2025-10-23	2C2MP26Mar87	12.86g	100%	t	4325-48-8	t	2020-08-18	2024-08-18	2026-10-09	1993	flammable liquid; toxic	2903.19.90	3	II	353	active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.703461	2026-01-08 15:04:10.511193	'-2':3A '-48':7C '-8':8C '2':1A '2c2mp26mar87':5B '4325':6C 'chloro':2A 'flammabl':9 'liquid':10 'methylpentan':4A 'toxic':11	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913512/tlink/samples/coa/file-1767654110589-937603278_mfcp2x.pdf	2-chloro-2-methylpentane_Lot2C2MP26Mar87_25a.pdf	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913481/tlink/samples/sds/file-1767654110617-443580517_wpqncd.pdf	DOW_2-chloro-2-methylpentane.pdf
+982e37f9-8ab6-41cf-ad25-43c9f4350a83	Cis-1,3-dichloropropene	2025-10-08	HC2116288B	89.90g		f	10061-01-5	t	2018-08-01	2026-08-02	2026-09-01	2047	flammable liquid; toxic; poison if injested	2903.29.0000				active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.801028	2026-01-08 15:04:12.634706	'-01':7C '-1':2A '-5':8C '10061':6C '3':3A 'cis':1A 'dichloropropen':4A 'flammabl':9 'hc2116288b':5B 'injest':14 'liquid':10 'poison':12 'toxic':11	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913513/tlink/samples/coa/file-1767656493602-183408063_dg38xq.pdf	cis-1,3-dichloropropene_LotHC2116288B_25f.pdf	\N	\N
+17859097-20be-467b-b183-eed7c729a111	Cis and Trans 1,3-Dichloropropene (Telone)	2025-10-23	LC03034	36 x 4.5g	98.18%	f	202656-23-3	t	2024-10-10	2027-10-31	2026-09-30	2903; 1992	flammable liquid; toxic; poison if injested	2903.29.0000	6.1(3)	II	654	active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.811476	2026-01-08 15:04:13.42213	'-23':10C '-3':11C '1':4A '202656':9C '3':5A 'cis':1A 'dichloropropen':6A 'flammabl':12 'injest':17 'lc03034':8B 'liquid':13 'poison':15 'telon':7A 'toxic':14 'tran':3A	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913515/tlink/samples/coa/file-1767656565685-631225506_a59asw.pdf	cis+trans-1,3-dichloropropene_LotLC03034_25b-ak.pdf	\N	\N
+711c3e15-68fa-49af-8bfb-1eb773016128	Trans-1,3-dichloropropene	2025-10-08	ZA0-171582-092	38.72g		f	10061-02-6	t	2021-08-17	2023-08-27	2026-09-01	2047	flammable liquid; toxic; poison if injested	2903.29.0000				active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.805578	2026-01-08 15:04:14.070146	'-02':9C '-092':7B '-1':2A '-171582':6B '-6':10C '10061':8C '3':3A 'dichloropropen':4A 'flammabl':11 'injest':16 'liquid':12 'poison':14 'toxic':13 'tran':1A 'za0':5B	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913516/tlink/samples/coa/file-1767656677267-372145292_tqky1x.pdf	trans-1,3-dichloropropene_LotZA0-171582-092_25c.pdf	\N	\N
+a6a3cd08-e283-43eb-9003-e309d56cbcde	4-chloro-4-methylpent-1-ene	2025-10-23	SYN-FS08669-066	87.95g	92%	t	53875-83-5	t	2023-03-07	2025-03-28	2026-10-09	2924	flammable liquid; toxic	2901.29.0000	3	II	353	active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.699162	2026-01-08 15:04:01.631643	'-1':5A '-4':3A '-5':13C '-83':12C '066':10B '4':1A '53875':11C 'chloro':2A 'ene':6A 'flammabl':14 'fs08669':9B 'liquid':15 'methylp':4A 'syn':8B 'syn-fs08669':7B 'toxic':16	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913503/tlink/samples/coa/file-1767656405204-161946490_kknbbv.pdf	4-chloro-4-methylpent-1-ene_LotSYN-FS08669-066_25a.pdf	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913449/tlink/samples/sds/file-1767656405234-584049215_fwov5u.pdf	DOW_4-chloro-4-methyl-1-pentane.pdf
+89054bb6-151d-4c6e-898f-99008883f542	2-chloro-1,5-hexadiene	2025-11-03	V43-038175-28	60g	96%	t	101933-88-4	t	2020-07-09	2028-08-31	2028-08-31	1992	flammable liquid; toxic	2901.29.6000	3(6.1)	III	355	active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.710937	2026-01-08 15:04:15.306504	'-038175':7B '-1':3A '-28':8B '-4':11C '-88':10C '101933':9C '2':1A '5':4A 'chloro':2A 'flammabl':12 'hexadien':5A 'liquid':13 'toxic':14 'v43':6B	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913516/tlink/samples/coa/file-1767650682335-356579419_qs9sda.pdf	2-chloro-1,5-hexadiene_LotV43-038175-28_25a.pdf	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913436/tlink/samples/sds/file-1767650682534-787476096_agy4o2.pdf	DOW_2-chloro-1,5-hexadiene.pdf
+f759739d-1233-495e-8df9-b90a479f11e8	Trans-1,3,3-trichloro-1-propene	2025-11-12	TSP-87-040-B	17.04g	88%	t	2598-01-8	t	2024-10-10	2027-10-31	2026-10-16	1992	toxic liquid	2903.19.6050	3(6.1)	II	352	active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.767174	2026-01-08 15:04:16.259012	'-01':13C '-040':10B '-1':2A,6A '-8':14C '-87':9B '2598':12C '3':3A,4A 'b':11B 'liquid':16 'propen':7A 'toxic':15 'tran':1A 'trichloro':5A 'tsp':8B	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913517/tlink/samples/coa/file-1767656753854-619196918_uvisrl.pdf	trans-1,3,3-trichloro-1-propene_LotTSP-87-040-B_25a.pdf	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913459/tlink/samples/sds/file-1767656753875-465049829_rnpulj.pdf	DOW_trans-1,3,3-trichloro-1-propene.pdf
+fa768507-ef6c-4a64-82de-4512dd95f39a	2-chloro-4-methylpentane	2025-10-31	SYN-FS09225-064	75.34g		t	25346-32-1	t	2016-06-20	2018-08-22	2026-08-31	1993	flammable liquid	2903.19.6050	3	II	353	active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.784722	2026-01-08 15:04:17.069064	'-1':11C '-32':10C '-4':3A '064':8B '2':1A '25346':9C 'chloro':2A 'flammabl':12 'fs09225':7B 'liquid':13 'methylpentan':4A 'syn':6B 'syn-fs09225':5B	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913518/tlink/samples/coa/file-1767654288092-827559_vsbllm.pdf	2-chloro-4-methylpentane_LotSYN-FS09225-064_25a.pdf	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913486/tlink/samples/sds/file-1767654288124-753739217_bactcf.pdf	DOW_2-chloro-4-methylpentane.pdf
+07eb6889-9182-4103-a804-91810b79708a	3-chloro-1-methylcyclopentane	2025-11-12	SYN-FS09225-051 F-1	43.59g	97%	t	142857-44-1	t	2023-03-07	2025-03-28	2026-10-30	1993	flammable liquid	2902.19.0000	3	III	Y344	active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.760766	2026-01-08 15:04:17.85931	'-1':3A,10B,13C '-44':12C '051':8B '142857':11C '3':1A 'chloro':2A 'f':9B 'flammabl':14 'fs09225':7B 'liquid':15 'methylcyclopentan':4A 'syn':6B 'syn-fs09225':5B	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913519/tlink/samples/coa/file-1767654334256-627847001_cho4vm.pdf	3-chloro-1-methylcyclopentane_LotSYN-FS09225-051 F-1_25a.pdf	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913488/tlink/samples/sds/file-1767654334278-922901219_ak5xzg.pdf	DOW_3-chloro-1-methylcyclopentane.pdf
+6c285fe9-5fc8-4c04-9b26-961725b12225	3-chloro-1,5-hexadiene	2025-11-03	SYN-FS09270-030	3.06g	73%	t	28734-86-9	t	2023-03-07	2024-03-28	2026-10-26	1993	flammable liquid; toxic	2901.29.6000	3	III	355	active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.738421	2026-01-08 15:04:18.401914	'-1':3A '-86':11C '-9':12C '030':9B '28734':10C '3':1A '5':4A 'chloro':2A 'flammabl':13 'fs09270':8B 'hexadien':5A 'liquid':14 'syn':7B 'syn-fs09270':6B 'toxic':15	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913520/tlink/samples/coa/file-1767654466182-173475063_gkyxzm.pdf	3-chloro-1,5-hexadiene_LotSYN-FS09270-030_25a.pdf	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913491/tlink/samples/sds/file-1767654466197-701172887_q3bhhv.pdf	DOW_3-chloro-1,5-hexadiene.pdf
+f2851805-6728-4a43-8a23-8906241fc557	5-chloro-1-hexene	2025-11-12	43-037044-86	9.21g	91%	t	927-54-8	t	2024-10-10	2026-10-18	2026-10-23	1993	flammable liquid	2901.29.1010	3	II	Y341	active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.743965	2026-01-08 15:04:19.128662	'-037044':6B '-1':3A '-54':9C '-8':10C '-86':7B '43':5B '5':1A '927':8C 'chloro':2A 'flammabl':11 'hexen':4A 'liquid':12	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913520/tlink/samples/coa/file-1767656454976-941297328_kcp5kr.pdf	5-chloro-1-hexene_Lot43-037044-86_25a.pdf	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913494/tlink/samples/sds/file-1767656455015-868357626_dlsybs.pdf	DOW_5-chloro-1-hexene.pdf
+3b2b8fa6-4eea-4729-9e28-63b59d740dca	Cis and Trans 2-chloro-3(chloromethyl)oxirane	2025-11-12	SYN-FS11130-001	5.59g	89%	t	66826-72-0	t	2023-03-07	2025-03-28	2026-10-30	2922	toxic liquid	2910.10.0000	8(6.1)	III	852	active	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-17 12:12:10.777857	2026-01-08 15:04:19.983957	'-0':15C '-3':6A '-72':14C '001':12B '2':4A '66826':13C 'chloro':5A 'chloromethyl':7A 'cis':1A 'fs11130':11B 'liquid':17 'oxiran':8A 'syn':10B 'syn-fs11130':9B 'toxic':16 'tran':3A	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913521/tlink/samples/coa/file-1767656642674-373156522_i4rydt.pdf	cis+trans-2-chloro-3(chloromethyl)oxirane_LotSYN-FS11130-001_25a.pdf	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913498/tlink/samples/sds/file-1767656642698-972497943_re1t2s.pdf	DOW_cis+trans-2-chloro-3(chloromethyl)oxirane.pdf
+\.
+
+
+--
+-- Data for Name: shipment_chain_of_custody; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.shipment_chain_of_custody (id, shipment_id, event_type, performed_by, event_timestamp, location, notes, signature_path) FROM stdin;
+\.
+
+
+--
+-- Data for Name: shipment_supplies_used; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.shipment_supplies_used (shipment_id, supply_id, quantity_used) FROM stdin;
+\.
+
+
+--
+-- Data for Name: shipments; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.shipments (id, shipment_number, status, sample_id, lot_number, amount_shipped, unit, hazard_id, recipient_name, recipient_company, destination_address, destination_city, destination_state, destination_zip, destination_country, carrier, tracking_number, shipping_label_path, special_instructions, requested_by, prepared_by, shipped_date, estimated_delivery, actual_delivery, created_at, updated_at) FROM stdin;
+\.
+
+
+--
+-- Data for Name: shipping_supplies; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.shipping_supplies (id, un_box_type, inner_packing_type, dot_sp_number, item_number, purchased_from, price_per_unit, count, created_at, updated_at) FROM stdin;
+9a455840-5e74-4a49-83d2-9e1fd35a9981	4GV/X 4.0/S/25	Metal Can	9168	KHMS-66340	LabelMaster	$44.35	20	2026-01-05 16:08:57.136037	2026-01-05 16:08:57.136037
+549c20bf-7d90-42e5-86e3-51e8ba5c5296	4GV/X 2.9/S/23	Plastic Capsulock	21488	UNIPCAPSULOCSP-32-R2	LabelMaster	$29.22	10	2026-01-05 16:08:57.136037	2026-01-05 16:08:57.136037
+72110423-23b3-4a99-9ea4-260a9dc7399c	4GV/X 2.9/S/23	Plastic Capsulock	NA	NA	NA	NA	2	2026-01-05 16:08:57.136037	2026-01-05 16:08:57.136037
+f0f0889d-dae0-4ba3-97c8-b2656cf9949b	4GV/X 8.9/S/25	Cardboard Capsule	NA	NA	NA	NA	5	2026-01-05 16:08:57.136037	2026-01-05 16:08:57.136037
+0da7635b-9b82-4ada-ab8c-987f34f291c7	4GV/X 10/S/25	Cardboard 4 Partition	NA	S-22147	ULINE	$61 for 15	2	2026-01-05 16:08:57.136037	2026-01-05 16:08:57.136037
+5c0ca38d-a7c0-4cb7-838a-feba43a5effd	4GV/X 3.1/S/24	Cardboard	NA	NA	NA	NA	4	2026-01-05 16:08:57.136037	2026-01-05 16:08:57.136037
+\.
+
+
+--
+-- Data for Name: sops; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.sops (id, sop_number, title, description, file_path, file_name, version, effective_date, review_date, status, created_by, created_at, updated_at) FROM stdin;
+17476548-bbe0-473a-a471-8017dd980be8	SOP-LAB-001	Laboratory Safety Procedures	General laboratory safety and emergency procedures	/documents/sops/SOP-LAB-001.pdf	SOP-LAB-001.pdf	3.0	2025-06-16	2027-06-16	active	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-16 14:08:28.173419	2025-12-16 14:08:28.173419
+913131b5-c14a-4cbb-8670-4f4953715eda	SOP-QC-002	Sample Handling and Storage	Procedures for proper sample handling, labeling, and storage	/documents/sops/SOP-QC-002.pdf	SOP-QC-002.pdf	2.5	2025-09-16	2027-09-16	active	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-16 14:08:28.173419	2025-12-16 14:08:28.173419
+\.
+
+
+--
+-- Data for Name: supply_transactions; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.supply_transactions (id, supply_id, transaction_type, quantity_change, quantity_before, quantity_after, performed_by, transaction_date, notes) FROM stdin;
+\.
+
+
+--
+-- Data for Name: test_method_categories; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.test_method_categories (id, category_name, description, created_at) FROM stdin;
+452a6ba5-c30b-4358-9668-938643bd9314	Gas Chromatography	GC and GC-MS methods	2025-12-22 14:55:40.929322
+27fb6056-5a20-4977-9266-79aa60dc4a47	Liquid Chromatography	HPLC, UHPLC, and LC-MS methods	2025-12-22 14:55:40.929322
+dddde8de-dfa3-464a-9167-11fdbcf6dc33	Titration	Volumetric and titration methods	2025-12-22 14:55:40.929322
+0bf52f1e-ced0-4174-bff7-e426f3d240e0	Spectroscopy	UV-Vis, IR, NMR, and other spectroscopic methods	2025-12-22 14:55:40.929322
+f3fbeaf2-2415-4da7-b04a-fd41f1e1f77c	Physical Testing	Physical property measurements	2025-12-22 14:55:40.929322
+8d6b6728-811a-488b-9ac8-bf870e9d6c6d	Wet Chemistry	Classical wet chemistry methods	2025-12-22 14:55:40.929322
+8582c5b8-4b6c-4dae-8337-2be1b364dda6	Sample Preparation	Sample prep and extraction methods	2025-12-22 14:55:40.929322
+758322e8-c3de-430a-914e-9c6829253b84	Quality Control	QC and calibration methods	2025-12-22 14:55:40.929322
+f3fc23a8-952d-44b3-a9f3-a1a458ecd2cb	Other	Miscellaneous test methods	2025-12-22 14:55:40.929322
+\.
+
+
+--
+-- Data for Name: test_method_files; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.test_method_files (id, test_method_id, file_name, file_path, file_type, file_size, file_category, version, uploaded_by, uploaded_at, notes) FROM stdin;
+\.
+
+
+--
+-- Data for Name: test_method_versions; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.test_method_versions (id, test_method_id, version_number, change_type, change_description, legacy_number, official_number, title, status, changed_by, change_date, previous_values, new_values, notes) FROM stdin;
+fd0f41c7-aa2f-4c16-a87a-eb65c6e41868	d85c7e30-6380-4937-b5c5-9a41ca9b7e7e	1.0	initial_import	Initial import from Dow AgroSciences. 	DAS-AM-05-008	\N	1,2-dichloropropane in Telone II and EC	active	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.883068	\N	{"method_type": "GC", "legacy_lab_source": "Dow AgroSciences"}	\N
+1a3c51c0-0bf0-4b97-a868-057e8d9fb91a	6c749acb-a25d-4755-a279-6cf4463ae052	1.0	initial_import	Initial import from Dow AgroSciences. 	DAS-AM-05-009	\N	3-chloro-1,5-hexadiene in Telone	active	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.888648	\N	{"method_type": "GC", "legacy_lab_source": "Dow AgroSciences"}	\N
+54113c5a-750d-43d8-b85b-7acf41fa3c12	cc5f13c3-a12b-4e4e-8346-b8a2d8ff32ec	1.0	initial_import	Initial import from Dow AgroSciences. 	DAS-AM-05-010	\N	Telone Analytical Method 05-010	active	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.892889	\N	{"method_type": "GC", "legacy_lab_source": "Dow AgroSciences"}	\N
+09cd790a-88d9-40b1-b4e1-88b7a12ddd10	fa2def8d-b848-4518-b4e4-4e63e5182183	1.0	initial_import	Initial import from Dow AgroSciences. 	DAS-AM-06-045	\N	cis and trans epoxide in Telone	active	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.896847	\N	{"method_type": "GC", "legacy_lab_source": "Dow AgroSciences"}	\N
+8d06a0e5-f25e-4e55-8731-1cd1d036c747	e2bea6f0-3d2b-471a-be35-ca41b6d5a43b	1.0	initial_import	Initial import from Dow AgroSciences. 	DAS-AM-G-13-48	\N	Telone Impurity Method Validation Report	active	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.899253	\N	{"method_type": "GC", "legacy_lab_source": "Dow AgroSciences"}	\N
+1da24ab5-271c-42d8-8e3a-b13f323025e2	2c9ba54a-7a29-4cf9-8207-469cd8d1ca2f	1.0	initial_import	Initial import from Dow AgroSciences. 	DAS-AM-G-14-50	\N	Telone Impurity Method Extension	active	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.901036	\N	{"method_type": "GC", "legacy_lab_source": "Dow AgroSciences"}	\N
+dc749bac-859b-4b07-bf58-7e450c38e381	bebc326c-ded5-436a-9f1b-431e9780353e	1.0	initial_import	Initial import from Dow AgroSciences. 	DAS-AM-G-15-28	\N	1,3-D assay validation	active	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.90396	\N	{"method_type": "GC", "legacy_lab_source": "Dow AgroSciences"}	\N
+5f8e2138-5bb9-4eb4-816c-545caa07dcf3	f5c59808-0a61-448a-ab88-8a63ee22212c	1.0	initial_import	Initial import from Dow AgroSciences. 	DAS-PM-00-012	\N	Karl Fischer Water Determination	active	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.907182	\N	{"method_type": "Karl Fischer", "legacy_lab_source": "Dow AgroSciences"}	\N
+b46b607b-4a17-4659-80b5-6f0568c1b1ca	aa433caa-bb13-48a2-955a-0853a64875d5	1.0	initial_import	Initial import from Unknown Lab. 	NA-AM-98-081.00	\N	Analytical Method 98-081	active	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.91003	\N	{"method_type": "GC", "legacy_lab_source": "Unknown Lab"}	\N
+504e3377-654e-4e7f-b0cf-21f998d3faf7	22cb06cf-47ee-4839-b6e7-47181b9af9cf	1.0	initial_import	Initial import from TriCal. 	TC-AM-85-12	\N	TriCal Method 85-12	active	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.913522	\N	{"method_type": "GC", "legacy_lab_source": "TriCal"}	\N
+24dc385c-07ae-4c99-bc68-a5843c42dd1c	8bdfa42a-eaf6-4659-b575-bd4130a5ead7	1.0	initial_import	Initial import from TriCal. 	TC-AM-85-21	\N	TriCal Method 85-21	active	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.915315	\N	{"method_type": "GC", "legacy_lab_source": "TriCal"}	\N
+938acdcc-4ab7-488c-bca3-4e9878454fb3	d111f3ca-1288-452e-9c8b-ddeb028ccaac	1.0	initial_import	Initial import from Unknown Lab. 	100106	\N	Method 100106	active	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.917609	\N	{"method_type": "Unknown", "legacy_lab_source": "Unknown Lab"}	\N
+bfcc1ddd-6a9c-4a15-ac10-23e4446b60c6	41d2d564-21cb-44da-9e8d-7c85e4de8e44	1.0	initial_import	Initial import from Unknown Lab. 	100368-CI88B	\N	Method 100368-CI88B	active	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.920048	\N	{"method_type": "Unknown", "legacy_lab_source": "Unknown Lab"}	\N
+542cf4b3-fa13-4d16-ab84-3e95f9f985a1	3c03fd33-53a5-475c-ab87-53f541dbe194	1.0	initial_import	Initial import from Unknown Lab. 	100718-LE90A	\N	Method 100718-LE90A	active	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.922244	\N	{"method_type": "Unknown", "legacy_lab_source": "Unknown Lab"}	\N
+dd1c0b4b-f10e-4460-98be-1d51ce4c7f79	5549afbd-a09a-4377-9e5e-50014720e3bd	1.0	initial_import	Initial import from Unknown Lab. 	102977-E24A	\N	Method 102977-E24A	active	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.92393	\N	{"method_type": "Unknown", "legacy_lab_source": "Unknown Lab"}	\N
+2297839d-036e-404a-8fb3-594526f7c4aa	fc7d4871-0617-46a7-8c34-8036617ce31a	1.0	initial_import	Initial import from Unknown Lab. 	102989-E25A	\N	Method 102989-E25A	active	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.928188	\N	{"method_type": "Unknown", "legacy_lab_source": "Unknown Lab"}	\N
+ba21b180-977d-4631-ae13-7373f82aca37	4c136e21-5017-4c24-adea-4f2a98a154f7	1.0	initial_import	Initial import from Unknown Lab. 	102990-E25A	\N	Method 102990-E25A	active	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.932163	\N	{"method_type": "Unknown", "legacy_lab_source": "Unknown Lab"}	\N
+3e821d20-8036-49d8-b2a6-fc20ba39ea20	873e65ad-618c-4baa-a7db-cd46aab3a505	1.0	initial_import	Initial import from Telios. 	TEL-001-E25A	\N	Telios Method E25A	active	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.934336	\N	{"method_type": "Unknown", "legacy_lab_source": "Telios"}	\N
+\.
+
+
+--
+-- Data for Name: test_methods; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.test_methods (id, legacy_number, legacy_lab_source, original_title, official_number, official_title, category_id, method_type, status, verification_status, verified_by, verified_date, verification_notes, purpose, scope, principle, equipment_required, reagents_required, procedure, calculations, acceptance_criteria, method_references, current_version, version_notes, supersedes_method_id, superseded_by_method_id, effective_date, review_date, next_review_date, created_by, created_at, updated_at, sample_matrix, analyte, test_purpose, file_path, file_name) FROM stdin;
+873e65ad-618c-4baa-a7db-cd46aab3a505	TEL-001-E25A	Telios	Epoxidized Soybean Oil in 1,3-Dichloropropene by Infrared Spectroscopy	\N	\N	f3fc23a8-952d-44b3-a9f3-a1a458ecd2cb	FTIR	active	pending_review	\N	\N	\N	Analytical Method	Telios legacy method	\N	TBD	TBD	See method document	\N	TBD	\N	1.0	\N	\N	\N	2025-04-30	\N	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.933069	2025-12-30 10:37:15.549416	\N	\N	\N	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913358/tlink/test-methods/file-1767119835577-983870964_xnhcuf.pdf	TEL-001-E25A.pdf
+5549afbd-a09a-4377-9e5e-50014720e3bd	102977-E24A	Unknown Lab	1,2-Dichloropropane in 1,3-Dichloropropene by Gas Chromatography	\N	\N	f3fc23a8-952d-44b3-a9f3-a1a458ecd2cb	GC	active	pending_review	\N	\N	\N	Analytical Method	Legacy method - details TBD	\N	TBD	TBD	See method document	\N	TBD	\N	1.0	\N	\N	\N	2024-12-10	\N	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.923088	2025-12-31 09:25:55.721148	\N	\N	\N	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913359/tlink/test-methods/file-1767201955869-186075105_hvipal.pdf	102977-E24A.pdf
+4c136e21-5017-4c24-adea-4f2a98a154f7	102990-E25A	Unknown Lab	Cis- and Trans-1,3-Dichloropropene in 1,3-Dichloropropene by Gas Chromatography	\N	\N	f3fc23a8-952d-44b3-a9f3-a1a458ecd2cb	GC	active	pending_review	\N	\N	\N	Analytical Method	Legacy method - details TBD	\N	TBD	TBD	See method document	\N	TBD	\N	1.0	\N	\N	\N	2025-04-23	\N	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.930903	2025-12-31 09:23:37.261201	\N	\N	\N	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913360/tlink/test-methods/file-1767201817327-62600573_ztqj5h.pdf	102990-E25A.pdf
+bebc326c-ded5-436a-9f1b-431e9780353e	DAS-AM-G-15-28	Dow AgroSciences	Analytical Method and Validation for the Determination of Active Ingredient in 1,3-Dichloropropene Technical Grade Active Ingredient	\N	\N	452a6ba5-c30b-4358-9668-938643bd9314	GC	active	verified	\N	\N	\N	Assay Validation	Validation of 1,3-dichloropropene assay method	\N	Gas Chromatograph	1,3-D standards	Validation protocol	\N	Per validation acceptance	\N	1.0	\N	\N	\N	2015-11-20	\N	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.902455	2025-12-31 09:41:04.726416	\N	\N	\N	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913399/tlink/test-methods/file-1767202864751-927060152_ft9v83.pdf	DAS-AM-G-15-28.pdf
+fc7d4871-0617-46a7-8c34-8036617ce31a	102989-E25A	Unknown Lab	Impurities in 1,3-Dichloropropene by Gas Chromatography	\N	\N	f3fc23a8-952d-44b3-a9f3-a1a458ecd2cb	GC	active	pending_review	\N	\N	\N	Analytical Method	Legacy method - details TBD	\N	TBD	TBD	See method document	\N	TBD	\N	1.0	\N	\N	\N	2025-04-22	\N	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.925071	2025-12-31 09:24:33.094345	\N	\N	\N	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913401/tlink/test-methods/file-1767201873416-131720482_dloedr.pdf	102989-E25A.pdf
+3c03fd33-53a5-475c-ab87-53f541dbe194	100718-LE90A	Unknown Lab	Low Percent Levels of Inert Gases in Chlorine	\N	\N	f3fc23a8-952d-44b3-a9f3-a1a458ecd2cb	GC	active	pending_review	\N	\N	\N	Analytical Method	Legacy method - details TBD	\N	TBD	TBD	See method document	\N	TBD	\N	1.0	\N	\N	\N	1990-03-12	\N	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.921426	2025-12-31 09:27:12.214825	\N	\N	\N	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913402/tlink/test-methods/file-1767202032357-841367465_wkazkm.pdf	100718-LE90A.pdf
+8bdfa42a-eaf6-4659-b575-bd4130a5ead7	TC-AM-85-21	TriCal	Free Acid in Allyl Chloride and Similar Halogenated Organic Compounds	\N	\N	452a6ba5-c30b-4358-9668-938643bd9314	Titration	active	pending_review	\N	\N	\N	Analytical Method	TriCal legacy method 85-21	\N	Gas Chromatograph	Standards	See method document	\N	TBD	\N	1.0	\N	\N	\N	2019-07-10	\N	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.914485	2025-12-31 09:39:19.504792	\N	\N	\N	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913403/tlink/test-methods/file-1767202399876-784857340_rhxuyw.pdf	TC-AM-85-21.pdf
+d111f3ca-1288-452e-9c8b-ddeb028ccaac	100106	Unknown Lab	Trace Impurities in Liquid Chlorine by Infrared Spectroscopy	\N	\N	f3fc23a8-952d-44b3-a9f3-a1a458ecd2cb	FTIR	active	pending_review	\N	\N	\N	Analytical Method	Legacy method - details TBD	\N	TBD	TBD	See method document	\N	TBD	\N	1.0	\N	\N	\N	1986-09-14	\N	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.916382	2025-12-31 09:30:15.573754	\N	\N	\N	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913403/tlink/test-methods/file-1767202215698-114628859_mkcldp.pdf	100106.pdf
+22cb06cf-47ee-4839-b6e7-47181b9af9cf	TC-AM-85-12	TriCal	Epoxidized Soybean Oil in TELONE* II Soil Fumigant	\N	\N	452a6ba5-c30b-4358-9668-938643bd9314	GC	active	pending_review	\N	\N	\N	Analytical Method	TriCal legacy method 85-12	\N	Gas Chromatograph	Standards	See method document	\N	TBD	\N	1.0	\N	\N	\N	2019-06-26	\N	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.912178	2025-12-31 09:34:32.704403	\N	\N	\N	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913411/tlink/test-methods/file-1767202472713-4516462_vc4hwg.pdf	TC-AM-85-12.pdf
+f5c59808-0a61-448a-ab88-8a63ee22212c	DAS-PM-00-012	Dow AgroSciences	DETERMINATION OF WATER CONTENT BY KARL FISCHER	\N	\N	f3fc23a8-952d-44b3-a9f3-a1a458ecd2cb	Titration	active	verified	\N	\N	\N	Physical Property	Determination of water content in Telone products	\N	Karl Fischer Titrator	Karl Fischer reagent	Titration procedure	\N	< 0.2% water	\N	1.0	\N	\N	\N	2016-12-05	\N	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.905773	2025-12-31 09:39:02.094992	\N	\N	\N	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913412/tlink/test-methods/file-1767202742215-295876246_pvqaxa.pdf	DAS-PM-00-012.pdf
+2c9ba54a-7a29-4cf9-8207-469cd8d1ca2f	DAS-AM-G-14-50	Dow AgroSciences	Analytical Method and Validation for the Determination of Impurities in 1,3-Dichloropropene Technical Grade Material – Method NA-AM-98-081.00 Extension	\N	\N	452a6ba5-c30b-4358-9668-938643bd9314	GC	active	verified	\N	\N	\N	Method Extension	Extension of validated impurity method	\N	Gas Chromatograph	Various standards	Extension protocol	\N	Per validation criteria	\N	1.0	\N	\N	\N	2015-07-06	\N	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.900214	2025-12-31 09:43:17.275288	\N	\N	\N	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913413/tlink/test-methods/file-1767202997393-64367260_navagn.pdf	DAS-AM-G-14-50 Report_Telone Impurity Method Extension.pdf
+e2bea6f0-3d2b-471a-be35-ca41b6d5a43b	DAS-AM-G-13-48	Dow AgroSciences	Analytical Method and Validation for the Determination of Impurities in Telone II Technical Grade Material – Method NA-AM-98-081.00 Extension	\N	\N	452a6ba5-c30b-4358-9668-938643bd9314	GC	active	verified	\N	\N	\N	Method Validation	Validation report for Telone impurity methods	\N	Gas Chromatograph	Various standards	Validation protocol	\N	Per validation criteria	\N	1.0	\N	\N	\N	2014-06-05	\N	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.898205	2025-12-31 09:44:28.892109	\N	\N	\N	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913417/tlink/test-methods/file-1767203068925-433032462_gymshu.pdf	DAS-AM-G-13-48 Report .pdf
+41d2d564-21cb-44da-9e8d-7c85e4de8e44	100368-CI88B	Unknown Lab	TELONE II Soil Fumigant	\N	\N	f3fc23a8-952d-44b3-a9f3-a1a458ecd2cb	GC	active	pending_review	\N	\N	\N	Analytical Method	Legacy method - details TBD	\N	TBD	TBD	See method document	\N	TBD	\N	1.0	\N	\N	\N	2016-06-28	\N	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.919142	2025-12-31 09:29:06.024873	\N	\N	\N	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913357/tlink/test-methods/file-1767202146134-271574466_swgom8.pdf	100368-CI88B-full.pdf
+fa2def8d-b848-4518-b4e4-4e63e5182183	DAS-AM-06-045	Dow AgroSciences	Analytical Method and Validation for the Determination of Epoxide Impurities in Telone II Technical; Method NAAM- 98-081 Extension	\N	\N	452a6ba5-c30b-4358-9668-938643bd9314	GC	active	pending_review	\N	\N	\N	Impurity Analysis	Determination of epoxide isomers	\N	Gas Chromatograph with FID detector	Standards, solvents	See method document	\N	Per specification limits	\N	1.0	\N	\N	\N	2008-12-08	\N	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.894899	2025-12-31 09:46:22.903035	\N	\N	\N	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913418/tlink/test-methods/file-1767203182920-76532415_cdppup.pdf	DAS-AM-06-045 (cis and trans epoxide in Telone).pdf
+aa433caa-bb13-48a2-955a-0853a64875d5	NA-AM-98-081.00	Unknown Lab	Analytical Method and Validation for the Determination of Process Impurities in Telone• II by Gas Chromatography	\N	\N	452a6ba5-c30b-4358-9668-938643bd9314	GC	active	pending_review	\N	\N	\N	Analytical Method	Legacy analytical method	\N	Gas Chromatograph	Standards	See method document	\N	TBD	\N	1.0	\N	\N	\N	1999-09-27	\N	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.908179	2025-12-31 09:37:21.966122	\N	\N	\N	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913410/tlink/test-methods/file-1767202641985-572735352_igvybj.pdf	NA-AM-98-081.00.pdf
+6c749acb-a25d-4755-a279-6cf4463ae052	DAS-AM-05-009	Dow AgroSciences	ANALYTICAL METHOD AND VALIDATlON FOR THE DETERMINATION OF PROCESS IMPURITIES IN TELONE II TECHNICAL	\N	\N	452a6ba5-c30b-4358-9668-938643bd9314	GC	active	pending_review	\N	\N	\N	Impurity Analysis	Determination of 3-chloro-1,5-hexadiene impurity	\N	Gas Chromatograph with FID detector	Internal standard, solvents	See method document	\N	Per specification limits	\N	1.0	\N	\N	\N	2005-11-04	\N	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.887221	2025-12-31 09:49:45.314618	\N	\N	\N	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913420/tlink/test-methods/file-1767203385461-323528743_zjaqqe.pdf	DAS-AM-05-009 (3-chloro-1,5-hexadiene in Telone).pdf
+cc5f13c3-a12b-4e4e-8346-b8a2d8ff32ec	DAS-AM-05-010	Dow AgroSciences	ANALYTICAL METHOD AND VALIDATION FOR THE DETERMINATION OF HEXADIENE IMPURITY IN TELONE II TECHNICAL	\N	\N	452a6ba5-c30b-4358-9668-938643bd9314	GC	active	pending_review	\N	\N	\N	Quality Control	General analytical testing for Telone products	\N	Gas Chromatograph	Standards and solvents	See method document	\N	Per specification	\N	1.0	\N	\N	\N	2005-11-07	\N	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.890918	2025-12-31 09:47:38.365872	\N	\N	\N	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913424/tlink/test-methods/file-1767203258381-550460570_sa1p9n.pdf	DAS-AM-05-010 .pdf
+d85c7e30-6380-4937-b5c5-9a41ca9b7e7e	DAS-AM-05-008	Dow AgroSciences	ANALYTICAL METHOD AND VALIDATION FOR THE DETERMINATION OF 1,2-DICHLOROPROPANE IN TELONE II AND TELONE EC FORMULATIONS	\N	\N	452a6ba5-c30b-4358-9668-938643bd9314	GC	active	pending_review	\N	\N	\N	Impurity Analysis	Determination of 1,2-dichloropropane impurity levels	\N	Gas Chromatograph with FID detector	Internal standard, solvents	See method document	\N	Per specification limits	\N	1.0	\N	\N	\N	2005-07-13	\N	\N	3a68bc14-22a9-464a-8423-9964d87b067d	2025-12-22 15:57:48.874913	2025-12-31 09:54:02.047715	\N	\N	\N	https://res.cloudinary.com/di7yyu1mx/image/upload/v1767913426/tlink/test-methods/file-1767203642192-811860451_fyzw3a.pdf	DAS-AM-05-008 (1,2-dichloropropane in Telone II and EC).pdf
+\.
+
+
+--
+-- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.users (id, username, email, password_hash, first_name, last_name, role, is_active, last_login, created_at, updated_at, email_verified, failed_login_attempts, locked_until) FROM stdin;
+18052907-cca0-4e02-96bb-5c11ee1c44f4	lab_user	lab@telios.com	$2a$10$6xeSXDn4EYlJvbe/zrZugOtY1JMGgnjv26AsTrBTXV93.Sz95wZFq	Lab	Staff	lab_staff	t	\N	2025-12-16 14:08:28.173419	2025-12-16 14:08:28.173419	f	0	\N
+eefe2c37-7e5c-4fa4-abc4-8f7d74af06ee	logistics_user	logistics@telios.com	$2a$10$6xeSXDn4EYlJvbe/zrZugOtY1JMGgnjv26AsTrBTXV93.Sz95wZFq	Logistics	Staff	logistics	t	\N	2025-12-16 14:08:28.173419	2025-12-16 14:08:28.173419	f	0	\N
+3a68bc14-22a9-464a-8423-9964d87b067d	admin	admin@telios.com	$2a$10$6xeSXDn4EYlJvbe/zrZugOtY1JMGgnjv26AsTrBTXV93.Sz95wZFq	System	Administrator	admin	t	2026-01-05 14:57:34.914669	2025-12-16 14:08:28.173419	2026-01-05 14:57:34.914669	f	0	\N
+56d755e5-0c32-426c-88bb-fcfba03a095a	jhunzie@ajwalabs.com	jhunzie@ajwalabs.com	$2a$10$skzheWp0h6JtoWpsZ.8ftu25TwpCWCdp/UZ2YW38bEN2O1BgJwVGG	Jonathan	Hunzie	admin	t	2026-01-08 14:27:44.102	2026-01-08 10:02:02.476141	2026-01-08 14:27:44.102	t	0	\N
+777de2b6-81d8-4a89-93d6-22b71db7b6e0	rxuan	rxuan@ajwalabs.com	.8ftu25TwpCWCdp/UZ2YW38bEN2O1BgJwVGG	R	Xuan	admin	t	\N	2026-01-12 16:01:21.358372	2026-01-12 16:01:21.358372	f	0	\N
+\.
+
+
+--
+-- Name: authorized_emails_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.authorized_emails_id_seq', 13, true);
+
+
+--
+-- Name: authorized_emails authorized_emails_email_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.authorized_emails
+    ADD CONSTRAINT authorized_emails_email_key UNIQUE (email);
+
+
+--
+-- Name: authorized_emails authorized_emails_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.authorized_emails
+    ADD CONSTRAINT authorized_emails_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: certificates_of_analysis certificates_of_analysis_lot_number_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.certificates_of_analysis
+    ADD CONSTRAINT certificates_of_analysis_lot_number_key UNIQUE (lot_number);
+
+
+--
+-- Name: certificates_of_analysis certificates_of_analysis_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.certificates_of_analysis
+    ADD CONSTRAINT certificates_of_analysis_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: chemical_hazards chemical_hazards_hazard_class_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chemical_hazards
+    ADD CONSTRAINT chemical_hazards_hazard_class_key UNIQUE (hazard_class);
+
+
+--
+-- Name: chemical_hazards chemical_hazards_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.chemical_hazards
+    ADD CONSTRAINT chemical_hazards_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: coa_expiration_notifications coa_expiration_notifications_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.coa_expiration_notifications
+    ADD CONSTRAINT coa_expiration_notifications_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: document_audit_log document_audit_log_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.document_audit_log
+    ADD CONSTRAINT document_audit_log_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: freezer_shelves freezer_shelves_freezer_id_shelf_number_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.freezer_shelves
+    ADD CONSTRAINT freezer_shelves_freezer_id_shelf_number_key UNIQUE (freezer_id, shelf_number);
+
+
+--
+-- Name: freezer_shelves freezer_shelves_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.freezer_shelves
+    ADD CONSTRAINT freezer_shelves_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: freezers freezers_freezer_name_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.freezers
+    ADD CONSTRAINT freezers_freezer_name_key UNIQUE (freezer_name);
+
+
+--
+-- Name: freezers freezers_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.freezers
+    ADD CONSTRAINT freezers_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: inventory_alerts inventory_alerts_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.inventory_alerts
+    ADD CONSTRAINT inventory_alerts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: manufacturer_companies manufacturer_companies_company_name_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.manufacturer_companies
+    ADD CONSTRAINT manufacturer_companies_company_name_key UNIQUE (company_name);
+
+
+--
+-- Name: manufacturer_companies manufacturer_companies_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.manufacturer_companies
+    ADD CONSTRAINT manufacturer_companies_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: manufacturer_users manufacturer_users_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.manufacturer_users
+    ADD CONSTRAINT manufacturer_users_pkey PRIMARY KEY (user_id, company_id);
+
+
+--
+-- Name: notifications notifications_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.notifications
+    ADD CONSTRAINT notifications_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: sample_transactions sample_transactions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.sample_transactions
+    ADD CONSTRAINT sample_transactions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: samples samples_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.samples
+    ADD CONSTRAINT samples_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: shipment_chain_of_custody shipment_chain_of_custody_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.shipment_chain_of_custody
+    ADD CONSTRAINT shipment_chain_of_custody_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: shipment_supplies_used shipment_supplies_used_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.shipment_supplies_used
+    ADD CONSTRAINT shipment_supplies_used_pkey PRIMARY KEY (shipment_id, supply_id);
+
+
+--
+-- Name: shipments shipments_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.shipments
+    ADD CONSTRAINT shipments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: shipments shipments_shipment_number_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.shipments
+    ADD CONSTRAINT shipments_shipment_number_key UNIQUE (shipment_number);
+
+
+--
+-- Name: shipping_supplies shipping_supplies_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.shipping_supplies
+    ADD CONSTRAINT shipping_supplies_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: sops sops_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.sops
+    ADD CONSTRAINT sops_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: sops sops_sop_number_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.sops
+    ADD CONSTRAINT sops_sop_number_key UNIQUE (sop_number);
+
+
+--
+-- Name: supply_transactions supply_transactions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.supply_transactions
+    ADD CONSTRAINT supply_transactions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: test_method_categories test_method_categories_category_name_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.test_method_categories
+    ADD CONSTRAINT test_method_categories_category_name_key UNIQUE (category_name);
+
+
+--
+-- Name: test_method_categories test_method_categories_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.test_method_categories
+    ADD CONSTRAINT test_method_categories_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: test_method_files test_method_files_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.test_method_files
+    ADD CONSTRAINT test_method_files_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: test_method_versions test_method_versions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.test_method_versions
+    ADD CONSTRAINT test_method_versions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: test_methods test_methods_official_number_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.test_methods
+    ADD CONSTRAINT test_methods_official_number_key UNIQUE (official_number);
+
+
+--
+-- Name: test_methods test_methods_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.test_methods
+    ADD CONSTRAINT test_methods_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: users users_email_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_email_key UNIQUE (email);
+
+
+--
+-- Name: users users_email_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_email_unique UNIQUE (email);
+
+
+--
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: users users_username_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_username_key UNIQUE (username);
+
+
+--
+-- Name: idx_audit_created; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_audit_created ON public.document_audit_log USING btree (created_at);
+
+
+--
+-- Name: idx_audit_document; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_audit_document ON public.document_audit_log USING btree (document_type, document_id);
+
+
+--
+-- Name: idx_audit_user; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_audit_user ON public.document_audit_log USING btree (performed_by);
+
+
+--
+-- Name: idx_authorized_emails_email; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_authorized_emails_email ON public.authorized_emails USING btree (email);
+
+
+--
+-- Name: idx_coa_exp_date; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_coa_exp_date ON public.certificates_of_analysis USING btree (expiration_date);
+
+
+--
+-- Name: idx_coa_lot; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_coa_lot ON public.certificates_of_analysis USING btree (lot_number);
+
+
+--
+-- Name: idx_coa_manufacturer; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_coa_manufacturer ON public.certificates_of_analysis USING btree (manufacturer_id);
+
+
+--
+-- Name: idx_coa_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_coa_status ON public.certificates_of_analysis USING btree (status);
+
+
+--
+-- Name: idx_notifications_read; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_notifications_read ON public.notifications USING btree (is_read);
+
+
+--
+-- Name: idx_notifications_type; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_notifications_type ON public.notifications USING btree (notification_type);
+
+
+--
+-- Name: idx_notifications_user; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_notifications_user ON public.notifications USING btree (recipient_user_id);
+
+
+--
+-- Name: idx_sample_transactions_date; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_sample_transactions_date ON public.sample_transactions USING btree (transaction_date DESC);
+
+
+--
+-- Name: idx_sample_transactions_sample_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_sample_transactions_sample_id ON public.sample_transactions USING btree (sample_id);
+
+
+--
+-- Name: idx_samples_cas_number; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_samples_cas_number ON public.samples USING btree (cas_number);
+
+
+--
+-- Name: idx_samples_chemical_name; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_samples_chemical_name ON public.samples USING btree (chemical_name);
+
+
+--
+-- Name: idx_samples_coa_file; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_samples_coa_file ON public.samples USING btree (coa_file_path) WHERE (coa_file_path IS NOT NULL);
+
+
+--
+-- Name: idx_samples_expiration_date; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_samples_expiration_date ON public.samples USING btree (expiration_date);
+
+
+--
+-- Name: idx_samples_lot_number; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_samples_lot_number ON public.samples USING btree (lot_number);
+
+
+--
+-- Name: idx_samples_sds_file; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_samples_sds_file ON public.samples USING btree (sds_file_path) WHERE (sds_file_path IS NOT NULL);
+
+
+--
+-- Name: idx_samples_search_vector; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_samples_search_vector ON public.samples USING gin (search_vector);
+
+
+--
+-- Name: idx_samples_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_samples_status ON public.samples USING btree (status);
+
+
+--
+-- Name: idx_samples_un_number; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_samples_un_number ON public.samples USING btree (un_number);
+
+
+--
+-- Name: idx_shipments_date; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_shipments_date ON public.shipments USING btree (shipped_date);
+
+
+--
+-- Name: idx_shipments_number; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_shipments_number ON public.shipments USING btree (shipment_number);
+
+
+--
+-- Name: idx_shipments_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_shipments_status ON public.shipments USING btree (status);
+
+
+--
+-- Name: idx_shipments_tracking; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_shipments_tracking ON public.shipments USING btree (tracking_number);
+
+
+--
+-- Name: idx_test_methods_analyte; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_test_methods_analyte ON public.test_methods USING btree (analyte);
+
+
+--
+-- Name: idx_test_methods_matrix; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_test_methods_matrix ON public.test_methods USING btree (sample_matrix);
+
+
+--
+-- Name: idx_users_active; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_users_active ON public.users USING btree (is_active);
+
+
+--
+-- Name: idx_users_email; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_users_email ON public.users USING btree (email);
+
+
+--
+-- Name: idx_users_role; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_users_role ON public.users USING btree (role);
+
+
+--
+-- Name: samples samples_search_update; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER samples_search_update BEFORE INSERT OR UPDATE ON public.samples FOR EACH ROW EXECUTE FUNCTION public.samples_search_trigger();
+
+
+--
+-- Name: certificates_of_analysis update_coa_status_trigger; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER update_coa_status_trigger BEFORE INSERT OR UPDATE ON public.certificates_of_analysis FOR EACH ROW EXECUTE FUNCTION public.update_coa_status();
+
+
+--
+-- Name: certificates_of_analysis update_coa_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER update_coa_updated_at BEFORE UPDATE ON public.certificates_of_analysis FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
+-- Name: freezers update_freezers_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER update_freezers_updated_at BEFORE UPDATE ON public.freezers FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
+-- Name: manufacturer_companies update_manufacturer_companies_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER update_manufacturer_companies_updated_at BEFORE UPDATE ON public.manufacturer_companies FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
+-- Name: samples update_samples_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER update_samples_updated_at BEFORE UPDATE ON public.samples FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
+-- Name: shipments update_shipments_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER update_shipments_updated_at BEFORE UPDATE ON public.shipments FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
+-- Name: sops update_sops_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER update_sops_updated_at BEFORE UPDATE ON public.sops FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
+-- Name: users update_users_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
+-- Name: authorized_emails authorized_emails_added_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.authorized_emails
+    ADD CONSTRAINT authorized_emails_added_by_fkey FOREIGN KEY (added_by) REFERENCES public.users(id);
+
+
+--
+-- Name: certificates_of_analysis certificates_of_analysis_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.certificates_of_analysis
+    ADD CONSTRAINT certificates_of_analysis_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id);
+
+
+--
+-- Name: certificates_of_analysis certificates_of_analysis_manufacturer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.certificates_of_analysis
+    ADD CONSTRAINT certificates_of_analysis_manufacturer_id_fkey FOREIGN KEY (manufacturer_id) REFERENCES public.manufacturer_companies(id);
+
+
+--
+-- Name: coa_expiration_notifications coa_expiration_notifications_coa_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.coa_expiration_notifications
+    ADD CONSTRAINT coa_expiration_notifications_coa_id_fkey FOREIGN KEY (coa_id) REFERENCES public.certificates_of_analysis(id) ON DELETE CASCADE;
+
+
+--
+-- Name: document_audit_log document_audit_log_performed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.document_audit_log
+    ADD CONSTRAINT document_audit_log_performed_by_fkey FOREIGN KEY (performed_by) REFERENCES public.users(id);
+
+
+--
+-- Name: freezer_shelves freezer_shelves_freezer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.freezer_shelves
+    ADD CONSTRAINT freezer_shelves_freezer_id_fkey FOREIGN KEY (freezer_id) REFERENCES public.freezers(id) ON DELETE CASCADE;
+
+
+--
+-- Name: inventory_alerts inventory_alerts_resolved_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.inventory_alerts
+    ADD CONSTRAINT inventory_alerts_resolved_by_fkey FOREIGN KEY (resolved_by) REFERENCES public.users(id);
+
+
+--
+-- Name: manufacturer_users manufacturer_users_company_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.manufacturer_users
+    ADD CONSTRAINT manufacturer_users_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.manufacturer_companies(id) ON DELETE CASCADE;
+
+
+--
+-- Name: manufacturer_users manufacturer_users_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.manufacturer_users
+    ADD CONSTRAINT manufacturer_users_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: notifications notifications_recipient_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.notifications
+    ADD CONSTRAINT notifications_recipient_user_id_fkey FOREIGN KEY (recipient_user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: sample_transactions sample_transactions_performed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.sample_transactions
+    ADD CONSTRAINT sample_transactions_performed_by_fkey FOREIGN KEY (performed_by) REFERENCES public.users(id);
+
+
+--
+-- Name: sample_transactions sample_transactions_sample_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.sample_transactions
+    ADD CONSTRAINT sample_transactions_sample_id_fkey FOREIGN KEY (sample_id) REFERENCES public.samples(id) ON DELETE CASCADE;
+
+
+--
+-- Name: samples samples_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.samples
+    ADD CONSTRAINT samples_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id);
+
+
+--
+-- Name: shipment_chain_of_custody shipment_chain_of_custody_performed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.shipment_chain_of_custody
+    ADD CONSTRAINT shipment_chain_of_custody_performed_by_fkey FOREIGN KEY (performed_by) REFERENCES public.users(id);
+
+
+--
+-- Name: shipment_chain_of_custody shipment_chain_of_custody_shipment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.shipment_chain_of_custody
+    ADD CONSTRAINT shipment_chain_of_custody_shipment_id_fkey FOREIGN KEY (shipment_id) REFERENCES public.shipments(id) ON DELETE CASCADE;
+
+
+--
+-- Name: shipment_supplies_used shipment_supplies_used_shipment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.shipment_supplies_used
+    ADD CONSTRAINT shipment_supplies_used_shipment_id_fkey FOREIGN KEY (shipment_id) REFERENCES public.shipments(id) ON DELETE CASCADE;
+
+
+--
+-- Name: shipments shipments_hazard_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.shipments
+    ADD CONSTRAINT shipments_hazard_id_fkey FOREIGN KEY (hazard_id) REFERENCES public.chemical_hazards(id);
+
+
+--
+-- Name: shipments shipments_prepared_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.shipments
+    ADD CONSTRAINT shipments_prepared_by_fkey FOREIGN KEY (prepared_by) REFERENCES public.users(id);
+
+
+--
+-- Name: shipments shipments_requested_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.shipments
+    ADD CONSTRAINT shipments_requested_by_fkey FOREIGN KEY (requested_by) REFERENCES public.users(id);
+
+
+--
+-- Name: sops sops_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.sops
+    ADD CONSTRAINT sops_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id);
+
+
+--
+-- Name: supply_transactions supply_transactions_performed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.supply_transactions
+    ADD CONSTRAINT supply_transactions_performed_by_fkey FOREIGN KEY (performed_by) REFERENCES public.users(id);
+
+
+--
+-- PostgreSQL database dump complete
+--
+
+\unrestrict 0rc0reOvweVR2kNQo6a84JF3ensVdr4a1ugOow05osawaA5Fzbiyc7oy2gpCyvz
+

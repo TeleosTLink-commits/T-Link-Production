@@ -14,6 +14,9 @@ import inventoryRoutes from './routes/inventory';
 import sampleInventoryRoutes from './routes/sampleInventory';
 import shipmentsRoutes from './routes/shipments';
 import manufacturerRoutes from './routes/manufacturer';
+import manufacturerAuthRoutes from './routes/manufacturerAuth';
+import manufacturerPortalRoutes from './routes/manufacturerPortal';
+import processingShipmentsRoutes from './routes/processingShipments';
 
 dotenv.config();
 
@@ -55,12 +58,15 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/auth/manufacturer', manufacturerAuthRoutes);
 app.use('/api/test-methods', testMethodsRoutes);
 // CoA routes removed — functionality handled via sample-inventory
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/sample-inventory', sampleInventoryRoutes);
 app.use('/api/shipments', shipmentsRoutes);
-app.use('/api/manufacturer', manufacturerRoutes);
+app.use('/api/manufacturer', manufacturerPortalRoutes);
+app.use('/api/processing', processingShipmentsRoutes);
+app.use('/api/manufacturer-admin', manufacturerRoutes);
 
 // 404 handler
 app.use((req, res) => {
