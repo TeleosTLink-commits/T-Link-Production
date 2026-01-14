@@ -16,19 +16,23 @@ const pool = new Pool({
 });
 
 // Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = 'C:\\T_Link\\storage\\sample-inventory';
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  },
-});
+// Use memory storage in production (Render) to avoid Windows path issues,
+// and disk storage locally for development.
+const storage = process.env.NODE_ENV === 'production'
+  ? multer.memoryStorage()
+  : multer.diskStorage({
+      destination: (req, file, cb) => {
+        const uploadDir = 'C\\T_Link\\storage\\sample-inventory';
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+      },
+    });
 
 const upload = multer({
   storage,
@@ -338,26 +342,22 @@ router.post('/:id/coa/upload', authenticate, upload.single('file'), async (req: 
     if (!file) {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
-
-    let filePath = file.path;
     const fileName = file.originalname;
+    let filePath: string | null = null;
 
-    // In production, upload to Cloudinary instead of using local disk
     if (process.env.NODE_ENV === 'production') {
-      const { uploadToCloudinary } = require('../utils/cloudinary');
+      const { uploadBufferToCloudinary } = require('../utils/cloudinary');
       try {
-        filePath = await uploadToCloudinary(file.path, 'sample-inventory/coa');
+        filePath = await uploadBufferToCloudinary(file.buffer, fileName, 'sample-inventory/coa');
         if (!filePath) {
           return res.status(500).json({ success: false, message: 'Failed to upload CoA to cloud' });
         }
-        // Delete the temporary file after uploading to Cloudinary
-        fs.unlink(file.path, (err) => {
-          if (err) console.error('Error deleting temp file:', err);
-        });
       } catch (cloudError: any) {
         console.error('Cloudinary upload error:', cloudError);
         return res.status(500).json({ success: false, message: 'Failed to upload to cloud storage', error: cloudError.message });
       }
+    } else {
+      filePath = (file as any).path;
     }
 
     await pool.query(
@@ -381,26 +381,22 @@ router.post('/:id/sds/upload', authenticate, upload.single('file'), async (req: 
     if (!file) {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
-
-    let filePath = file.path;
     const fileName = file.originalname;
+    let filePath: string | null = null;
 
-    // In production, upload to Cloudinary instead of using local disk
     if (process.env.NODE_ENV === 'production') {
-      const { uploadToCloudinary } = require('../utils/cloudinary');
+      const { uploadBufferToCloudinary } = require('../utils/cloudinary');
       try {
-        filePath = await uploadToCloudinary(file.path, 'sample-inventory/sds');
+        filePath = await uploadBufferToCloudinary(file.buffer, fileName, 'sample-inventory/sds');
         if (!filePath) {
           return res.status(500).json({ success: false, message: 'Failed to upload SDS to cloud' });
         }
-        // Delete the temporary file after uploading to Cloudinary
-        fs.unlink(file.path, (err) => {
-          if (err) console.error('Error deleting temp file:', err);
-        });
       } catch (cloudError: any) {
         console.error('Cloudinary upload error:', cloudError);
         return res.status(500).json({ success: false, message: 'Failed to upload to cloud storage', error: cloudError.message });
       }
+    } else {
+      filePath = (file as any).path;
     }
 
     await pool.query(

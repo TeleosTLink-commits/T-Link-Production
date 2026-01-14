@@ -24,6 +24,36 @@ export async function uploadToCloudinary(filePath: string, folder: string): Prom
   }
 }
 
+/**
+ * Upload a file buffer to Cloudinary (used in production where local disk paths are not available)
+ */
+export async function uploadBufferToCloudinary(buffer: Buffer, originalFilename: string, folder: string): Promise<string | null> {
+  try {
+    const baseName = originalFilename.replace(/\.[^/.]+$/, '');
+    const result: any = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: `tlink/${folder}`,
+          resource_type: 'auto',
+          use_filename: true,
+          unique_filename: true,
+          public_id: baseName,
+          access_control: [{ access_type: 'public' }]
+        },
+        (error, result) => {
+          if (error) return reject(error);
+          resolve(result);
+        }
+      );
+      stream.end(buffer);
+    });
+    return result.secure_url as string;
+  } catch (error: any) {
+    console.error(`Error uploading buffer to Cloudinary:`, error.message);
+    return null;
+  }
+}
+
 export async function deleteFromCloudinary(publicId: string): Promise<boolean> {
   try {
     await cloudinary.uploader.destroy(publicId);
