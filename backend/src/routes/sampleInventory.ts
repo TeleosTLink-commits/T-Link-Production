@@ -36,11 +36,15 @@ const storage = process.env.NODE_ENV === 'production'
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB limit
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /pdf|doc|docx/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    if (extname) {
+    const allowedExt = /\.(pdf|doc|docx)$/i.test(path.extname(file.originalname));
+    const allowedMime = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ].includes(file.mimetype);
+    if (allowedExt || allowedMime) {
       cb(null, true);
     } else {
       cb(new Error('Only PDF and DOC files are allowed'));
@@ -342,6 +346,18 @@ router.post('/:id/coa/upload', authenticate, upload.single('file'), async (req: 
     if (!file) {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
+    console.log('CoA upload request:', {
+      id,
+      name: file.originalname,
+      size: (file as any).size,
+      mimetype: file.mimetype,
+      envCloudinary: {
+        cloud: !!process.env.CLOUDINARY_CLOUD_NAME,
+        key: !!process.env.CLOUDINARY_API_KEY,
+        secret: !!process.env.CLOUDINARY_API_SECRET
+      },
+      nodeEnv: process.env.NODE_ENV
+    });
     const fileName = file.originalname;
     let filePath: string | null = null;
 
@@ -368,7 +384,7 @@ router.post('/:id/coa/upload', authenticate, upload.single('file'), async (req: 
     res.json({ success: true, message: 'CoA uploaded successfully', data: { filePath, fileName } });
   } catch (error: any) {
     console.error('Error uploading CoA:', error);
-    res.status(500).json({ success: false, message: 'Failed to upload CoA', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to upload CoA', error: error.message || String(error) });
   }
 });
 
@@ -381,6 +397,18 @@ router.post('/:id/sds/upload', authenticate, upload.single('file'), async (req: 
     if (!file) {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
+    console.log('SDS upload request:', {
+      id,
+      name: file.originalname,
+      size: (file as any).size,
+      mimetype: file.mimetype,
+      envCloudinary: {
+        cloud: !!process.env.CLOUDINARY_CLOUD_NAME,
+        key: !!process.env.CLOUDINARY_API_KEY,
+        secret: !!process.env.CLOUDINARY_API_SECRET
+      },
+      nodeEnv: process.env.NODE_ENV
+    });
     const fileName = file.originalname;
     let filePath: string | null = null;
 
@@ -407,7 +435,7 @@ router.post('/:id/sds/upload', authenticate, upload.single('file'), async (req: 
     res.json({ success: true, message: 'SDS uploaded successfully', data: { filePath, fileName } });
   } catch (error: any) {
     console.error('Error uploading SDS:', error);
-    res.status(500).json({ success: false, message: 'Failed to upload SDS', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to upload SDS', error: error.message || String(error) });
   }
 });
 
