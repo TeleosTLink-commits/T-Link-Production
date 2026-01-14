@@ -41,13 +41,13 @@ const ManufacturerDashboard: React.FC = () => {
       icon: '💬',
       title: 'Tech Support',
       description: 'Get technical assistance',
-      link: '/manufacturer/tech-support',
+      link: '/manufacturer/support?type=tech',
     },
     {
       icon: '🧪',
       title: 'Lab Support',
       description: 'Questions about samples and shipments',
-      link: '/manufacturer/lab-support',
+      link: '/manufacturer/support?type=lab',
     },
   ];
 

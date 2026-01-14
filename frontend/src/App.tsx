@@ -10,6 +10,18 @@ import Shipments from './pages/Shipments';
 import ManufacturerPortal from './pages/ManufacturerPortal';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+// Manufacturer portal components
+import ManufacturerSignUp from './pages/manufacturer/ManufacturerSignUp';
+import ManufacturerDashboard from './pages/manufacturer/ManufacturerDashboard';
+import CoALookup from './pages/manufacturer/CoALookup';
+import InventorySearch from './pages/manufacturer/InventorySearch';
+import ShipmentRequest from './pages/manufacturer/ShipmentRequest';
+import MyShipments from './pages/manufacturer/MyShipments';
+import SupportForms from './pages/manufacturer/SupportForms';
+// Internal lab staff components
+import ProcessingDashboard from './pages/internal/ProcessingDashboard';
+import SupplyInventory from './pages/internal/SupplyInventory';
+import HazmatWarning from './pages/internal/HazmatWarning';
 
 function App() {
   const token = localStorage.getItem('auth_token');
@@ -20,7 +32,10 @@ function App() {
       <Routes>
         <Route path="/login" element={!token ? <Login /> : <Navigate to="/dashboard" />} />
         <Route path="/register" element={!token ? <Register /> : <Navigate to="/dashboard" />} />
-
+        
+        {/* Manufacturer Portal Routes */}
+        <Route path="/manufacturer/signup" element={!token ? <ManufacturerSignUp /> : <Navigate to="/manufacturer/dashboard" />} />
+        
         <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Navigate to="/dashboard" />} />
           <Route path="dashboard" element={<Dashboard />} />
@@ -28,6 +43,19 @@ function App() {
           <Route path="inventory" element={<SampleInventory />} />
           <Route path="shipments" element={<Shipments />} />
           <Route path="manufacturer" element={<ManufacturerPortal />} />
+          
+          {/* Manufacturer Portal Pages */}
+          <Route path="manufacturer/dashboard" element={<ManufacturerDashboard />} />
+          <Route path="manufacturer/coa-lookup" element={<CoALookup />} />
+          <Route path="manufacturer/inventory-search" element={<InventorySearch />} />
+          <Route path="manufacturer/shipment-request" element={<ShipmentRequest />} />
+          <Route path="manufacturer/my-shipments" element={<MyShipments />} />
+          <Route path="manufacturer/support" element={<SupportForms />} />
+          
+          {/* Internal Lab Staff Pages */}
+          <Route path="internal/processing-dashboard" element={<ProcessingDashboard />} />
+          <Route path="internal/supplies" element={<SupplyInventory />} />
+          <Route path="internal/hazmat-processing" element={<HazmatWarning />} />
         </Route>
 
         <Route path="*" element={<Navigate to={token ? '/dashboard' : '/login'} />} />
