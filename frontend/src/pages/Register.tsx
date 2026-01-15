@@ -87,6 +87,17 @@ const Register: React.FC = () => {
   return (
     <div className="login-container">
       <div className="login-box" style={{ maxWidth: '500px' }}>
+        <div className="collab-band">
+          <div className="collab-title">A partnership between</div>
+          <div className="collab-logos">
+            <img src="/images/teleos-logo.png" alt="Teleos AG Solutions" className="collab-logo" />
+            <span className="collab-separator">×</span>
+            <div className="collab-subblock">
+              <span className="collab-subtext">Built & maintained by</span>
+              <img src="/images/ajwa-logo.png" alt="AJWA Analytical Laboratories" className="collab-logo small" />
+            </div>
+          </div>
+        </div>
         <div className="login-header">
           <h1>T-Link</h1>
           <p>Create Your Account</p>

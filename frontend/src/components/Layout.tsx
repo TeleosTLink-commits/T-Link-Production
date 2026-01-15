@@ -63,6 +63,10 @@ const Layout = () => {
               <div className="user-role">{effectiveUser?.role}</div>
             </div>
           </div>
+          <div className="operator-brand">
+            <span className="operator-label">Operated by</span>
+            <img src="/images/ajwa-logo.png" alt="AJWA Analytical Laboratories" className="operator-logo" />
+          </div>
           <button onClick={handleLogout} className="logout-btn">
             <FaSignOutAlt /> Logout
           </button>
