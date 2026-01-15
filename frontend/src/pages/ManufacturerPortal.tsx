@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './ManufacturerPortal.css';
 import { useAuthStore } from '../store/authStore';
+import api from '../services/api';
 
 interface SearchResult {
   found: boolean;
@@ -14,6 +15,22 @@ interface SearchResult {
     pdfPath?: string;
   };
   message: string;
+}
+
+interface Shipment {
+  id: string;
+  shipment_number: string;
+  lot_number: string;
+  quantity: number;
+  unit: string;
+  status: 'initiated' | 'processing' | 'shipped' | 'delivered';
+  created_at: string;
+  scheduled_ship_date?: string;
+  tracking_number?: string;
+  carrier?: string;
+  is_hazmat: boolean;
+  shipped_date?: string;
+  estimated_delivery?: string;
 }
 
 const ManufacturerPortal: React.FC = () => {
@@ -32,28 +49,65 @@ const ManufacturerPortal: React.FC = () => {
   // Inventory Search
   const [inventorySearch, setInventorySearch] = useState({ sampleName: '', lotNumber: '' });
 
+  // Shipment state
+  const [shipments, setShipments] = useState<Shipment[]>([]);
+  const [shipmentsLoading, setShipmentsLoading] = useState(false);
+
+  // Fetch shipments when shipment modal opens
+  useEffect(() => {
+    if (activeModal === 'shipment') {
+      fetchShipments();
+    }
+  }, [activeModal]);
+
+  const fetchShipments = async () => {
+    setShipmentsLoading(true);
+    try {
+      const response = await api.get('/manufacturer/shipments/my-requests');
+      setShipments(response.data.shipments || []);
+    } catch (error: any) {
+      console.error('Error fetching shipments:', error);
+      setShipments([]);
+    } finally {
+      setShipmentsLoading(false);
+    }
+  };
+
   const handleCoaSearch = async () => {
+    if (!coaSearch.lotNumber.trim()) {
+      setSearchResult({
+        found: false,
+        type: 'coa',
+        message: 'Please enter a lot number.'
+      });
+      return;
+    }
+
     setSearchLoading(true);
     try {
-      // TODO: Replace with actual API call
-      // const response = await api.post('/manufacturer/coa/search', coaSearch);
+      const response = await api.get('/manufacturer/coa/search', {
+        params: { lot_number: coaSearch.lotNumber }
+      });
+      
+      const sample = response.data.sample;
       setSearchResult({
         found: true,
         type: 'coa',
         message: 'COA Found',
         data: {
-          name: coaSearch.sampleName || 'Sample COA',
-          lotNumber: coaSearch.lotNumber || 'LOT-001',
-          createdDate: '2026-01-15',
-          expirationDate: '2027-01-15',
-          pdfPath: '/pdfs/sample-coa.pdf'
+          name: sample.name || 'Sample',
+          lotNumber: sample.lot_number || coaSearch.lotNumber,
+          createdDate: sample.created_at ? new Date(sample.created_at).toLocaleDateString() : 'N/A',
+          expirationDate: sample.expiration_date ? new Date(sample.expiration_date).toLocaleDateString() : 'N/A',
+          pdfPath: sample.file_path
         }
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('CoA search error:', error);
       setSearchResult({
         found: false,
         type: 'coa',
-        message: 'COA not found. Please verify the sample name and lot number.'
+        message: error.response?.data?.error || 'COA not found. Please verify the lot number.'
       });
     } finally {
       setSearchLoading(false);
@@ -61,25 +115,46 @@ const ManufacturerPortal: React.FC = () => {
   };
 
   const handleInventorySearch = async () => {
-    setSearchLoading(true);
-    try {
-      // TODO: Replace with actual API call
-      // const response = await api.post('/manufacturer/inventory/search', inventorySearch);
-      setSearchResult({
-        found: true,
-        type: 'inventory',
-        message: 'Inventory Found',
-        data: {
-          name: inventorySearch.sampleName || 'Sample',
-          lotNumber: inventorySearch.lotNumber || 'LOT-001',
-          quantity: 250
-        }
-      });
-    } catch (error) {
+    if (!inventorySearch.sampleName.trim()) {
       setSearchResult({
         found: false,
         type: 'inventory',
-        message: 'Inventory record not found.'
+        message: 'Please enter a sample name.'
+      });
+      return;
+    }
+
+    setSearchLoading(true);
+    try {
+      const response = await api.get('/manufacturer/inventory/search', {
+        params: { sample_name: inventorySearch.sampleName }
+      });
+      
+      if (response.data.samples && response.data.samples.length > 0) {
+        const sample = response.data.samples[0];
+        setSearchResult({
+          found: true,
+          type: 'inventory',
+          message: 'Inventory Found',
+          data: {
+            name: sample.name,
+            lotNumber: sample.lot_number,
+            quantity: sample.available_quantity
+          }
+        });
+      } else {
+        setSearchResult({
+          found: false,
+          type: 'inventory',
+          message: 'No inventory records found for this sample.'
+        });
+      }
+    } catch (error: any) {
+      console.error('Inventory search error:', error);
+      setSearchResult({
+        found: false,
+        type: 'inventory',
+        message: error.response?.data?.error || 'Inventory record not found.'
       });
     } finally {
       setSearchLoading(false);
@@ -315,10 +390,72 @@ const ManufacturerPortal: React.FC = () => {
               <button className="close-btn" onClick={() => setActiveModal(null)}>✕</button>
             </div>
             <div className="modal-content">
-              <p style={{ textAlign: 'center', color: '#666', padding: '40px' }}>
-                Shipment dashboard loading...
-              </p>
-              {/* TODO: Insert shipment dashboard component here */}
+              {shipmentsLoading ? (
+                <p style={{ textAlign: 'center', color: '#666', padding: '40px' }}>
+                  Loading shipments...
+                </p>
+              ) : shipments.length === 0 ? (
+                <p style={{ textAlign: 'center', color: '#999', padding: '40px' }}>
+                  No shipments found.
+                </p>
+              ) : (
+                <div className="shipments-list">
+                  {shipments.map((shipment) => (
+                    <div key={shipment.id} className="shipment-card">
+                      <div className="shipment-header">
+                        <div>
+                          <div className="shipment-lot">Lot: {shipment.lot_number}</div>
+                          <div className="shipment-date">Requested: {new Date(shipment.created_at).toLocaleDateString()}</div>
+                        </div>
+                        <div className={`shipment-status status-${shipment.status}`}>
+                          {shipment.status.charAt(0).toUpperCase() + shipment.status.slice(1)}
+                        </div>
+                      </div>
+                      <div className="shipment-details">
+                        <div className="detail-item">
+                          <span className="label">Quantity:</span>
+                          <span className="value">{shipment.quantity} {shipment.unit}</span>
+                        </div>
+                        {shipment.tracking_number && (
+                          <div className="detail-item">
+                            <span className="label">Tracking Number:</span>
+                            <span className="value">{shipment.tracking_number}</span>
+                          </div>
+                        )}
+                        {shipment.carrier && (
+                          <div className="detail-item">
+                            <span className="label">Carrier:</span>
+                            <span className="value">{shipment.carrier}</span>
+                          </div>
+                        )}
+                        {shipment.scheduled_ship_date && (
+                          <div className="detail-item">
+                            <span className="label">Scheduled Ship Date:</span>
+                            <span className="value">{new Date(shipment.scheduled_ship_date).toLocaleDateString()}</span>
+                          </div>
+                        )}
+                        {shipment.estimated_delivery && (
+                          <div className="detail-item">
+                            <span className="label">Estimated Delivery:</span>
+                            <span className="value">{new Date(shipment.estimated_delivery).toLocaleDateString()}</span>
+                          </div>
+                        )}
+                        {shipment.is_hazmat && (
+                          <div className="detail-item hazmat">
+                            <span className="label">⚠️ Hazmat Materials</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="modal-actions">
+                <button className="btn-cancel" onClick={() => setActiveModal(null)}>
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
