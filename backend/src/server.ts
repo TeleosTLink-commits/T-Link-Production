@@ -18,6 +18,7 @@ import manufacturerAuthRoutes from './routes/manufacturerAuth';
 import manufacturerPortalRoutes from './routes/manufacturerPortal';
 import processingShipmentsRoutes from './routes/processingShipments';
 import fedexRoutes from './routes/fedex';
+import adminRoutes from './routes/admin';
 
 dotenv.config();
 
@@ -69,6 +70,7 @@ app.use('/api/manufacturer', manufacturerPortalRoutes);
 app.use('/api/processing', processingShipmentsRoutes);
 app.use('/api/fedex', fedexRoutes);
 app.use('/api/manufacturer-admin', manufacturerRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 404 handler
 app.use((req, res) => {

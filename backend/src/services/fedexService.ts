@@ -95,6 +95,21 @@ class FedExService {
    * Validate a delivery address using FedEx Address Validation API
    */
   async validateAddress(address: AddressValidationInput): Promise<AddressValidationResult> {
+    // If FedEx credentials are not configured, return mock validation
+    if (!FEDEX_API_KEY || !FEDEX_SECRET_KEY) {
+      console.warn('FedEx API credentials not configured. Using mock validation.');
+      return {
+        valid: true,
+        correctedAddress: {
+          street: address.street,
+          city: address.city,
+          state: address.stateOrProvinceCode,
+          zip: address.postalCode,
+          country: address.countryCode || 'US',
+        },
+      };
+    }
+
     try {
       const token = await this.getAuthToken();
 
@@ -166,6 +181,21 @@ class FedExService {
    * Generate shipment label and get shipping cost
    */
   async generateShipmentLabel(request: ShipmentLabelRequest): Promise<ShipmentLabelResult> {
+    // If FedEx credentials are not configured, return mock label
+    if (!FEDEX_API_KEY || !FEDEX_SECRET_KEY) {
+      console.warn('FedEx API credentials not configured. Using mock label.');
+      const mockTrackingNumber = `MOCK${Date.now().toString().slice(-10)}`;
+      const mockCost = request.weight * (request.service === 'OVERNIGHT_EXPRESS' ? 45 : 12);
+      const mockDelivery = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
+      
+      return {
+        trackingNumber: mockTrackingNumber,
+        label: 'MOCK_LABEL_BASE64', // In production, this would be actual PDF data
+        cost: mockCost,
+        estimatedDelivery: mockDelivery,
+      };
+    }
+
     try {
       const token = await this.getAuthToken();
 
@@ -357,6 +387,13 @@ class FedExService {
    * Get shipping rate quote without creating a shipment
    */
   async getShippingRate(request: ShipmentLabelRequest): Promise<{ rate: number; error?: string }> {
+    // If FedEx credentials are not configured, return mock rate
+    if (!FEDEX_API_KEY || !FEDEX_SECRET_KEY) {
+      console.warn('FedEx API credentials not configured. Using mock rate.');
+      const mockRate = request.weight * (request.service === 'OVERNIGHT_EXPRESS' ? 45 : 12);
+      return { rate: mockRate };
+    }
+
     try {
       const token = await this.getAuthToken();
 

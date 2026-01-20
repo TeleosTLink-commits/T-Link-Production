@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './ManufacturerPortal.css';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
@@ -34,14 +35,16 @@ interface Shipment {
 }
 
 const ManufacturerPortal: React.FC = () => {
-  const { user } = useAuthStore();
+  const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
   const storedUserStr = localStorage.getItem('user');
   const storedUser = storedUserStr ? JSON.parse(storedUserStr) : null;
   const effectiveUser = user || storedUser;
 
-  const [activeModal, setActiveModal] = useState<'coa' | 'inventory' | 'shipment' | null>(null);
+  const [activeModal, setActiveModal] = useState<'coa' | 'inventory' | 'shipment' | 'request-shipment' | 'contact' | null>(null);
   const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   // COA Search
   const [coaSearch, setCoaSearch] = useState({ sampleName: '', lotNumber: '' });
@@ -52,6 +55,27 @@ const ManufacturerPortal: React.FC = () => {
   // Shipment state
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [shipmentsLoading, setShipmentsLoading] = useState(false);
+
+  // Shipment Request Form
+  const [shipmentRequest, setShipmentRequest] = useState({
+    firstName: '',
+    lastName: '',
+    deliveryAddress: '',
+    sampleName: '',
+    lotNumber: '',
+    quantityRequested: '',
+    quantityUnit: 'ml',
+    scheduledShipDate: ''
+  });
+  const [requestLoading, setRequestLoading] = useState(false);
+  const [requestResult, setRequestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleLogout = () => {
+    logout();
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user');
+    navigate('/login');
+  };
 
   // Fetch shipments when shipment modal opens
   useEffect(() => {
@@ -97,8 +121,8 @@ const ManufacturerPortal: React.FC = () => {
         data: {
           name: sample.name || 'Sample',
           lotNumber: sample.lot_number || coaSearch.lotNumber,
-          createdDate: sample.created_at ? new Date(sample.created_at).toLocaleDateString() : 'N/A',
-          expirationDate: sample.expiration_date ? new Date(sample.expiration_date).toLocaleDateString() : 'N/A',
+          createdDate: sample.certification_date ? new Date(sample.certification_date).toLocaleDateString() : 'Not extracted',
+          expirationDate: sample.expiration_date ? new Date(sample.expiration_date).toLocaleDateString() : 'Not extracted',
           pdfPath: sample.file_path
         }
       });
@@ -161,6 +185,56 @@ const ManufacturerPortal: React.FC = () => {
     }
   };
 
+  const handleShipmentRequest = async () => {
+    if (!shipmentRequest.firstName || !shipmentRequest.lastName || !shipmentRequest.deliveryAddress || 
+        !shipmentRequest.sampleName || !shipmentRequest.lotNumber || !shipmentRequest.quantityRequested) {
+      setRequestResult({
+        success: false,
+        message: 'Please fill in all required fields.'
+      });
+      return;
+    }
+
+    setRequestLoading(true);
+    try {
+      const response = await api.post('/manufacturer/shipments/request', {
+        first_name: shipmentRequest.firstName,
+        last_name: shipmentRequest.lastName,
+        delivery_address: shipmentRequest.deliveryAddress,
+        sample_name: shipmentRequest.sampleName,
+        lot_number: shipmentRequest.lotNumber,
+        quantity_requested: parseFloat(shipmentRequest.quantityRequested),
+        quantity_unit: shipmentRequest.quantityUnit,
+        scheduled_ship_date: shipmentRequest.scheduledShipDate || null
+      });
+
+      setRequestResult({
+        success: true,
+        message: `Shipment request created successfully! Shipment #${response.data.shipment.shipment_number}`
+      });
+
+      // Reset form
+      setShipmentRequest({
+        firstName: '',
+        lastName: '',
+        deliveryAddress: '',
+        sampleName: '',
+        lotNumber: '',
+        quantityRequested: '',
+        quantityUnit: 'ml',
+        scheduledShipDate: ''
+      });
+    } catch (error: any) {
+      console.error('Shipment request error:', error);
+      setRequestResult({
+        success: false,
+        message: error.response?.data?.error || 'Failed to create shipment request. Please try again.'
+      });
+    } finally {
+      setRequestLoading(false);
+    }
+  };
+
   return (
     <div className="manufacturer-portal">
       {/* Header */}
@@ -169,44 +243,38 @@ const ManufacturerPortal: React.FC = () => {
           <img src="/images/tlink-official-logo.png" alt="T-Link" className="logo" />
           <div className="header-text">
             <h1>Manufacturer Access Portal</h1>
-            <p className="subtitle">Dedicated access for Teleos AG Solutions affiliates to documentation, shipments, and CoAs.</p>
           </div>
         </div>
         <div className="header-right">
-          <div className="user-badge">
-            <div className="user-icon">👤</div>
-            <div className="user-details">
-              <div className="user-email">{effectiveUser?.email}</div>
-              <div className="user-role">{effectiveUser?.role}</div>
-            </div>
+          <button className="contact-btn" onClick={() => setActiveModal('contact')}>
+            💬 Contact Support
+          </button>
+          <div className="user-badge-container">
+            <button 
+              className="user-badge" 
+              onClick={() => setShowUserMenu(!showUserMenu)}
+            >
+              <div className="user-icon">👤</div>
+              <div className="user-details">
+                <div className="user-email">{effectiveUser?.email}</div>
+                <div className="user-role">{effectiveUser?.role}</div>
+              </div>
+              <span className="dropdown-icon">▼</span>
+            </button>
+            {showUserMenu && (
+              <div className="user-menu">
+                <button onClick={handleLogout} className="menu-item logout">
+                  Sign Out
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="portal-content">
-        <div className="actions-container">
-          <h2>Quick Actions</h2>
-          <div className="actions-grid">
-            <button className="action-btn coa-btn" onClick={() => setActiveModal('coa')}>
-              <span className="btn-icon">📄</span>
-              <span className="btn-label">Fetch Certificate of Analysis</span>
-              <span className="btn-desc">Search and download CoAs</span>
-            </button>
-
-            <button className="action-btn inventory-btn" onClick={() => setActiveModal('inventory')}>
-              <span className="btn-icon">📦</span>
-              <span className="btn-label">Sample Inventory Quantity</span>
-              <span className="btn-desc">Check stock availability</span>
-            </button>
-
-            <button className="action-btn shipment-btn" onClick={() => setActiveModal('shipment')}>
-              <span className="btn-icon">🚚</span>
-              <span className="btn-label">Shipments</span>
-              <span className="btn-desc">View orders & tracking</span>
-            </button>
-          </div>
-        </div>
+        {/* ...other content... */}
       </div>
 
       {/* COA Search Modal */}
@@ -226,7 +294,7 @@ const ManufacturerPortal: React.FC = () => {
                     type="text"
                     value={coaSearch.sampleName}
                     onChange={(e) => setCoaSearch({ ...coaSearch, sampleName: e.target.value })}
-                    placeholder="e.g., API Sample 001"
+                    placeholder="e.g., 1,2,2-trichloropropane"
                   />
                 </div>
 
@@ -236,7 +304,7 @@ const ManufacturerPortal: React.FC = () => {
                     type="text"
                     value={coaSearch.lotNumber}
                     onChange={(e) => setCoaSearch({ ...coaSearch, lotNumber: e.target.value })}
-                    placeholder="e.g., LOT-2026-001"
+                    placeholder="e.g., YC2-106153-90"
                   />
                 </div>
 
@@ -262,7 +330,7 @@ const ManufacturerPortal: React.FC = () => {
                         <span className="value">{searchResult.data?.lotNumber}</span>
                       </div>
                       <div className="detail-row">
-                        <span className="label">Date of Creation:</span>
+                        <span className="label">Created Date:</span>
                         <span className="value">{searchResult.data?.createdDate}</span>
                       </div>
                       <div className="detail-row">
@@ -319,7 +387,7 @@ const ManufacturerPortal: React.FC = () => {
                     type="text"
                     value={inventorySearch.sampleName}
                     onChange={(e) => setInventorySearch({ ...inventorySearch, sampleName: e.target.value })}
-                    placeholder="e.g., API Sample 001"
+                    placeholder="e.g., 1,2,2-trichloropropane"
                   />
                 </div>
 
@@ -329,7 +397,7 @@ const ManufacturerPortal: React.FC = () => {
                     type="text"
                     value={inventorySearch.lotNumber}
                     onChange={(e) => setInventorySearch({ ...inventorySearch, lotNumber: e.target.value })}
-                    placeholder="e.g., LOT-2026-001"
+                    placeholder="e.g., YC2-106153-90"
                   />
                 </div>
 
@@ -375,6 +443,138 @@ const ManufacturerPortal: React.FC = () => {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Request Shipment Modal */}
+      {activeModal === 'request-shipment' && (
+        <div className="modal-overlay" onClick={() => setActiveModal(null)}>
+          <div className="modal large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Request Shipment</h3>
+              <button className="close-btn" onClick={() => setActiveModal(null)}>✕</button>
+            </div>
+
+            {!requestResult ? (
+              <div className="modal-content">
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>First Name *</label>
+                    <input
+                      type="text"
+                      value={shipmentRequest.firstName}
+                      onChange={(e) => setShipmentRequest({ ...shipmentRequest, firstName: e.target.value })}
+                      placeholder="Enter first name"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Last Name *</label>
+                    <input
+                      type="text"
+                      value={shipmentRequest.lastName}
+                      onChange={(e) => setShipmentRequest({ ...shipmentRequest, lastName: e.target.value })}
+                      placeholder="Enter last name"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Delivery Address *</label>
+                  <textarea
+                    value={shipmentRequest.deliveryAddress}
+                    onChange={(e) => setShipmentRequest({ ...shipmentRequest, deliveryAddress: e.target.value })}
+                    placeholder="Enter full delivery address"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Sample Name *</label>
+                    <input
+                      type="text"
+                      value={shipmentRequest.sampleName}
+                      onChange={(e) => setShipmentRequest({ ...shipmentRequest, sampleName: e.target.value })}
+                      placeholder="e.g., 1,2,2-trichloropropane"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Lot Number *</label>
+                    <input
+                      type="text"
+                      value={shipmentRequest.lotNumber}
+                      onChange={(e) => setShipmentRequest({ ...shipmentRequest, lotNumber: e.target.value })}
+                      placeholder="e.g., YC2-106153-90"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Quantity Requested *</label>
+                    <input
+                      type="number"
+                      value={shipmentRequest.quantityRequested}
+                      onChange={(e) => setShipmentRequest({ ...shipmentRequest, quantityRequested: e.target.value })}
+                      placeholder="Enter quantity"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Unit</label>
+                    <select
+                      value={shipmentRequest.quantityUnit}
+                      onChange={(e) => setShipmentRequest({ ...shipmentRequest, quantityUnit: e.target.value })}
+                    >
+                      <option value="ml">mL</option>
+                      <option value="L">L</option>
+                      <option value="g">g</option>
+                      <option value="kg">kg</option>
+                      <option value="mg">mg</option>
+                      <option value="units">units</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Scheduled Ship Date (Optional)</label>
+                  <input
+                    type="date"
+                    value={shipmentRequest.scheduledShipDate}
+                    onChange={(e) => setShipmentRequest({ ...shipmentRequest, scheduledShipDate: e.target.value })}
+                  />
+                </div>
+
+                <div className="modal-actions">
+                  <button className="btn-cancel" onClick={() => setActiveModal(null)}>Cancel</button>
+                  <button className="btn-search" onClick={handleShipmentRequest} disabled={requestLoading}>
+                    {requestLoading ? 'Submitting...' : 'Submit Request'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="modal-content">
+                <div className={`search-result ${requestResult.success ? 'success' : 'error'}`}>
+                  <div className="result-header">{requestResult.success ? '✓ Success' : '✗ Error'}</div>
+                  <p>{requestResult.message}</p>
+                  <div className="modal-actions">
+                    <button className="btn-cancel" onClick={() => { setActiveModal(null); setRequestResult(null); }}>
+                      Close
+                    </button>
+                    {requestResult.success && (
+                      <button className="btn-search" onClick={() => { setActiveModal('shipment'); setRequestResult(null); }}>
+                        View Shipments
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -460,6 +660,81 @@ const ManufacturerPortal: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Contact Modal */}
+      {activeModal === 'contact' && (
+        <div className="modal-overlay" onClick={() => setActiveModal(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Contact Support</h3>
+              <button className="close-btn" onClick={() => setActiveModal(null)}>✕</button>
+            </div>
+            <div className="modal-content">
+              <p style={{ textAlign: 'center', marginBottom: '24px', color: '#666' }}>
+                Select the type of support you need:
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                <button 
+                  onClick={() => { setActiveModal(null); navigate('/manufacturer/support?type=tech'); }}
+                  className="contact-type-btn tech"
+                >
+                  <div style={{ fontSize: '32px', marginBottom: '8px' }}>🖥️</div>
+                  <div style={{ fontWeight: 600, marginBottom: '4px' }}>Technical Support</div>
+                  <div style={{ fontSize: '12px', color: '#666' }}>Portal & access issues</div>
+                </button>
+                <button 
+                  onClick={() => { setActiveModal(null); navigate('/manufacturer/support?type=lab'); }}
+                  className="contact-type-btn lab"
+                >
+                  <div style={{ fontSize: '32px', marginBottom: '8px' }}>🧪</div>
+                  <div style={{ fontWeight: 600, marginBottom: '4px' }}>Lab Support</div>
+                  <div style={{ fontSize: '12px', color: '#666' }}>Sample & shipment questions</div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bottom Quick Actions */}
+      <div className="portal-bottom">
+        <div className="actions-container">
+          <h2>Quick Actions</h2>
+          <div className="actions-grid">
+            <button className="action-btn coa-btn" onClick={() => setActiveModal('coa')}>
+              <span className="btn-icon">📄</span>
+              <span className="btn-label">Fetch Certificate of Analysis</span>
+              <span className="btn-desc">Search and download CoAs</span>
+            </button>
+
+            <button className="action-btn inventory-btn" onClick={() => setActiveModal('inventory')}>
+              <span className="btn-icon">📦</span>
+              <span className="btn-label">Sample Inventory Quantity</span>
+              <span className="btn-desc">Check stock availability</span>
+            </button>
+
+            <button className="action-btn request-btn" onClick={() => setActiveModal('request-shipment')}>
+              <span className="btn-icon">📤</span>
+              <span className="btn-label">Request Shipment</span>
+              <span className="btn-desc">Order sample delivery</span>
+            </button>
+
+            <button className="action-btn shipment-btn" onClick={() => setActiveModal('shipment')}>
+              <span className="btn-icon">🚚</span>
+              <span className="btn-label">Shipments</span>
+              <span className="btn-desc">View orders & tracking</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="portal-footer">
+        <div className="footer-content">
+          <span className="footer-text">Developed and operated by</span>
+          <img src="/images/AAL_Dig_Dev.png" alt="AAL Digital Development" className="footer-logo" />
+        </div>
+      </footer>
     </div>
   );
 };

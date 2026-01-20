@@ -163,7 +163,40 @@ const ManufacturerDashboard: React.FC = () => {
             </div>
           </div>
         </section>
+
+        {/* End Main Content */}
       </main>
+
+      {/* Quick Actions (Bottom) */}
+      <section style={styles.quickActionsSection}>
+        <h2 style={styles.quickActionsTitle}>Quick Actions</h2>
+        <div style={styles.quickActionsGrid}>
+          <Link to="/manufacturer/coa-lookup" style={{ textDecoration: 'none', display: 'block' }}>
+            <button style={styles.quickActionBtn}>
+              <span style={styles.quickBtnLabel}>CoA Lookup</span>
+              <span style={styles.quickBtnDesc}>Search & download</span>
+            </button>
+          </Link>
+          <Link to="/manufacturer/inventory-search" style={{ textDecoration: 'none', display: 'block' }}>
+            <button style={styles.quickActionBtn}>
+              <span style={styles.quickBtnLabel}>Inventory Search</span>
+              <span style={styles.quickBtnDesc}>Check availability</span>
+            </button>
+          </Link>
+          <Link to="/manufacturer/shipment-request" style={{ textDecoration: 'none', display: 'block' }}>
+            <button style={styles.quickActionBtn}>
+              <span style={styles.quickBtnLabel}>Create Shipment</span>
+              <span style={styles.quickBtnDesc}>Request samples</span>
+            </button>
+          </Link>
+          <Link to="/manufacturer/my-shipments" style={{ textDecoration: 'none', display: 'block' }}>
+            <button style={styles.quickActionBtn}>
+              <span style={styles.quickBtnLabel}>My Shipments</span>
+              <span style={styles.quickBtnDesc}>View status</span>
+            </button>
+          </Link>
+        </div>
+      </section>
 
       {/* Footer */}
       <footer style={styles.footer}>
@@ -375,6 +408,55 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '12px',
     color: '#666',
     margin: 0,
+  },
+  quickActionsSection: {
+    marginTop: 'auto',
+    marginBottom: '20px',
+    backgroundColor: 'white',
+    padding: '30px',
+    borderRadius: '8px',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+  },
+  quickActionsTitle: {
+    fontSize: '13px',
+    fontWeight: 700,
+    color: '#333',
+    margin: '0 0 16px 0',
+    textAlign: 'left' as const,
+  },
+  quickActionsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, 1fr)',
+    gap: '20px',
+  },
+  quickActionBtn: {
+    background: 'white',
+    border: '2px solid #e0e0e0',
+    padding: '10px 24px',
+    borderRadius: '8px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '4px',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
+    width: '100%',
+    height: '70px',
+  },
+  quickBtnLabel: {
+    fontSize: '12px',
+    fontWeight: 700,
+    color: '#333',
+    textAlign: 'center' as const,
+    lineHeight: '1.2',
+  },
+  quickBtnDesc: {
+    fontSize: '10px',
+    color: '#666',
+    textAlign: 'center' as const,
+    lineHeight: '1.2',
   },
 };
 

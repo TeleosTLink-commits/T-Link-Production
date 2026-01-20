@@ -1,41 +1,45 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import './TestMethods.css';
 
 interface TestMethod {
   id?: string;
-  legacy_number: string;
-  legacy_lab_source?: string;
-  original_title: string;
-  official_number?: string;
-  official_title?: string;
-  method_type?: string;
-  status: string;
-  verification_status?: string;
-  effective_date?: string;
-  verified_date?: string;
-  current_version?: string;
+  tm_number: string;
+  version: string;
+  title: string;
+  description?: string;
   file_path?: string;
   file_name?: string;
+  is_current_version: boolean;
+  status: string;
+  approved_by?: string;
+  approved_at?: string;
+  created_by?: string;
   created_at?: string;
   updated_at?: string;
 }
 
 const TestMethods: React.FC = () => {
+  const navigate = useNavigate();
   const [testMethods, setTestMethods] = useState<TestMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editingMethod, setEditingMethod] = useState<TestMethod | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   
   const [formData, setFormData] = useState<TestMethod>({
-    legacy_number: '',
-    legacy_lab_source: '',
-    original_title: '',
-    official_number: '',
-    method_type: '',
-    status: 'draft',
+    tm_number: '',
+    version: '',
+    title: '',
+    description: '',
+    file_path: '',
+    file_name: '',
+    is_current_version: true,
+    status: 'active',
   });
 
   useEffect(() => {
@@ -44,7 +48,7 @@ const TestMethods: React.FC = () => {
 
   const fetchTestMethods = async () => {
     try {
-      const response = await api.get('/test-methods?page=1&limit=100');
+      const response = await api.get('/test-methods?page=1&limit=500');
       setTestMethods(response.data.data);
       setLoading(false);
     } catch (err: any) {
@@ -56,12 +60,14 @@ const TestMethods: React.FC = () => {
   const handleAdd = () => {
     setEditingMethod(null);
     setFormData({
-      legacy_number: '',
-      legacy_lab_source: '',
-      original_title: '',
-      official_number: '',
-      method_type: '',
-      status: 'draft',
+      tm_number: '',
+      version: '',
+      title: '',
+      description: '',
+      file_path: '',
+      file_name: '',
+      is_current_version: true,
+      status: 'active',
     });
     setSelectedFile(null);
     setShowModal(true);
@@ -129,60 +135,165 @@ const TestMethods: React.FC = () => {
     }
   };
 
-  if (loading) return <div className="test-methods-container"><div className="loading">Loading test methods...</div></div>;
-  if (error) return <div className="test-methods-container"><div className="error-message">{error}</div></div>;
+  const filteredMethods = testMethods.filter(method => {
+    const matchesSearch = 
+      (method.tm_number?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+      (method.title?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+      (method.version?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
+    
+    const matchesStatus = !statusFilter || method.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  if (loading) {
+    return (
+      <div className="portal-page">
+        <div className="portal-header">
+          <div className="header-content">
+            <div className="header-top">
+              <button className="btn-back" onClick={() => navigate('/dashboard')} title="Back to Dashboard">
+                ← Dashboard
+              </button>
+              <h1>Test Methods Library</h1>
+            </div>
+          </div>
+        </div>
+        <div className="portal-content">
+          <div className="loading-message">Loading test methods...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="portal-page">
+        <div className="portal-header">
+          <div className="header-content">
+            <div className="header-top">
+              <button className="btn-back" onClick={() => navigate('/dashboard')} title="Back to Dashboard">
+                ← Dashboard
+              </button>
+              <h1>Test Methods Library</h1>
+            </div>
+          </div>
+        </div>
+        <div className="portal-content">
+          <div className="error-message">{error}</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="test-methods-container">
-      <div className="page-header">
-        <h1>Test Methods Library</h1>
-        <button className="btn-primary" onClick={handleAdd}>
-          + Add Test Method
-        </button>
+    <div className="portal-page">
+      <div className="portal-header">
+        <div className="header-content">
+          <div className="header-top">
+            <button className="btn-back" onClick={() => navigate('/dashboard')} title="Back to Dashboard">
+              ← Dashboard
+            </button>
+            <h1>Test Methods Library</h1>
+          </div>
+          <button className="btn-contact" onClick={handleAdd}>
+            + Add Test Method
+          </button>
+        </div>
       </div>
 
-      <div className="table-container">
-        <table className="test-methods-table">
-          <thead>
-            <tr>
-              <th>Legacy Number</th>
-              <th>Lab Source</th>
-              <th>Title</th>
-              <th>AAL Test Method Number</th>
-              <th>Method Type</th>              <th>Effective Date</th>              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {testMethods.length === 0 ? (
-              <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: '40px' }}>
-                  <p>No test methods found.</p>
-                  <p>Click &quot;+ Add Test Method&quot; to create one.</p>
-                </td>
-              </tr>
-            ) : (
-              testMethods.map((method: TestMethod) => (
-                <tr key={method.id}>
-                  <td>{method.legacy_number || 'N/A'}</td>
-                  <td>{method.legacy_lab_source || 'N/A'}</td>
-                  <td>{method.original_title}</td>
-                  <td>{method.official_number || 'Pending'}</td>
-                  <td>{method.method_type || 'N/A'}</td>
-                  <td>{method.effective_date ? new Date(method.effective_date).toLocaleDateString() : 'N/A'}</td>
-                  <td><span style={{padding: '4px 8px', backgroundColor: method.status === 'verified' ? '#d4edda' : '#fff3cd', borderRadius: '4px'}}>{method.status}</span></td>
-                  <td>
-                    {method.file_path && (
-                      <button className="btn-icon" onClick={() => handleViewDocument(method)} title="View Document">📄 View</button>
-                    )}
-                    <button className="btn-icon" onClick={() => handleEdit(method)} title="Edit">✏️ Edit</button>
-                    <button className="btn-icon" onClick={() => handleDelete(method.id!)} title="Delete">🗑️ Delete</button>
-                  </td>
+      <div className="portal-content">
+        <div className="filters-bar">
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Search by TM Number, Title, or Version..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <select
+            className="status-filter"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="superseded">Superseded</option>
+            <option value="archived">Archived</option>
+          </select>
+        </div>
+
+        {filteredMethods.length === 0 ? (
+          <div className="empty-state">
+            <p className="empty-message">No test methods found</p>
+            <button className="btn-primary-outline" onClick={handleAdd}>
+              Create First Test Method
+            </button>
+          </div>
+        ) : (
+          <div className="table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>TM Number</th>
+                  <th>Version</th>
+                  <th>Title</th>
+                  <th>Description</th>
+                  <th>Status</th>
+                  <th>Current</th>
+                  <th>Actions</th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              </thead>
+              <tbody>
+                {filteredMethods.map((method) => (
+                  <tr key={method.id}>
+                    <td className="tm-number"><strong>{method.tm_number}</strong></td>
+                    <td>{method.version}</td>
+                    <td>{method.title}</td>
+                    <td className="description">{method.description || '—'}</td>
+                    <td>
+                      <span className={`status-badge status-${method.status}`}>
+                        {method.status}
+                      </span>
+                    </td>
+                    <td className="center">
+                      {method.is_current_version ? (
+                        <span className="badge-current">✓</span>
+                      ) : (
+                        <span className="badge-inactive">—</span>
+                      )}
+                    </td>
+                    <td className="actions">
+                      {method.file_path && (
+                        <button 
+                          className="btn-small"
+                          onClick={() => handleViewDocument(method)}
+                          title="View Document"
+                        >
+                          📄
+                        </button>
+                      )}
+                      <button 
+                        className="btn-small"
+                        onClick={() => handleEdit(method)}
+                        title="Edit"
+                      >
+                        ✏️
+                      </button>
+                      <button 
+                        className="btn-small btn-delete"
+                        onClick={() => handleDelete(method.id!)}
+                        title="Delete"
+                      >
+                        🗑️
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {showModal && (
@@ -190,28 +301,29 @@ const TestMethods: React.FC = () => {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>{editingMethod ? 'Edit Test Method' : 'Add Test Method'}</h2>
-              <button className="btn-close" onClick={() => setShowModal(false)}></button>
+              <button className="btn-close" onClick={() => setShowModal(false)}>✕</button>
             </div>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className="modal-form">
               <div className="form-grid">
                 <div className="form-group">
-                  <label>Legacy Number *</label>
+                  <label>TM Number *</label>
                   <input
                     type="text"
-                    value={formData.legacy_number}
-                    onChange={(e) => setFormData({...formData, legacy_number: e.target.value})}
+                    value={formData.tm_number}
+                    onChange={(e) => setFormData({...formData, tm_number: e.target.value})}
                     required
-                    placeholder="e.g., TEL-001-E25A"
+                    placeholder="e.g., TM-001"
                   />
                 </div>
                 
                 <div className="form-group">
-                  <label>Legacy Lab Source</label>
+                  <label>Version *</label>
                   <input
                     type="text"
-                    value={formData.legacy_lab_source || ''}
-                    onChange={(e) => setFormData({...formData, legacy_lab_source: e.target.value})}
-                    placeholder="e.g., Dow Chemical Company"
+                    value={formData.version}
+                    onChange={(e) => setFormData({...formData, version: e.target.value})}
+                    required
+                    placeholder="e.g., 1.0"
                   />
                 </div>
 
@@ -219,30 +331,20 @@ const TestMethods: React.FC = () => {
                   <label>Title *</label>
                   <input
                     type="text"
-                    value={formData.original_title}
-                    onChange={(e) => setFormData({...formData, original_title: e.target.value})}
+                    value={formData.title}
+                    onChange={(e) => setFormData({...formData, title: e.target.value})}
                     required
                     placeholder="Test method title"
                   />
                 </div>
 
-                <div className="form-group">
-                  <label>AAL Test Method Number</label>
-                  <input
-                    type="text"
-                    value={formData.official_number || ''}
-                    onChange={(e) => setFormData({...formData, official_number: e.target.value})}
-                    placeholder="e.g., AAL-TM-001"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Method Type</label>
-                  <input
-                    type="text"
-                    value={formData.method_type || ''}
-                    onChange={(e) => setFormData({...formData, method_type: e.target.value})}
-                    placeholder="e.g., FTIR, GC-MS, HPLC"
+                <div className="form-group full-width">
+                  <label>Description</label>
+                  <textarea
+                    value={formData.description || ''}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    placeholder="Description of the test method"
+                    rows={4}
                   />
                 </div>
 
@@ -253,28 +355,37 @@ const TestMethods: React.FC = () => {
                     onChange={(e) => setFormData({...formData, status: e.target.value})}
                     required
                   >
-                    <option value="draft">Draft</option>
-                    <option value="under_review">Under Review</option>
-                    <option value="verified">Verified</option>
-                    <option value="standardized">Standardized</option>
+                    <option value="active">Active</option>
+                    <option value="superseded">Superseded</option>
                     <option value="archived">Archived</option>
                   </select>
+                </div>
+
+                <div className="form-group">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={formData.is_current_version}
+                      onChange={(e) => setFormData({...formData, is_current_version: e.target.checked})}
+                    />
+                    Current Version
+                  </label>
                 </div>
 
                 <div className="form-group full-width">
                   <label>Test Method Document</label>
                   {editingMethod?.file_name && (
-                    <div style={{marginBottom: '8px', fontSize: '14px', color: '#666'}}>
+                    <div className="file-info">
                       Current file: {editingMethod.file_name}
                     </div>
                   )}
                   <input
                     type="file"
-                    accept=".pdf,.doc,.docx,.xls,.xlsx"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
                     onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                   />
                   {selectedFile && (
-                    <div style={{marginTop: '8px', fontSize: '14px', color: '#0066cc'}}>
+                    <div className="file-selected">
                       Selected: {selectedFile.name}
                     </div>
                   )}
@@ -282,7 +393,7 @@ const TestMethods: React.FC = () => {
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>
+                <button type="button" className="btn-cancel" onClick={() => setShowModal(false)}>
                   Cancel
                 </button>
                 <button type="submit" className="btn-primary">

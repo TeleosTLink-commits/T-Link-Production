@@ -20,8 +20,11 @@ import MyShipments from './pages/manufacturer/MyShipments';
 import SupportForms from './pages/manufacturer/SupportForms';
 // Internal lab staff components
 import ProcessingDashboard from './pages/internal/ProcessingDashboard';
+import ProcessingView from './pages/internal/ProcessingView';
+import TrackingView from './pages/internal/TrackingView';
 import SupplyInventory from './pages/internal/SupplyInventory';
 import HazmatWarning from './pages/internal/HazmatWarning';
+import AdminPanel from './pages/internal/AdminPanel';
 
 function App() {
   const token = localStorage.getItem('auth_token');
@@ -54,8 +57,11 @@ function App() {
           
           {/* Internal Lab Staff Pages */}
           <Route path="internal/processing-dashboard" element={<ProcessingDashboard />} />
+          <Route path="internal/processing/shipment/:id" element={<ProcessingView />} />
+          <Route path="internal/tracking/:id" element={<TrackingView />} />
           <Route path="internal/supplies" element={<SupplyInventory />} />
           <Route path="internal/hazmat-processing" element={<HazmatWarning />} />
+          <Route path="internal/admin" element={<AdminPanel />} />
         </Route>
 
         <Route path="*" element={<Navigate to={token ? '/dashboard' : '/login'} />} />

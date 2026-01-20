@@ -1,0 +1,39 @@
+API_KEY:l7f8017fe04c134efab572877391c8b4ba
+
+SECRETE_KEY:a96428668e1f4cc39ff3ac14a9797754
+
+SHIPPING_LOCATION:Global
+
+ACCOUNT:740561073
+
+TEST_URL:https://apis-sandbox.fedex.com
+
+Shipper Account:510087020 Address:1202 Chalet Ln, Harrison, AR, 72601
+Bill-to Account:510051408 Address:2000 Freight LTL Testing, Harrison, AR 72601
+
+
+LIST OF ENABLED_APIs:
+Address Validation API
+	
+Comprehensive Rates and Transit Times API
+
+Consolidation API
+
+FedEx Locations Search API
+
+Freight LTL API
+
+Global Trade API
+
+Ground End of Day Close API
+
+Pickup Request API
+
+Postal Code Validation API
+
+Rates and Transit Times API
+
+Service Availability API
+
+Ship API
+

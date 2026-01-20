@@ -332,7 +332,45 @@ export const sendSupportRequestNotification = async (
     </html>
   `;
 
-  return sendEmail({ to: recipientEmail, subject: emailSubject, html });
+  // Send to support team
+  await sendEmail({ to: recipientEmail, subject: emailSubject, html });
+  
+  // Send confirmation copy to manufacturer at their registered email
+  const manufacturerHtml = `
+    <html>
+      <body style="font-family: Arial, sans-serif; color: #333;">
+        <h2>Support Request Confirmation</h2>
+        <p>Dear ${senderName},</p>
+        
+        <p>Thank you for submitting a support request. We have received your ${typeLabel.toLowerCase()} request and will respond as soon as possible.</p>
+        
+        <h3>Request Details:</h3>
+        <table style="border-collapse: collapse; margin: 20px 0;">
+          <tr style="background-color: #f5f5f5;">
+            <td style="padding: 10px; font-weight: bold; border: 1px solid #ddd;">Request Type:</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${typeLabel}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; font-weight: bold; border: 1px solid #ddd;">Subject:</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${subject}</td>
+          </tr>
+        </table>
+        
+        <h3>Your Message:</h3>
+        <p style="white-space: pre-wrap; background-color: #f9f9f9; padding: 15px; border-left: 4px solid #28a745;">${escapeHtml(message)}</p>
+        
+        <p style="margin-top: 20px; color: #666;">
+          <strong>Expected Response Time:</strong> 24-48 business hours
+        </p>
+        
+        <p style="margin-top: 30px; border-top: 1px solid #ccc; padding-top: 20px; color: #666;">
+          <small>This is an automated confirmation email. Please do not reply to this email. Use the T-Link Portal to track your request status.</small>
+        </p>
+      </body>
+    </html>
+  `;
+  
+  return sendEmail({ to: senderEmail, subject: `Confirmation: ${emailSubject}`, html: manufacturerHtml });
 };
 
 function escapeHtml(text: string): string {

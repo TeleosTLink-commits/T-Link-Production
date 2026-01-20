@@ -45,23 +45,22 @@ const pool = new Pool({
   ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
 });
 
-// Get statistics
+// Get statistics (new schema)
 router.get('/stats', authenticate, async (req, res) => {
   try {
     const statsQuery = `
       SELECT 
         COUNT(*) as total_methods,
-        COUNT(CASE WHEN status = 'verified' THEN 1 END) as verified_methods,
-        COUNT(CASE WHEN status = 'draft' THEN 1 END) as draft_methods,
-        COUNT(DISTINCT legacy_number) as unique_legacy_methods
+        COUNT(CASE WHEN status = 'active' THEN 1 END) as active_methods,
+        COUNT(CASE WHEN status = 'superseded' THEN 1 END) as superseded_methods,
+        COUNT(CASE WHEN status = 'archived' THEN 1 END) as archived_methods,
+        COUNT(CASE WHEN is_current_version = true THEN 1 END) as current_version_count
       FROM test_methods
-      WHERE status != 'archived'
     `;
 
     const byStatusQuery = `
       SELECT status, COUNT(*) as count
       FROM test_methods
-      WHERE status != 'archived'
       GROUP BY status
       ORDER BY count DESC
     `;
@@ -94,12 +93,12 @@ router.get('/categories', authenticate, async (req, res) => {
   }
 });
 
-// Get all test methods (with filters and pagination)
+// Get all test methods (with filters and pagination) using new schema
 router.get('/', authenticate, async (req, res) => {
   try {
     const {
       page = 1,
-      limit = 20,
+      limit = 100,
       search = '',
       status,
     } = req.query;
@@ -109,13 +108,12 @@ router.get('/', authenticate, async (req, res) => {
     const values: any[] = [];
     let valueIndex = 1;
 
-    // Search by legacy_number, official_number, or title
+    // Search by tm_number, version, or title
     if (search) {
       conditions.push(`(
-        legacy_number ILIKE $${valueIndex} OR
-        official_number ILIKE $${valueIndex} OR
-        original_title ILIKE $${valueIndex} OR
-        official_title ILIKE $${valueIndex}
+        tm_number ILIKE $${valueIndex} OR
+        title ILIKE $${valueIndex} OR
+        version ILIKE $${valueIndex}
       )`);
       values.push(`%${search}%`);
       valueIndex++;
@@ -126,8 +124,6 @@ router.get('/', authenticate, async (req, res) => {
       conditions.push(`status = $${valueIndex}`);
       values.push(status);
       valueIndex++;
-    } else {
-      conditions.push("status != 'archived'");
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -139,11 +135,11 @@ router.get('/', authenticate, async (req, res) => {
     const countResult = await pool.query(countQuery, values);
     const total = parseInt(countResult.rows[0].count);
 
-    // Get data (include file path so UI can show view button)
+    // Get data with new schema
     const dataQuery = `
-      SELECT id, legacy_number, legacy_lab_source, original_title, official_number, official_title,
-             method_type, status, verification_status, effective_date, verified_date,
-             current_version, file_path, file_name, created_at, updated_at
+      SELECT id, tm_number, version, title, description,
+             file_path, file_name, is_current_version, status,
+             approved_by, approved_at, created_by, created_at, updated_at
       FROM test_methods ${whereClause}
       ORDER BY created_at DESC
       LIMIT $${valueIndex} OFFSET $${valueIndex + 1}
@@ -215,81 +211,40 @@ router.get('/:id/files', authenticate, async (req, res) => {
 router.post('/', authenticate, authorize('admin', 'lab_user'), async (req, res) => {
   try {
     const {
-      legacy_number,
-      legacy_lab_source,
-      original_title,
-      official_number,
-      official_title,
-      category_id,
-      method_type,
-      status = 'draft',
-      verification_status = 'pending',
-      purpose,
-      scope,
-      principle,
-      equipment_required,
-      reagents_required,
-      procedure,
-      calculations,
-      acceptance_criteria,
-      references,
-      verification_notes,
+      tm_number,
+      version,
+      title,
+      description,
+      is_current_version = true,
+      status = 'active',
     } = req.body;
+
+    if (!tm_number || !version || !title) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'tm_number, version, and title are required' 
+      });
+    }
 
     const authReq = req as AuthRequest;
     const userId = authReq.user!.id;
 
     const result = await pool.query(
       `INSERT INTO test_methods (
-        legacy_number, legacy_lab_source, original_title,
-        official_number, official_title, category_id, method_type,
-        status, verification_status,
-        purpose, scope, principle,
-        equipment_required, reagents_required, procedure,
-        calculations, acceptance_criteria, references,
-        verification_notes, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+        tm_number, version, title, description,
+        is_current_version, status, created_by, file_path, file_name
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *`,
       [
-        legacy_number || null,
-        legacy_lab_source || null,
-        original_title,
-        official_number || null,
-        official_title || null,
-        category_id || null,
-        method_type || null,
-        status,
-        verification_status,
-        purpose || null,
-        scope || null,
-        principle || null,
-        equipment_required || null,
-        reagents_required || null,
-        procedure || null,
-        calculations || null,
-        acceptance_criteria || null,
-        references || null,
-        verification_notes || null,
-        userId,
-      ]
-    );
-
-    // Create initial version history
-    await pool.query(
-      `INSERT INTO test_method_versions (
-        test_method_id, version_number, change_type, change_description,
-        legacy_number, official_number, title, status, changed_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [
-        result.rows[0].id,
-        '1.0',
-        'initial_creation',
-        'Test method created',
-        legacy_number || null,
-        official_number || null,
-        original_title,
+        tm_number,
+        version,
+        title,
+        description || null,
+        is_current_version,
         status,
         userId,
+        '', // file_path - will be set when file is uploaded
+        '', // file_name - will be set when file is uploaded
       ]
     );
 
@@ -304,14 +259,27 @@ router.post('/', authenticate, authorize('admin', 'lab_user'), async (req, res) 
 router.put('/:id', authenticate, authorize('admin', 'lab_user'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { legacy_number, display_title, original_title, official_number, method_type, status, verification_status, effective_date, aal_verification_date } = req.body;
-    console.log('UPDATE REQUEST:', { legacy_number, display_title, original_title, official_number, method_type });
-    const titleToUse = original_title;
+    const { tm_number, version, title, description, is_current_version, status } = req.body;
+
     const result = await pool.query(
-      `UPDATE test_methods SET legacy_number = $1, original_title = $2, official_number = $3, method_type = $4, status = $5, verification_status = $6, effective_date = $7, verified_date = $8, updated_at = CURRENT_TIMESTAMP WHERE id = $9 RETURNING *`,
-      [legacy_number, titleToUse, official_number || null, method_type, status || 'active', verification_status || 'pending_review', effective_date || null, aal_verification_date || null, id]
+      `UPDATE test_methods 
+       SET tm_number = COALESCE($1, tm_number),
+           version = COALESCE($2, version),
+           title = COALESCE($3, title),
+           description = COALESCE($4, description),
+           is_current_version = COALESCE($5, is_current_version),
+           status = COALESCE($6, status),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $7 
+       RETURNING *`,
+      [tm_number || null, version || null, title || null, description || null, 
+       is_current_version !== undefined ? is_current_version : null, status || null, id]
     );
-    if (result.rows.length === 0) return res.status(404).json({ success: false, message: 'Test method not found' });
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Test method not found' });
+    }
+
     res.json({ success: true, data: result.rows[0] });
   } catch (error: any) {
     console.error('Error updating test method:', error);
@@ -320,99 +288,7 @@ router.put('/:id', authenticate, authorize('admin', 'lab_user'), async (req, res
 });
 
 
-// Standardize test method (assign official number)
-router.post('/:id/standardize', authenticate, authorize('admin', 'lab_user'), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { official_number, official_title } = req.body;
-
-    const authReq = req as AuthRequest;
-    const userId = authReq.user!.id;
-
-    const result = await pool.query(
-      `UPDATE test_methods SET
-        official_number = $1,
-        official_title = COALESCE($2, official_title),
-        status = CASE WHEN status = 'draft' THEN 'standardized' ELSE status END
-      WHERE id = $3
-      RETURNING *`,
-      [official_number, official_title || null, id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Test method not found' });
-    }
-
-    // Create version history
-    await pool.query(
-      `INSERT INTO test_method_versions (
-        test_method_id, version_number, change_type, change_description,
-        official_number, changed_by
-      ) VALUES ($1, $2, $3, $4, $5, $6)`,
-      [
-        id,
-        result.rows[0].current_version,
-        'standardization',
-        `Standardized with official number: ${official_number}`,
-        official_number,
-        userId,
-      ]
-    );
-
-    res.json({ success: true, data: result.rows[0] });
-  } catch (error: any) {
-    console.error('Error standardizing test method:', error);
-    res.status(500).json({ success: false, message: error.message || 'Failed to standardize' });
-  }
-});
-
-// Verify test method
-router.post('/:id/verify', authenticate, authorize('admin', 'lab_user'), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { verification_notes } = req.body;
-
-    const authReq = req as AuthRequest;
-    const userId = authReq.user!.id;
-
-    const result = await pool.query(
-      `UPDATE test_methods SET
-        verification_status = 'verified',
-        status = CASE WHEN status = 'draft' THEN 'verified' ELSE status END,
-        verified_by = $1,
-        verified_date = CURRENT_DATE,
-        verification_notes = $2
-      WHERE id = $3
-      RETURNING *`,
-      [userId, verification_notes || null, id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Test method not found' });
-    }
-
-    // Create version history
-    await pool.query(
-      `INSERT INTO test_method_versions (
-        test_method_id, version_number, change_type, change_description,
-        changed_by, notes
-      ) VALUES ($1, $2, $3, $4, $5, $6)`,
-      [
-        id,
-        result.rows[0].current_version,
-        'verification',
-        'Test method verified',
-        userId,
-        verification_notes || null,
-      ]
-    );
-
-    res.json({ success: true, data: result.rows[0] });
-  } catch (error: any) {
-    console.error('Error verifying test method:', error);
-    res.status(500).json({ success: false, message: 'Failed to verify test method' });
-  }
-});
+// NOTE: standardization/verification workflows removed for the simplified schema
 
 // Archive test method (soft delete)
 router.delete('/:id', authenticate, authorize('admin'), async (req, res) => {
@@ -491,14 +367,14 @@ router.post('/:id/upload', authenticate, authorize('admin', 'lab_user'), upload.
 router.get('/:id/download', async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await pool.query('SELECT file_path, file_name, original_title FROM test_methods WHERE id = $1', [id]);
+    const result = await pool.query('SELECT file_path, file_name, title FROM test_methods WHERE id = $1', [id]);
     
     if (result.rows.length === 0 || !result.rows[0].file_path) {
       return res.status(404).json({ success: false, message: 'File not found' });
     }
     
     const filePath = result.rows[0].file_path;
-    const fileName = result.rows[0].file_name || `${result.rows[0].original_title}.pdf`;
+    const fileName = result.rows[0].file_name || `${result.rows[0].title || 'test-method'}.pdf`;
 
     if (filePath.startsWith('http')) {
       return res.redirect(filePath);

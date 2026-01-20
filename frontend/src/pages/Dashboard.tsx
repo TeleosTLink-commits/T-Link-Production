@@ -1,112 +1,138 @@
-import React, { useState, useEffect } from 'react';
-import { useAuthStore } from '../store/authStore';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
 import './Dashboard.css';
-
-interface DashboardStats {
-  testMethods: number;
-  samples: number;
-  shipments: number;
-}
+import { useAuthStore } from '../store/authStore';
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuthStore();
   const navigate = useNavigate();
-  const [stats, setStats] = useState<DashboardStats>({
-    testMethods: 0,
-    samples: 0,
-    shipments: 0
-  });
-  const [loading, setLoading] = useState(true);
+  const { user, logout } = useAuthStore();
+  const storedUserStr = localStorage.getItem('user');
+  const storedUser = storedUserStr ? JSON.parse(storedUserStr) : null;
+  const effectiveUser = user || storedUser;
 
-  useEffect(() => {
-    fetchDashboardStats();
-  }, []);
+  const [activeModal, setActiveModal] = useState<'contact' | null>(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
-  const fetchDashboardStats = async () => {
-    try {
-      setLoading(true);
-      
-      // Fetch stats (CoA now tracked via Sample Inventory)
-      const [testMethodsRes, sampleInventoryRes, shipmentsRes] = await Promise.all([
-        api.get('/test-methods/stats').catch(() => ({ data: { data: { total_methods: 0 } } })),
-        api.get('/sample-inventory/stats').catch(() => ({ data: { data: { total_samples: 0 } } })),
-        api.get('/shipments').catch(() => ({ data: { data: [] } }))
-      ]);
-
-      setStats({
-        testMethods: testMethodsRes.data.data?.total_methods || 0,
-        samples: sampleInventoryRes.data.data?.total_samples || 0,
-        shipments: shipmentsRes.data.data?.filter((s: any) => s.status === 'in_transit' || s.status === 'pending').length || 0
-      });
-    } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
-    } finally {
-      setLoading(false);
-    }
+  const handleLogout = () => {
+    logout();
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user');
+    navigate('/login');
   };
 
   return (
-    <div className="dashboard">
-      <h1>Welcome to T-Link Dashboard</h1>
-      <p className="welcome-message">Hello, {user?.firstName || user?.username}!</p>
-
-      <div className="dashboard-grid">
-        <div className="dashboard-card">
-          <div className="card-icon">📋</div>
-          <h3>Test Methods</h3>
-          <p className="card-count">{loading ? '...' : stats.testMethods}</p>
-          <p className="card-description">Active test methods with version control</p>
+    <div className="dashboard-portal">
+      {/* Header */}
+      <div className="dashboard-header">
+        <div className="header-left">
+          <img src="/images/tlink-official-logo.png" alt="T-Link" className="logo" />
+          <div className="header-text">
+            <h1>T-Link Dashboard</h1>
+          </div>
         </div>
-
-        {/* Certificates of Analysis card removed — use Sample Inventory for CoA management */}
-
-        <div className="dashboard-card">
-          <div className="card-icon">🧪</div>
-          <h3>Sample Inventory</h3>
-          <p className="card-count">{loading ? '...' : stats.samples}</p>
-          <p className="card-description">Samples across all freezer locations</p>
-        </div>
-
-        <div className="dashboard-card">
-          <div className="card-icon">📦</div>
-          <h3>Active Shipments</h3>
-          <p className="card-count">{loading ? '...' : stats.shipments}</p>
-          <p className="card-description">Shipments in progress</p>
-        </div>
-      </div>
-
-      <div className="alerts-section">
-        <h2>Recent Alerts</h2>
-        <div className="alert-list">
-          <div className="alert-item info">
-            <div className="alert-icon">ℹ️</div>
-            <div className="alert-content">
-              <p className="alert-title">System Ready</p>
-              <p className="alert-description">T-Link system is fully operational</p>
-            </div>
+        <div className="header-right">
+          <button className="contact-btn" onClick={() => setActiveModal('contact')}>
+            💬 Contact Support
+          </button>
+          <div className="user-badge-container">
+            <button 
+              className="user-badge" 
+              onClick={() => setShowUserMenu(!showUserMenu)}
+            >
+              <div className="user-icon">👤</div>
+              <div className="user-details">
+                <div className="user-email">{effectiveUser?.email}</div>
+                <div className="user-role">{effectiveUser?.role}</div>
+              </div>
+              <span className="dropdown-icon">▼</span>
+            </button>
+            {showUserMenu && (
+              <div className="user-menu">
+                <button onClick={handleLogout} className="menu-item logout">
+                  Sign Out
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="quick-actions">
-        <h2>Quick Actions</h2>
-        <div className="action-buttons">
-          <button className="action-btn" onClick={() => navigate('/test-methods')}>
-            <span>➕</span> Add Test Method
-          </button>
-          <button className="action-btn" onClick={() => navigate('/inventory')}>
-            <span>📄</span> Manage Inventory / CoAs
-          </button>
-          <button className="action-btn" onClick={() => navigate('/inventory')}>
-            <span>🧪</span> Add Sample
-          </button>
-          <button className="action-btn" onClick={() => navigate('/shipments')}>
-            <span>📦</span> Create Shipment
-          </button>
+      {/* Main Content */}
+      <div className="dashboard-content">
+        <div className="actions-container">
+          <h2>Platform Modules</h2>
+          <div className="actions-grid">
+            <button className="action-btn test-methods-btn" onClick={() => navigate('/test-methods')}>
+              <span className="btn-icon">📋</span>
+              <span className="btn-label">Test Methods</span>
+              <span className="btn-desc">Manage testing procedures</span>
+            </button>
+
+            <button className="action-btn inventory-btn" onClick={() => navigate('/inventory')}>
+              <span className="btn-icon">🧪</span>
+              <span className="btn-label">Sample Inventory</span>
+              <span className="btn-desc">Track samples and CoAs</span>
+            </button>
+
+            <button className="action-btn shipments-btn" onClick={() => navigate('/shipments')}>
+              <span className="btn-icon">📦</span>
+              <span className="btn-label">Shipment Logistics</span>
+              <span className="btn-desc">Manage shipping operations</span>
+            </button>
+
+            {effectiveUser?.role === 'super_admin' && (
+              <button className="action-btn admin-btn" onClick={() => navigate('/internal/admin')}>
+                <span className="btn-icon">🛡️</span>
+                <span className="btn-label">Super Admin Panel</span>
+                <span className="btn-desc">Platform management & control</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Contact Modal */}
+      {activeModal === 'contact' && (
+        <div className="modal-overlay" onClick={() => setActiveModal(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Contact Support</h3>
+              <button className="close-btn" onClick={() => setActiveModal(null)}>✕</button>
+            </div>
+            <div className="modal-content">
+              <p style={{ textAlign: 'center', marginBottom: '24px', color: '#666' }}>
+                Select the type of support you need:
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                <button 
+                  onClick={() => { setActiveModal(null); navigate('/manufacturer/support?type=tech'); }}
+                  className="contact-type-btn tech"
+                >
+                  <div style={{ fontSize: '32px', marginBottom: '8px' }}>🖥️</div>
+                  <div style={{ fontWeight: 600, marginBottom: '4px' }}>Technical Support</div>
+                  <div style={{ fontSize: '12px', color: '#666' }}>Portal & access issues</div>
+                </button>
+                <button 
+                  onClick={() => { setActiveModal(null); navigate('/manufacturer/support?type=lab'); }}
+                  className="contact-type-btn lab"
+                >
+                  <div style={{ fontSize: '32px', marginBottom: '8px' }}>🧪</div>
+                  <div style={{ fontWeight: 600, marginBottom: '4px' }}>Lab Support</div>
+                  <div style={{ fontSize: '12px', color: '#666' }}>Sample & shipment questions</div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Footer */}
+      <footer className="dashboard-footer">
+        <div className="footer-content">
+          <span className="footer-text">Developed and operated by</span>
+          <img src="/images/AAL_Dig_Dev.png" alt="AAL Digital Development" className="footer-logo" />
+        </div>
+      </footer>
     </div>
   );
 };

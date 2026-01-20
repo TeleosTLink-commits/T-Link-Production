@@ -25,8 +25,13 @@ const Login: React.FC = () => {
         localStorage.setItem('auth_token', response.data.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.data.user));
         
-        // Redirect to dashboard
-        navigate('/dashboard');
+        // Redirect based on user role
+        const userRole = response.data.data.user?.role;
+        if (userRole === 'manufacturer') {
+          navigate('/manufacturer');
+        } else {
+          navigate('/dashboard');
+        }
       }
     } catch (err: any) {
       const message = err.response?.data?.message || err.response?.data?.error || 'Login failed. Please check your credentials.';
@@ -39,20 +44,8 @@ const Login: React.FC = () => {
   return (
     <div className="login-container">
       <div className="login-box">
-        <div className="collab-band">
-          <div className="collab-title">A partnership between</div>
-          <div className="collab-logos">
-            <img src="/images/teleos-logo.png" alt="Teleos AG Solutions" className="collab-logo" />
-            <span className="collab-separator">×</span>
-            <div className="collab-subblock">
-              <span className="collab-subtext">Built & maintained by</span>
-              <img src="/images/ajwa-logo.png" alt="AJWA Analytical Laboratories" className="collab-logo small" />
-            </div>
-          </div>
-        </div>
-        <div className="login-header">
-          <h1>T-Link</h1>
-          <p>Teleos Logistics & Information Network</p>
+        <div className="login-logo">
+          <img src="/images/tlink-official-logo.png" alt="T-Link" className="login-logo-img" />
         </div>
         
         {error && <div className="error-message">{error}</div>}

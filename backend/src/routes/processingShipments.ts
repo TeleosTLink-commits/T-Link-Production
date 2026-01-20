@@ -2,6 +2,10 @@ import express, { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
 import { authenticate } from '../middleware/auth';
 import { v4 as uuidv4 } from 'uuid';
+import fedexService from '../services/fedexService';
+import fs from 'fs/promises';
+import path from 'path';
+import logger from '../config/logger';
 
 const router: Router = express.Router();
 
@@ -38,10 +42,12 @@ router.get('/shipments', authenticate, checkLabStaff, async (req: Request, res: 
               s.recipient_name, s.destination_address, s.is_hazmat, s.requires_dg_declaration,
               s.scheduled_ship_date, s.created_at,
               u.first_name, u.last_name, u.email,
-              mc.company_name
+              mc.company_name,
+              sam.chemical_name
        FROM shipments s
        JOIN users u ON s.manufacturer_user_id = u.id
-       JOIN manufacturer_companies mc ON s.company_id = mc.id
+       LEFT JOIN manufacturer_companies mc ON s.company_id = mc.id
+       LEFT JOIN samples sam ON s.sample_id = sam.id
        WHERE s.status = 'initiated'
        ORDER BY s.created_at ASC
        LIMIT $1 OFFSET $2`,
@@ -51,26 +57,25 @@ router.get('/shipments', authenticate, checkLabStaff, async (req: Request, res: 
     res.json({
       success: true,
       count: result.rows.length,
+      data: result.rows,
       shipments: result.rows.map((row: any) => ({
         id: row.id,
         shipment_number: row.shipment_number,
         lot_number: row.lot_number,
-        quantity: row.amount_shipped,
+        chemical_name: row.chemical_name,
+        company_name: row.company_name,
+        quantity_requested: row.amount_shipped,
+        amount_shipped: row.amount_shipped,
         unit: row.unit,
-        recipient: {
-          name: row.recipient_name,
-          address: row.destination_address,
-        },
-        manufacturer: {
-          name: `${row.first_name} ${row.last_name}`,
-          company: row.company_name,
-          email: row.email,
-        },
-        is_hazmat: row.is_hazmat,
-        requires_dg: row.requires_dg_declaration,
+        first_name: row.first_name,
+        last_name: row.last_name,
+        recipient_name: row.recipient_name,
         scheduled_ship_date: row.scheduled_ship_date,
+        is_hazmat: row.is_hazmat,
+        requires_dg_declaration: row.requires_dg_declaration,
         created_at: row.created_at,
-      })),
+        status: row.status
+      }))
     });
   } catch (error: any) {
     console.error('Error fetching processing shipments:', error);
@@ -78,6 +83,94 @@ router.get('/shipments', authenticate, checkLabStaff, async (req: Request, res: 
       error: 'Failed to fetch shipments',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
+  }
+});
+
+/**
+ * GET /api/processing/supplies
+ * Get shipping supplies inventory
+ */
+router.get('/supplies', authenticate, checkLabStaff, async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, un_box_type, inner_packing_type, dot_sp_number, item_number, purchased_from, price_per_unit, count
+       FROM shipping_supplies
+       ORDER BY inner_packing_type ASC, item_number ASC`
+    );
+
+    const supplies = result.rows.map((row: any) => ({
+      id: row.id,
+      supply_name: row.item_number || row.un_box_type || 'Unknown',
+      supply_type: row.inner_packing_type || 'Other',
+      current_quantity: row.count || 0,
+      unit: 'units',
+    }));
+
+    res.json(supplies);
+  } catch (error: any) {
+    console.error('Error fetching supplies:', error);
+    res.status(500).json({
+      error: 'Failed to fetch supplies',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * GET /api/processing/:id
+ * Get shipment by ID for processing view (simplified endpoint)
+ */
+router.get('/:id', authenticate, checkLabStaff, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Get shipment details with all necessary information
+    const shipmentResult = await pool.query(
+      `SELECT s.*, 
+              u.first_name, u.last_name, u.email,
+              mc.company_name,
+              sam.chemical_name, sam.cas_number, sam.lot_number, 
+              sam.quantity as available_quantity,
+              s.amount_shipped
+       FROM shipments s
+       JOIN users u ON s.manufacturer_user_id = u.id
+       LEFT JOIN manufacturer_companies mc ON s.company_id = mc.id
+       LEFT JOIN samples sam ON s.sample_id = sam.id
+       WHERE s.id = $1`,
+      [id]
+    );
+
+    if (shipmentResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Shipment not found' });
+    }
+
+    const shipment = shipmentResult.rows[0];
+
+    // Get SDS documents for this sample
+    let sdsDocuments = [];
+    if (shipment.sample_id) {
+      const sdsResult = await pool.query(
+        `SELECT id, sds_file_name, sds_file_path, revision_date, created_at
+         FROM sample_sds_documents
+         WHERE sample_id = $1
+         ORDER BY revision_date DESC, created_at DESC`,
+        [shipment.sample_id]
+      );
+      sdsDocuments = sdsResult.rows;
+    }
+
+    res.json({
+      success: true,
+      data: {
+        ...shipment,
+        manufacturer_name: `${shipment.first_name} ${shipment.last_name}`,
+        manufacturer_email: shipment.email,
+        sds_documents: sdsDocuments
+      }
+    });
+  } catch (error) {
+    logger.error('Error fetching shipment for processing:', error);
+    res.status(500).json({ error: 'Failed to fetch shipment details' });
   }
 });
 
@@ -247,40 +340,6 @@ router.post('/shipments/:shipmentId/update-status', authenticate, checkLabStaff,
     console.error('Error updating shipment status:', error);
     res.status(500).json({
       error: 'Failed to update shipment status',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
-  }
-});
-
-/**
- * GET /api/processing/supplies
- * Get shipping supplies inventory
- */
-router.get('/supplies', authenticate, checkLabStaff, async (req: Request, res: Response) => {
-  try {
-    const result = await pool.query(
-      `SELECT id, supply_name, supply_type, current_quantity, unit, low_stock_threshold, status
-       FROM shipping_supplies
-       ORDER BY supply_type ASC, supply_name ASC`
-    );
-
-    res.json({
-      success: true,
-      supplies: result.rows.map((row: any) => ({
-        id: row.id,
-        name: row.supply_name,
-        type: row.supply_type,
-        current_quantity: row.current_quantity,
-        unit: row.unit,
-        low_stock_threshold: row.low_stock_threshold,
-        status: row.status,
-        is_low_stock: row.current_quantity <= row.low_stock_threshold,
-      })),
-    });
-  } catch (error: any) {
-    console.error('Error fetching supplies:', error);
-    res.status(500).json({
-      error: 'Failed to fetch supplies',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
@@ -496,6 +555,268 @@ router.post('/shipments/:shipmentId/print-warning-labels', authenticate, checkLa
     console.error('Error marking labels as printed:', error);
     res.status(500).json({
       error: 'Failed to mark labels as printed',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * POST /api/processing/validate-address
+ * Validate delivery address using FedEx API
+ */
+router.post('/validate-address', authenticate, checkLabStaff, async (req: Request, res: Response) => {
+  try {
+    const { street, city, state, zip, country } = req.body;
+
+    console.log('Address validation request:', { street, city, state, zip, country });
+
+    if (!street || !city || !state || !zip) {
+      console.error('Missing address fields:', { street: !!street, city: !!city, state: !!state, zip: !!zip });
+      return res.status(400).json({ error: 'Missing required address fields', received: { street, city, state, zip } });
+    }
+
+    const validationResult = await fedexService.validateAddress({
+      street,
+      city,
+      stateOrProvinceCode: state,
+      postalCode: zip,
+      countryCode: country || 'US',
+    });
+
+    res.json({
+      success: true,
+      data: validationResult,
+    });
+  } catch (error: any) {
+    console.error('Error validating address:', error);
+    res.status(500).json({
+      error: 'Failed to validate address',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * POST /api/processing/get-rate
+ * Get shipping rate quote from FedEx
+ */
+router.post('/get-rate', authenticate, checkLabStaff, async (req: Request, res: Response) => {
+  try {
+    const { toAddress, weight, weightUnit, service, packageValue, isHazmat } = req.body;
+
+    if (!toAddress || !weight || !weightUnit || !service) {
+      return res.status(400).json({ error: 'Missing required fields for rate quote' });
+    }
+
+    // Get lab address from env or database
+    const fromAddress = {
+      street: process.env.LAB_ADDRESS_STREET || '123 Lab Street',
+      city: process.env.LAB_ADDRESS_CITY || 'Baton Rouge',
+      stateOrProvinceCode: process.env.LAB_ADDRESS_STATE || 'LA',
+      postalCode: process.env.LAB_ADDRESS_ZIP || '70802',
+      countryCode: 'US',
+    };
+
+    const rateResult = await fedexService.getShippingRate({
+      fromAddress,
+      toAddress: {
+        street: toAddress.street,
+        city: toAddress.city,
+        stateOrProvinceCode: toAddress.state,
+        postalCode: toAddress.zip,
+        countryCode: toAddress.country || 'US',
+      },
+      weight: parseFloat(weight),
+      weightUnit: weightUnit.toUpperCase() as 'LB' | 'KG',
+      service: service as any,
+      packageValue: parseFloat(packageValue) || 100,
+      isHazmat: isHazmat || false,
+    });
+
+    res.json({
+      success: true,
+      data: rateResult,
+    });
+  } catch (error: any) {
+    console.error('Error getting rate:', error);
+    res.status(500).json({
+      error: 'Failed to get shipping rate',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * POST /api/processing/generate-label
+ * Generate FedEx shipping label and update shipment
+ */
+router.post('/generate-label', authenticate, checkLabStaff, async (req: Request, res: Response) => {
+  try {
+    const { shipmentId, weight, weightUnit, service, packageValue, isHazmat, suppliesUsed } = req.body;
+
+    if (!shipmentId || !weight || !weightUnit || !service) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Get shipment details
+    const shipmentResult = await pool.query(
+      `SELECT s.*, sam.chemical_name, sam.lot_number
+       FROM shipments s
+       LEFT JOIN samples sam ON s.sample_id = sam.id
+       WHERE s.id = $1`,
+      [shipmentId]
+    );
+
+    if (shipmentResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Shipment not found' });
+    }
+
+    const shipment = shipmentResult.rows[0];
+
+    // Get lab address
+    const fromAddress = {
+      street: process.env.LAB_ADDRESS_STREET || '123 Lab Street',
+      city: process.env.LAB_ADDRESS_CITY || 'Baton Rouge',
+      stateOrProvinceCode: process.env.LAB_ADDRESS_STATE || 'LA',
+      postalCode: process.env.LAB_ADDRESS_ZIP || '70802',
+      countryCode: 'US',
+    };
+
+    const toAddress = {
+      street: shipment.destination_address,
+      city: shipment.destination_city,
+      stateOrProvinceCode: shipment.destination_state,
+      postalCode: shipment.destination_zip,
+      countryCode: shipment.destination_country || 'US',
+    };
+
+    // Generate FedEx label
+    const labelResult = await fedexService.generateShipmentLabel({
+      fromAddress,
+      toAddress,
+      weight: parseFloat(weight),
+      weightUnit: weightUnit.toUpperCase() as 'LB' | 'KG',
+      service: service as any,
+      packageValue: parseFloat(packageValue) || 100,
+      isHazmat: isHazmat || false,
+    });
+
+    if (labelResult.error) {
+      return res.status(500).json({ error: `FedEx label generation failed: ${labelResult.error}` });
+    }
+
+    // Save label PDF to file system
+    const labelDir = path.join(__dirname, '../../uploads/shipping-labels');
+    await fs.mkdir(labelDir, { recursive: true });
+
+    const labelFileName = `label_${shipmentId}_${Date.now()}.pdf`;
+    const labelPath = path.join(labelDir, labelFileName);
+
+    // Decode base64 and save
+    if (labelResult.label) {
+      const labelBuffer = Buffer.from(labelResult.label, 'base64');
+      await fs.writeFile(labelPath, labelBuffer);
+    }
+
+    // Update shipment with tracking info
+    await pool.query(
+      `UPDATE shipments
+       SET tracking_number = $1,
+           fedex_quote_amount = $2,
+           shipping_label_path = $3,
+           status = 'shipped',
+           shipped_date = CURRENT_TIMESTAMP,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $4`,
+      [labelResult.trackingNumber, labelResult.cost, `/uploads/shipping-labels/${labelFileName}`, shipmentId]
+    );
+
+    // Record supplies used
+    if (suppliesUsed && Array.isArray(suppliesUsed)) {
+      for (const supply of suppliesUsed) {
+        await pool.query(
+          `INSERT INTO shipment_supplies_used (shipment_id, supply_id, quantity_used)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (shipment_id, supply_id) 
+           DO UPDATE SET quantity_used = $3`,
+          [shipmentId, supply.supply_id, supply.quantity]
+        );
+
+        // Update supply inventory
+        await pool.query(
+          `UPDATE shipping_supplies
+           SET count = count - $1,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $2`,
+          [supply.quantity, supply.supply_id]
+        );
+      }
+    }
+
+    // Create hazmat record if applicable
+    if (isHazmat) {
+      await pool.query(
+        `INSERT INTO dangerous_goods_declarations
+         (shipment_id, un_number, hazard_class, proper_shipping_name, packing_group)
+         SELECT $1, sam.un_number, sam.hazard_class, sam.chemical_name, sam.packing_group
+         FROM samples sam
+         WHERE sam.id = $2`,
+        [shipmentId, shipment.sample_id]
+      );
+    }
+
+    res.json({
+      success: true,
+      data: {
+        trackingNumber: labelResult.trackingNumber,
+        cost: labelResult.cost,
+        estimatedDelivery: labelResult.estimatedDelivery,
+        labelPath: `/uploads/shipping-labels/${labelFileName}`,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error generating label:', error);
+    res.status(500).json({
+      error: 'Failed to generate shipping label',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * GET /api/processing/tracking/:trackingNumber
+ * Get tracking information for a shipment
+ */
+router.get('/tracking/:trackingNumber', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { trackingNumber } = req.params;
+
+    const trackingInfo = await fedexService.getTrackingInfo(trackingNumber);
+
+    if (!trackingInfo) {
+      return res.status(404).json({ error: 'Tracking information not found' });
+    }
+
+    // Update shipment status if delivered
+    if (trackingInfo.status === 'delivered') {
+      await pool.query(
+        `UPDATE shipments
+         SET status = 'delivered',
+             delivered_date = CURRENT_TIMESTAMP,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE tracking_number = $1 AND status != 'delivered'`,
+        [trackingNumber]
+      );
+    }
+
+    res.json({
+      success: true,
+      data: trackingInfo,
+    });
+  } catch (error: any) {
+    console.error('Error getting tracking info:', error);
+    res.status(500).json({
+      error: 'Failed to get tracking information',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }

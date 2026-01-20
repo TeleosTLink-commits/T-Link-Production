@@ -1,7 +1,14 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api from '../../services/api';
+
+interface Sample {
+  sample_name: string;
+  lot_number: string;
+  quantity_requested: string;
+  quantity_unit: string;
+}
 
 const ShipmentRequest: React.FC = () => {
   const navigate = useNavigate();
@@ -10,12 +17,11 @@ const ShipmentRequest: React.FC = () => {
     first_name: '',
     last_name: '',
     delivery_address: '',
-    sample_name: '',
-    lot_number: '',
-    quantity_requested: '',
-    quantity_unit: 'ml',
     scheduled_ship_date: '',
   });
+  const [samples, setSamples] = useState<Sample[]>([
+    { sample_name: '', lot_number: '', quantity_requested: '', quantity_unit: 'ml' }
+  ]);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [submitted, setSubmitted] = useState(false);
   const [submittedData, setSubmittedData] = useState<any>(null);
@@ -26,12 +32,38 @@ const ShipmentRequest: React.FC = () => {
       ...prev,
       [name]: value,
     }));
-    // Clear error for this field
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
         [name]: '',
       }));
+    }
+  };
+
+  const handleSampleChange = (index: number, field: keyof Sample, value: string) => {
+    const newSamples = [...samples];
+    newSamples[index][field] = value;
+    setSamples(newSamples);
+    
+    // Clear error for this sample
+    const errorKey = `sample_${index}_${field}`;
+    if (errors[errorKey]) {
+      setErrors((prev) => ({
+        ...prev,
+        [errorKey]: '',
+      }));
+    }
+  };
+
+  const addSample = () => {
+    if (samples.length < 10) {
+      setSamples([...samples, { sample_name: '', lot_number: '', quantity_requested: '', quantity_unit: 'ml' }]);
+    }
+  };
+
+  const removeSample = (index: number) => {
+    if (samples.length > 1) {
+      setSamples(samples.filter((_, i) => i !== index));
     }
   };
 
@@ -41,10 +73,14 @@ const ShipmentRequest: React.FC = () => {
     if (!formData.first_name) newErrors.first_name = 'First name is required';
     if (!formData.last_name) newErrors.last_name = 'Last name is required';
     if (!formData.delivery_address) newErrors.delivery_address = 'Delivery address is required';
-    if (!formData.sample_name) newErrors.sample_name = 'Sample name is required';
-    if (!formData.lot_number) newErrors.lot_number = 'Lot number is required';
-    if (!formData.quantity_requested) newErrors.quantity_requested = 'Quantity is required';
-    else if (isNaN(parseFloat(formData.quantity_requested))) newErrors.quantity_requested = 'Must be a valid number';
+
+    // Validate samples
+    samples.forEach((sample, index) => {
+      if (!sample.sample_name) newErrors[`sample_${index}_sample_name`] = 'Sample name is required';
+      if (!sample.lot_number) newErrors[`sample_${index}_lot_number`] = 'Lot number is required';
+      if (!sample.quantity_requested) newErrors[`sample_${index}_quantity_requested`] = 'Quantity is required';
+      else if (isNaN(parseFloat(sample.quantity_requested))) newErrors[`sample_${index}_quantity_requested`] = 'Must be a valid number';
+    });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -57,15 +93,17 @@ const ShipmentRequest: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await api.post('/manufacturer/shipments/request', {
+      const response = await api.post('/manufacturer/shipments/request-multiple', {
         first_name: formData.first_name,
         last_name: formData.last_name,
         delivery_address: formData.delivery_address,
-        sample_name: formData.sample_name,
-        lot_number: formData.lot_number,
-        quantity_requested: parseFloat(formData.quantity_requested),
-        quantity_unit: formData.quantity_unit,
         scheduled_ship_date: formData.scheduled_ship_date || undefined,
+        samples: samples.map(s => ({
+          sample_name: s.sample_name,
+          lot_number: s.lot_number,
+          quantity_requested: parseFloat(s.quantity_requested),
+          quantity_unit: s.quantity_unit,
+        })),
       });
 
       setSubmittedData(response.data.shipment);
@@ -90,20 +128,21 @@ const ShipmentRequest: React.FC = () => {
       first_name: '',
       last_name: '',
       delivery_address: '',
-      sample_name: '',
-      lot_number: '',
-      quantity_requested: '',
-      quantity_unit: 'ml',
       scheduled_ship_date: '',
     });
+    setSamples([{ sample_name: '', lot_number: '', quantity_requested: '', quantity_unit: 'ml' }]);
     setErrors({});
   };
+
+  // Calculate total quantity and check for hazmat
+  const totalQuantity = samples.reduce((sum, s) => sum + (parseFloat(s.quantity_requested) || 0), 0);
+  const isHazmat = totalQuantity >= 30;
 
   if (submitted && submittedData) {
     return (
       <div style={styles.container}>
         <div style={styles.successCard}>
-          <div style={styles.successIcon}>✅</div>
+          <div style={styles.successIcon}>âœ…</div>
           <h1 style={styles.successTitle}>Shipment Request Submitted!</h1>
           <p style={styles.successMessage}>Your shipment request has been created and a confirmation email has been sent.</p>
 
@@ -121,14 +160,12 @@ const ShipmentRequest: React.FC = () => {
                 </span>
               </div>
               <div style={styles.summaryItem}>
-                <span style={styles.summaryLabel}>Lot Number:</span>
-                <span style={styles.summaryValue}>{submittedData.lot_number}</span>
+                <span style={styles.summaryLabel}>Samples:</span>
+                <span style={styles.summaryValue}>{submittedData.samples?.length || 1} sample(s)</span>
               </div>
               <div style={styles.summaryItem}>
-                <span style={styles.summaryLabel}>Quantity:</span>
-                <span style={styles.summaryValue}>
-                  {submittedData.quantity_requested} {submittedData.unit}
-                </span>
+                <span style={styles.summaryLabel}>Total Quantity:</span>
+                <span style={styles.summaryValue}>{submittedData.total_quantity} {submittedData.unit}</span>
               </div>
               <div style={styles.summaryItem}>
                 <span style={styles.summaryLabel}>Delivery Address:</span>
@@ -147,7 +184,7 @@ const ShipmentRequest: React.FC = () => {
             <h4 style={styles.infoTitle}>What happens next?</h4>
             <ol style={styles.infoList}>
               <li>Your request will be reviewed by our lab team</li>
-              <li>We'll prepare your shipment and verify inventory</li>
+              <li>We'll prepare your shipment and verify inventory for all samples</li>
               <li>Once shipped, you'll receive tracking information</li>
               <li>Monitor progress in "My Shipments" section</li>
             </ol>
@@ -174,9 +211,10 @@ const ShipmentRequest: React.FC = () => {
       {/* Header */}
       <div style={styles.header}>
         <button onClick={handleGoBack} style={styles.backButton}>
-          ← Back
+          â† Back
         </button>
         <h1 style={styles.title}>Create Shipment Request</h1>
+        <p style={styles.subtitle}>Add up to 10 samples per shipment</p>
       </div>
 
       {/* Form Section */}
@@ -234,84 +272,6 @@ const ShipmentRequest: React.FC = () => {
               />
               {errors.delivery_address && <span style={styles.error}>{errors.delivery_address}</span>}
             </div>
-          </fieldset>
-
-          {/* Sample Information */}
-          <fieldset style={styles.fieldset}>
-            <legend style={styles.legend}>Sample Information</legend>
-
-            <div style={styles.formRow}>
-              <div style={styles.formGroup}>
-                <label htmlFor="sample_name" style={styles.label}>
-                  Sample Name *
-                </label>
-                <input
-                  type="text"
-                  id="sample_name"
-                  name="sample_name"
-                  value={formData.sample_name}
-                  onChange={handleChange}
-                  style={{ ...styles.input, borderColor: errors.sample_name ? '#dc3545' : '#ccc' }}
-                  placeholder="Sample XYZ"
-                />
-                {errors.sample_name && <span style={styles.error}>{errors.sample_name}</span>}
-              </div>
-
-              <div style={styles.formGroup}>
-                <label htmlFor="lot_number" style={styles.label}>
-                  Lot Number *
-                </label>
-                <input
-                  type="text"
-                  id="lot_number"
-                  name="lot_number"
-                  value={formData.lot_number}
-                  onChange={handleChange}
-                  style={{ ...styles.input, borderColor: errors.lot_number ? '#dc3545' : '#ccc' }}
-                  placeholder="LOT-2026-001"
-                />
-                {errors.lot_number && <span style={styles.error}>{errors.lot_number}</span>}
-              </div>
-            </div>
-
-            <div style={styles.formRow}>
-              <div style={styles.formGroup}>
-                <label htmlFor="quantity_requested" style={styles.label}>
-                  Quantity Requested *
-                </label>
-                <input
-                  type="number"
-                  id="quantity_requested"
-                  name="quantity_requested"
-                  value={formData.quantity_requested}
-                  onChange={handleChange}
-                  step="0.1"
-                  style={{ ...styles.input, borderColor: errors.quantity_requested ? '#dc3545' : '#ccc' }}
-                  placeholder="50"
-                />
-                {errors.quantity_requested && <span style={styles.error}>{errors.quantity_requested}</span>}
-              </div>
-
-              <div style={styles.formGroup}>
-                <label htmlFor="quantity_unit" style={styles.label}>
-                  Unit
-                </label>
-                <select
-                  id="quantity_unit"
-                  name="quantity_unit"
-                  value={formData.quantity_unit}
-                  onChange={handleChange}
-                  style={styles.input}
-                >
-                  <option value="ml">ml (milliliters)</option>
-                  <option value="L">L (liters)</option>
-                  <option value="mg">mg (milligrams)</option>
-                  <option value="g">g (grams)</option>
-                  <option value="oz">oz (ounces)</option>
-                  <option value="lb">lb (pounds)</option>
-                </select>
-              </div>
-            </div>
 
             <div style={styles.formGroup}>
               <label htmlFor="scheduled_ship_date" style={styles.label}>
@@ -329,14 +289,123 @@ const ShipmentRequest: React.FC = () => {
             </div>
           </fieldset>
 
+          {/* Samples Section */}
+          <fieldset style={styles.fieldset}>
+            <legend style={styles.legend}>
+              Samples ({samples.length} of 10)
+            </legend>
+
+            {samples.map((sample, index) => (
+              <div key={index} style={styles.sampleCard}>
+                <div style={styles.sampleHeader}>
+                  <h4 style={styles.sampleTitle}>Sample {index + 1}</h4>
+                  {samples.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeSample(index)}
+                      style={styles.removeButton}
+                    >
+                      âœ• Remove
+                    </button>
+                  )}
+                </div>
+
+                <div style={styles.formRow}>
+                  <div style={styles.formGroup}>
+                    <label htmlFor={`sample_name_${index}`} style={styles.label}>
+                      Sample Name *
+                    </label>
+                    <input
+                      type="text"
+                      id={`sample_name_${index}`}
+                      value={sample.sample_name}
+                      onChange={(e) => handleSampleChange(index, 'sample_name', e.target.value)}
+                      style={{ ...styles.input, borderColor: errors[`sample_${index}_sample_name`] ? '#dc3545' : '#ccc' }}
+                      placeholder="Sample XYZ"
+                    />
+                    {errors[`sample_${index}_sample_name`] && (
+                      <span style={styles.error}>{errors[`sample_${index}_sample_name`]}</span>
+                    )}
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label htmlFor={`lot_number_${index}`} style={styles.label}>
+                      Lot Number *
+                    </label>
+                    <input
+                      type="text"
+                      id={`lot_number_${index}`}
+                      value={sample.lot_number}
+                      onChange={(e) => handleSampleChange(index, 'lot_number', e.target.value)}
+                      style={{ ...styles.input, borderColor: errors[`sample_${index}_lot_number`] ? '#dc3545' : '#ccc' }}
+                      placeholder="LOT-2026-001"
+                    />
+                    {errors[`sample_${index}_lot_number`] && (
+                      <span style={styles.error}>{errors[`sample_${index}_lot_number`]}</span>
+                    )}
+                  </div>
+                </div>
+
+                <div style={styles.formRow}>
+                  <div style={styles.formGroup}>
+                    <label htmlFor={`quantity_${index}`} style={styles.label}>
+                      Quantity *
+                    </label>
+                    <input
+                      type="number"
+                      id={`quantity_${index}`}
+                      value={sample.quantity_requested}
+                      onChange={(e) => handleSampleChange(index, 'quantity_requested', e.target.value)}
+                      step="0.1"
+                      style={{ ...styles.input, borderColor: errors[`sample_${index}_quantity_requested`] ? '#dc3545' : '#ccc' }}
+                      placeholder="50"
+                    />
+                    {errors[`sample_${index}_quantity_requested`] && (
+                      <span style={styles.error}>{errors[`sample_${index}_quantity_requested`]}</span>
+                    )}
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label htmlFor={`unit_${index}`} style={styles.label}>
+                      Unit
+                    </label>
+                    <select
+                      id={`unit_${index}`}
+                      value={sample.quantity_unit}
+                      onChange={(e) => handleSampleChange(index, 'quantity_unit', e.target.value)}
+                      style={styles.input}
+                    >
+                      <option value="ml">ml (milliliters)</option>
+                      <option value="L">L (liters)</option>
+                      <option value="mg">mg (milligrams)</option>
+                      <option value="g">g (grams)</option>
+                      <option value="oz">oz (ounces)</option>
+                      <option value="lb">lb (pounds)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {samples.length < 10 && (
+              <button
+                type="button"
+                onClick={addSample}
+                style={styles.addSampleButton}
+              >
+                + Add Another Sample
+              </button>
+            )}
+          </fieldset>
+
           {/* Hazmat Warning */}
-          {formData.quantity_requested && parseFloat(formData.quantity_requested) >= 30 && (
+          {isHazmat && (
             <div style={styles.warningBox}>
-              <span style={styles.warningIcon}>⚠️</span>
+              <span style={styles.warningIcon}>âš ï¸</span>
               <div>
                 <p style={styles.warningTitle}>Hazmat Notice</p>
                 <p style={styles.warningText}>
-                  Quantities of 30{formData.quantity_unit || 'ml'} or more may require additional dangerous goods (DG) documentation and special handling.
+                  Total shipment quantity of {totalQuantity} ml or more may require additional dangerous goods (DG) documentation and special handling.
                 </p>
               </div>
             </div>
@@ -344,7 +413,7 @@ const ShipmentRequest: React.FC = () => {
 
           {/* Submit Button */}
           <button type="submit" style={styles.submitButton} disabled={loading}>
-            {loading ? 'Creating Request...' : 'Create Shipment Request'}
+            {loading ? 'Creating Request...' : `Create Shipment Request (${samples.length} sample${samples.length !== 1 ? 's' : ''})`}
           </button>
         </form>
       </div>
@@ -354,7 +423,7 @@ const ShipmentRequest: React.FC = () => {
 
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
-    maxWidth: '800px',
+    maxWidth: '900px',
     margin: '0 auto',
     padding: '20px',
     minHeight: '100vh',
@@ -376,7 +445,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '28px',
     fontWeight: 'bold',
     color: '#333',
-    margin: 0,
+    margin: '0 0 4px 0',
+  },
+  subtitle: {
+    fontSize: '14px',
+    color: '#666',
+    margin: '4px 0 0 0',
+    fontStyle: 'italic',
   },
   formSection: {
     backgroundColor: 'white',
@@ -441,6 +516,46 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontStyle: 'italic',
     margin: '4px 0 0 0',
   },
+  sampleCard: {
+    backgroundColor: '#f8f9fa',
+    border: '1px solid #dee2e6',
+    borderRadius: '4px',
+    padding: '16px',
+    marginBottom: '16px',
+  },
+  sampleHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '16px',
+  },
+  sampleTitle: {
+    fontSize: '14px',
+    fontWeight: 'bold',
+    color: '#333',
+    margin: 0,
+  },
+  removeButton: {
+    background: '#dc3545',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    padding: '6px 12px',
+    fontSize: '13px',
+    cursor: 'pointer',
+    fontWeight: 'bold',
+  },
+  addSampleButton: {
+    padding: '10px 16px',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    backgroundColor: '#28a745',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    marginTop: '12px',
+  },
   warningBox: {
     backgroundColor: '#fff3cd',
     border: '1px solid #ffc107',
@@ -474,7 +589,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     cursor: 'pointer',
     marginTop: '16px',
   },
-  // Success styles
   successCard: {
     backgroundColor: 'white',
     borderRadius: '8px',
@@ -593,3 +707,4 @@ const styles: { [key: string]: React.CSSProperties } = {
 };
 
 export default ShipmentRequest;
+

@@ -6,6 +6,7 @@ import {
   sendShipmentShippedNotification,
   sendSupportRequestNotification,
 } from '../services/emailService';
+import { extractDatesFromPDF, updateSampleDates } from '../services/pdfExtractionService';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs';
@@ -35,6 +36,7 @@ const checkManufacturer = (req: Request, res: Response, next: any) => {
 /**
  * GET /api/manufacturer/coa/search?lot_number=LOT-001
  * Search for Certificate of Analysis by lot number
+ * Automatically extracts and updates certification/expiration dates from PDF
  */
 router.get('/coa/search', authenticate, checkManufacturer, async (req: Request, res: Response) => {
   try {
@@ -46,9 +48,9 @@ router.get('/coa/search', authenticate, checkManufacturer, async (req: Request, 
 
     // Search for sample with matching lot number
     const result = await pool.query(
-      `SELECT id, sample_name, lot_number, created_at, file_path 
+      `SELECT id, chemical_name, lot_number, received_date, certification_date, recertification_date, expiration_date, coa_file_path, created_at
        FROM samples 
-       WHERE lot_number = $1 AND is_active = true
+       WHERE lot_number = $1
        LIMIT 1`,
       [lot_number]
     );
@@ -62,14 +64,46 @@ router.get('/coa/search', authenticate, checkManufacturer, async (req: Request, 
 
     const sample = result.rows[0];
 
+    // If PDF exists and dates are missing, attempt to extract them
+    if (sample.coa_file_path && (!sample.expiration_date || !sample.certification_date)) {
+      try {
+        console.log(`Extracting dates from PDF for sample ${sample.id}...`);
+        const extractedDates = await extractDatesFromPDF(sample.coa_file_path);
+        
+        if (extractedDates.certification_date || extractedDates.expiration_date) {
+          await updateSampleDates(pool, sample.id, extractedDates);
+          
+          // Update local sample object with extracted dates
+          if (extractedDates.certification_date && !sample.certification_date) {
+            sample.certification_date = extractedDates.certification_date;
+          }
+          if (extractedDates.expiration_date && !sample.expiration_date) {
+            sample.expiration_date = extractedDates.expiration_date;
+          }
+          if (extractedDates.recertification_date && !sample.recertification_date) {
+            sample.recertification_date = extractedDates.recertification_date;
+          }
+          
+          console.log(`Successfully extracted and updated dates for sample ${sample.id}`);
+        }
+      } catch (extractError) {
+        console.error(`Failed to extract dates from PDF: ${extractError}`);
+        // Continue - don't fail the request if extraction fails
+      }
+    }
+
     res.json({
       success: true,
       sample: {
         id: sample.id,
-        name: sample.sample_name,
+        name: sample.chemical_name,
         lot_number: sample.lot_number,
         created_at: sample.created_at,
-        file_path: sample.file_path,
+        received_date: sample.received_date,
+        certification_date: sample.certification_date,
+        recertification_date: sample.recertification_date,
+        expiration_date: sample.expiration_date,
+        file_path: sample.coa_file_path,
       },
     });
   } catch (error: any) {
@@ -145,10 +179,10 @@ router.get('/inventory/search', authenticate, checkManufacturer, async (req: Req
 
     // Search for samples by name (case-insensitive)
     const result = await pool.query(
-      `SELECT id, sample_name, lot_number, current_quantity, quantity_unit, status 
+      `SELECT id, chemical_name, lot_number, quantity, status 
        FROM samples 
-       WHERE LOWER(sample_name) LIKE LOWER($1) AND is_active = true
-       ORDER BY sample_name ASC
+       WHERE LOWER(chemical_name) LIKE LOWER($1)
+       ORDER BY chemical_name ASC
        LIMIT 20`,
       [`%${sample_name}%`]
     );
@@ -165,10 +199,9 @@ router.get('/inventory/search', authenticate, checkManufacturer, async (req: Req
       count: result.rows.length,
       samples: result.rows.map((row: any) => ({
         id: row.id,
-        name: row.sample_name,
+        name: row.chemical_name,
         lot_number: row.lot_number,
-        available_quantity: row.current_quantity,
-        unit: row.quantity_unit,
+        available_quantity: row.quantity,
         status: row.status,
       })),
     });
@@ -209,7 +242,7 @@ router.post('/shipments/request', authenticate, checkManufacturer, async (req: R
     }
 
     // Check if sample exists and get inventory
-    const sampleResult = await pool.query('SELECT id, current_quantity FROM samples WHERE lot_number = $1', [
+    const sampleResult = await pool.query('SELECT id, quantity FROM samples WHERE lot_number = $1', [
       lot_number,
     ]);
 
@@ -220,28 +253,13 @@ router.post('/shipments/request', authenticate, checkManufacturer, async (req: R
     const sample = sampleResult.rows[0];
 
     // Check if sufficient inventory
-    if (sample.current_quantity < quantity_requested) {
+    if (sample.quantity < quantity_requested) {
       return res.status(400).json({
         error: 'Insufficient inventory',
-        available: sample.current_quantity,
+        available: sample.quantity,
         requested: quantity_requested,
       });
     }
-
-    // Get manufacturer company
-    const companyResult = await pool.query(
-      `SELECT mc.id, mc.company_name FROM manufacturer_users mu
-       JOIN manufacturer_companies mc ON mu.company_id = mc.id
-       WHERE mu.user_id = $1
-       LIMIT 1`,
-      [userId]
-    );
-
-    if (companyResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Manufacturer company information not found' });
-    }
-
-    const company = companyResult.rows[0];
 
     await client.query('BEGIN');
 
@@ -255,10 +273,10 @@ router.post('/shipments/request', authenticate, checkManufacturer, async (req: R
     await client.query(
       `INSERT INTO shipments (
         id, shipment_number, status, sample_id, lot_number, amount_shipped, unit,
-        recipient_name, destination_address, manufacturer_user_id, company_id,
+        recipient_name, destination_address, manufacturer_user_id,
         first_name, last_name, scheduled_ship_date, is_hazmat, requires_dg_declaration,
         requested_by, created_at
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW())`,
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW())`,
       [
         shipmentId,
         shipmentNumber,
@@ -270,7 +288,6 @@ router.post('/shipments/request', authenticate, checkManufacturer, async (req: R
         `${first_name} ${last_name}`,
         delivery_address,
         userId,
-        company.id,
         first_name,
         last_name,
         scheduled_ship_date || null,
@@ -313,6 +330,186 @@ router.post('/shipments/request', authenticate, checkManufacturer, async (req: R
     await client.query('ROLLBACK').catch(() => {});
 
     console.error('Error creating shipment request:', error);
+    res.status(500).json({
+      error: 'Failed to create shipment request',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * POST /api/manufacturer/shipments/request-multiple
+ * Create a new shipment request with multiple samples (up to 10)
+ */
+router.post('/shipments/request-multiple', authenticate, checkManufacturer, async (req: Request, res: Response) => {
+  const client = await pool.connect();
+  try {
+    const userId = (req as any).user.id;
+    const userEmail = (req as any).user.email;
+    const {
+      first_name,
+      last_name,
+      delivery_address,
+      scheduled_ship_date,
+      samples,
+    } = req.body;
+
+    // Validation
+    if (!first_name || !last_name || !delivery_address || !samples || !Array.isArray(samples)) {
+      return res.status(400).json({
+        error: 'Missing required fields: first_name, last_name, delivery_address, samples (array)',
+      });
+    }
+
+    if (samples.length === 0 || samples.length > 10) {
+      return res.status(400).json({
+        error: 'Shipment must contain between 1 and 10 samples',
+      });
+    }
+
+    // Validate each sample
+    for (let i = 0; i < samples.length; i++) {
+      const sample = samples[i];
+      if (!sample.sample_name || !sample.lot_number || !sample.quantity_requested || !sample.quantity_unit) {
+        return res.status(400).json({
+          error: `Sample ${i + 1} missing required fields: sample_name, lot_number, quantity_requested, quantity_unit`,
+        });
+      }
+      if (isNaN(parseFloat(sample.quantity_requested))) {
+        return res.status(400).json({
+          error: `Sample ${i + 1}: quantity_requested must be a valid number`,
+        });
+      }
+    }
+
+    await client.query('BEGIN');
+
+    // Check inventory and collect sample data for all samples
+    const sampleData = [];
+    let totalQuantity = 0;
+
+    for (const sample of samples) {
+      const sampleResult = await client.query(
+        'SELECT id, quantity, chemical_name FROM samples WHERE lot_number = $1',
+        [sample.lot_number]
+      );
+
+      if (sampleResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ 
+          error: `Sample with lot number ${sample.lot_number} not found` 
+        });
+      }
+
+      const dbSample = sampleResult.rows[0];
+      const requestedQty = parseFloat(sample.quantity_requested);
+
+      // Check if sufficient inventory
+      if (dbSample.quantity < requestedQty) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          error: `Insufficient inventory for lot ${sample.lot_number}`,
+          available: dbSample.quantity,
+          requested: requestedQty,
+        });
+      }
+
+      sampleData.push({
+        ...sample,
+        sample_id: dbSample.id,
+        quantity_requested: requestedQty,
+      });
+
+      totalQuantity += requestedQty;
+    }
+
+    // Create shipment record
+    const shipmentId = uuidv4();
+    const shipmentNumber = `SHIP-${Date.now()}`;
+
+    // Check if total quantity >= 30ml (hazmat rule)
+    const isHazmat = totalQuantity >= 30;
+
+    // Insert main shipment record
+    await client.query(
+      `INSERT INTO shipments (
+        id, shipment_number, status, lot_number, amount_shipped, unit,
+        recipient_name, destination_address, manufacturer_user_id,
+        first_name, last_name, scheduled_ship_date, is_hazmat, requires_dg_declaration,
+        requested_by, created_at
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())`,
+      [
+        shipmentId,
+        shipmentNumber,
+        'initiated',
+        sampleData.map(s => s.lot_number).join(', '),
+        totalQuantity,
+        'ml', // Default unit for multi-sample shipments
+        `${first_name} ${last_name}`,
+        delivery_address,
+        userId,
+        first_name,
+        last_name,
+        scheduled_ship_date || null,
+        isHazmat,
+        isHazmat,
+        userId,
+      ]
+    );
+
+    // Insert shipment_samples records for each sample
+    const submittedSamples = [];
+    for (const sample of sampleData) {
+      const result = await client.query(
+        `INSERT INTO shipment_samples (shipment_id, sample_id, quantity_requested, unit)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id, quantity_requested, unit`,
+        [shipmentId, sample.sample_id, sample.quantity_requested, sample.quantity_unit]
+      );
+      
+      submittedSamples.push({
+        sample_name: sample.sample_name,
+        lot_number: sample.lot_number,
+        quantity: result.rows[0].quantity_requested,
+        unit: result.rows[0].unit,
+      });
+    }
+
+    await client.query('COMMIT');
+
+    // Send email notification to manufacturer
+    await sendShipmentCreatedNotification(userEmail, `${first_name} ${last_name}`, {
+      shipment_id: shipmentId,
+      lot_number: sampleData.map(s => s.lot_number).join(', '),
+      sample_name: `${sampleData.length} sample(s)`,
+      quantity_requested: totalQuantity,
+      unit: 'ml',
+      delivery_address,
+      scheduled_ship_date: scheduled_ship_date || 'TBD',
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Shipment request created successfully',
+      shipment: {
+        id: shipmentId,
+        shipment_number: shipmentNumber,
+        status: 'initiated',
+        samples: submittedSamples,
+        total_quantity: totalQuantity,
+        unit: 'ml',
+        delivery_address,
+        is_hazmat: isHazmat,
+        sample_count: sampleData.length,
+        created_at: new Date(),
+      },
+    });
+  } catch (error: any) {
+    await client.query('ROLLBACK').catch(() => {});
+
+    console.error('Error creating multi-sample shipment request:', error);
     res.status(500).json({
       error: 'Failed to create shipment request',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined,

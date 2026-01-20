@@ -90,8 +90,9 @@ router.get('/:id', authenticate, async (req: AuthRequest, res, next) => {
     // Get supplies used
     const supplies = await query(
       `SELECT ssu.*, 
-              ss.supply_name,
-              ss.supply_type
+              ss.un_box_type as supply_name,
+              ss.inner_packing_type as supply_type,
+              ss.item_number
        FROM shipment_supplies_used ssu
        JOIN shipping_supplies ss ON ssu.supply_id = ss.id
        WHERE ssu.shipment_id = $1`,

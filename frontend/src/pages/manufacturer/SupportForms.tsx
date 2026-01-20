@@ -27,14 +27,14 @@ const SupportForms: React.FC = () => {
   const contactInfo = {
     tech: {
       name: 'Technical Support',
-      email: 'jhunzie@',
+      email: 'jhunzie@ajwalabs.com',
       description: 'Network, software, portal access, and technical issues',
       icon: '🖥️',
       color: '#007bff',
     },
     lab: {
       name: 'Lab Support',
-      email: 'eboak@',
+      email: 'eboak@ajwalabs.com',
       description: 'Sample preparation, testing procedures, and lab documentation',
       icon: '🧪',
       color: '#28a745',

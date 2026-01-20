@@ -327,213 +327,229 @@ const SampleInventory: React.FC = () => {
     }
   };
 
+  const handleDashboardReturn = () => {
+    window.location.href = '/dashboard';
+  };
+
   return (
     <div className="sample-inventory">
-      <div className="page-header">
-        <h1>Sample Inventory</h1>
-        <button className="btn btn-primary" onClick={handleAddNew}>
-          + Add New Sample
-        </button>
-      </div>
-
-      {/* Statistics Dashboard */}
-      {stats && (
-        <div className="stats-grid">
-          <div className="stat-card">
-            <h3>{stats.total_samples}</h3>
-            <p>Total Samples</p>
+      {/* Green Gradient Portal Header */}
+      <div className="sampleinv-header">
+        <div className="sampleinv-header-content">
+          <button className="sampleinv-back-btn" onClick={handleDashboardReturn}>
+            ← Dashboard
+          </button>
+          <div className="sampleinv-title-section">
+            <h1 className="sampleinv-title">Sample Inventory</h1>
           </div>
-          <div className="stat-card stat-success">
-            <h3>{stats.active_samples}</h3>
-            <p>Active Samples</p>
-          </div>
-          <div className="stat-card stat-warning">
-            <h3>{stats.expiring_30_days}</h3>
-            <p>Expiring (30 days)</p>
-          </div>
-          <div className="stat-card stat-danger">
-            <h3>{stats.expired_samples}</h3>
-            <p>Expired</p>
-          </div>
-          <div className="stat-card">
-            <h3>{stats.with_coa}</h3>
-            <p>With CoA</p>
-          </div>
-          <div className="stat-card">
-            <h3>{stats.with_sds}</h3>
-            <p>With SDS</p>
-          </div>
-        </div>
-      )}
-
-      {/* Filters */}
-      <div className="filters-section">
-        <div className="search-box">
-          <input
-            type="text"
-            placeholder="Search by chemical name, lot number, CAS number..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        
-        <div className="filters">
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="depleted">Depleted</option>
-          </select>
+          <button className="sampleinv-action-btn" onClick={handleAddNew}>
+            + Add New Sample
+          </button>
         </div>
       </div>
 
-      {/* Error Message */}
-      {error && <div className="error-message">{error}</div>}
+      {/* Main Content Container */}
+      <div className="sampleinv-content">
+        {/* Statistics Dashboard */}
+        {stats && (
+          <div className="sampleinv-stats-container">
+            <div className="sampleinv-stat-card">
+              <div className="sampleinv-stat-number">{stats.total_samples}</div>
+              <div className="sampleinv-stat-label">Total Samples</div>
+            </div>
+            <div className="sampleinv-stat-card">
+              <div className="sampleinv-stat-number">{stats.active_samples}</div>
+              <div className="sampleinv-stat-label">Active</div>
+            </div>
+            <div className="sampleinv-stat-card">
+              <div className="sampleinv-stat-number">{stats.expiring_30_days}</div>
+              <div className="sampleinv-stat-label">Expiring (30d)</div>
+            </div>
+            <div className="sampleinv-stat-card">
+              <div className="sampleinv-stat-number">{stats.expired_samples}</div>
+              <div className="sampleinv-stat-label">Expired</div>
+            </div>
+            <div className="sampleinv-stat-card">
+              <div className="sampleinv-stat-number">{stats.with_coa}</div>
+              <div className="sampleinv-stat-label">With CoA</div>
+            </div>
+            <div className="sampleinv-stat-card">
+              <div className="sampleinv-stat-number">{stats.with_sds}</div>
+              <div className="sampleinv-stat-label">With SDS</div>
+            </div>
+          </div>
+        )}
 
-      {/* Samples Table */}
-      {loading ? (
-        <div className="loading">Loading samples...</div>
-      ) : (
-        <>
-          <div className="table-container">
-            <table className="samples-table">
-              <thead>
-                <tr>
-                  <th onClick={() => handleSort('chemical_name')}>
-                    Chemical Name {sortBy === 'chemical_name' && (sortOrder === 'asc' ? '↑' : '↓')}
-                  </th>
-                  <th onClick={() => handleSort('received_date')}>
-                    Received {sortBy === 'received_date' && (sortOrder === 'asc' ? '↑' : '↓')}
-                  </th>
-                  <th onClick={() => handleSort('lot_number')}>
-                    Lot Number {sortBy === 'lot_number' && (sortOrder === 'asc' ? '↑' : '↓')}
-                  </th>
-                  <th>Quantity</th>
-                  <th>Concentration</th>
-                  <th>DOW SDS</th>
-                  <th>CAS Number</th>
-                  <th>Have CoA</th>
-                  <th>Cert. Date</th>
-                  <th>Recert. Date</th>
-                  <th onClick={() => handleSort('expiration_date')}>
-                    Expiration {sortBy === 'expiration_date' && (sortOrder === 'asc' ? '↑' : '↓')}
-                  </th>
-                  <th>UN Number</th>
-                  <th>Hazard</th>
-                  <th>HS Code</th>
-                  <th>Hazard Class</th>
-                  <th>Packing Group</th>
-                  <th>Packing Inst.</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {samples.length === 0 ? (
+        {/* Filters Section */}
+        <div className="sampleinv-filters-section">
+          <div className="sampleinv-search-container">
+            <input
+              type="text"
+              className="sampleinv-search-input"
+              placeholder="Search by chemical name, lot number, CAS number..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          
+          <div className="sampleinv-filter-group">
+            <select className="sampleinv-status-filter" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="depleted">Depleted</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Error Message */}
+        {error && <div className="sampleinv-error-message">{error}</div>}
+
+        {/* Samples Table */}
+        {loading ? (
+          <div className="sampleinv-loading">Loading samples...</div>
+        ) : (
+          <>
+            <div className="sampleinv-table-wrapper">
+              <table className="sampleinv-table">
+                <thead>
                   <tr>
-                    <td colSpan={19} style={{ textAlign: 'center', padding: '40px' }}>
-                      No samples found
-                    </td>
+                    <th onClick={() => handleSort('chemical_name')}>
+                      Chemical Name {sortBy === 'chemical_name' && (sortOrder === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleSort('received_date')}>
+                      Received {sortBy === 'received_date' && (sortOrder === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleSort('lot_number')}>
+                      Lot Number {sortBy === 'lot_number' && (sortOrder === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th>Quantity</th>
+                    <th>Concentration</th>
+                    <th>DOW SDS</th>
+                    <th>CAS Number</th>
+                    <th>Have CoA</th>
+                    <th>Cert. Date</th>
+                    <th>Recert. Date</th>
+                    <th onClick={() => handleSort('expiration_date')}>
+                      Expiration {sortBy === 'expiration_date' && (sortOrder === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th>UN Number</th>
+                    <th>Hazard</th>
+                    <th>HS Code</th>
+                    <th>Hazard Class</th>
+                    <th>Packing Group</th>
+                    <th>Packing Inst.</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                   </tr>
-                ) : (
-                  samples.map((sample) => (
-                    <tr key={sample.id}>
-                      <td><strong>{sample.chemical_name}</strong></td>
-                      <td>{sample.received_date ? new Date(sample.received_date).toLocaleDateString() : 'N/A'}</td>
-                      <td>{sample.lot_number}</td>
-                      <td>{sample.quantity}</td>
-                      <td>{sample.concentration}</td>
-                      <td>{sample.has_dow_sds ? 'Y' : 'N'}</td>
-                      <td>{sample.cas_number}</td>
-                      <td>{sample.has_coa ? 'Y' : 'N'}</td>
-                      <td>{sample.certification_date ? new Date(sample.certification_date).toLocaleDateString() : ''}</td>
-                      <td>{sample.recertification_date ? new Date(sample.recertification_date).toLocaleDateString() : ''}</td>
-                      <td>
-                        {sample.expiration_date 
-                          ? new Date(sample.expiration_date).toLocaleDateString() 
-                          : 'N/A'}
-                        <br />
-                        {getExpirationBadge(sample.expiration_status, sample.expiration_date)}
-                      </td>
-                      <td>{sample.un_number}</td>
-                      <td>{sample.hazard_description}</td>
-                      <td>{sample.hs_code}</td>
-                      <td>{sample.hazard_class}</td>
-                      <td>{sample.packing_group}</td>
-                      <td>{sample.packing_instruction}</td>
-                      <td>
-                        <span className={`badge badge-${sample.status === 'active' ? 'success' : 'secondary'}`}>
-                          {sample.status}
-                        </span>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
-                          {sample.coa_file_path && (
-                            <button 
-                              className="btn btn-sm btn-info" 
-                              onClick={() => handleViewCoA(sample)}
-                              title="View Certificate of Analysis"
-                            >
-                              CoA
-                            </button>
-                          )}
-                          {sample.sds_file_path && (
-                            <button 
-                              className="btn btn-sm btn-warning" 
-                              onClick={() => handleViewSDS(sample)}
-                              title="View Safety Data Sheet"
-                            >
-                              SDS
-                            </button>
-                          )}
-                          <button className="btn btn-sm btn-secondary" onClick={() => handleEdit(sample)}>
-                            Edit
-                          </button>
-                          <button className="btn btn-sm btn-danger" onClick={() => handleDelete(sample.id)}>
-                            Delete
-                          </button>
-                        </div>
+                </thead>
+                <tbody>
+                  {samples.length === 0 ? (
+                    <tr>
+                      <td colSpan={19} style={{ textAlign: 'center', padding: '40px' }}>
+                        No samples found
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ) : (
+                    samples.map((sample) => (
+                      <tr key={sample.id}>
+                        <td><strong>{sample.chemical_name}</strong></td>
+                        <td>{sample.received_date ? new Date(sample.received_date).toLocaleDateString() : 'N/A'}</td>
+                        <td>{sample.lot_number}</td>
+                        <td>{sample.quantity}</td>
+                        <td>{sample.concentration}</td>
+                        <td>{sample.has_dow_sds ? 'Y' : 'N'}</td>
+                        <td>{sample.cas_number}</td>
+                        <td>{sample.has_coa ? 'Y' : 'N'}</td>
+                        <td>{sample.certification_date ? new Date(sample.certification_date).toLocaleDateString() : ''}</td>
+                        <td>{sample.recertification_date ? new Date(sample.recertification_date).toLocaleDateString() : ''}</td>
+                        <td>
+                          {sample.expiration_date 
+                            ? new Date(sample.expiration_date).toLocaleDateString() 
+                            : 'N/A'}
+                          <br />
+                          {getExpirationBadge(sample.expiration_status, sample.expiration_date)}
+                        </td>
+                        <td>{sample.un_number}</td>
+                        <td>{sample.hazard_description}</td>
+                        <td>{sample.hs_code}</td>
+                        <td>{sample.hazard_class}</td>
+                        <td>{sample.packing_group}</td>
+                        <td>{sample.packing_instruction}</td>
+                        <td>
+                          <span className={`sampleinv-badge sampleinv-badge-${sample.status === 'active' ? 'success' : 'secondary'}`}>
+                            {sample.status}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="sampleinv-actions">
+                            {sample.coa_file_path && (
+                              <button 
+                                className="sampleinv-btn sampleinv-btn-info" 
+                                onClick={() => handleViewCoA(sample)}
+                                title="View Certificate of Analysis"
+                              >
+                                CoA
+                              </button>
+                            )}
+                            {sample.sds_file_path && (
+                              <button 
+                                className="sampleinv-btn sampleinv-btn-warning" 
+                                onClick={() => handleViewSDS(sample)}
+                                title="View Safety Data Sheet"
+                              >
+                                SDS
+                              </button>
+                            )}
+                            <button className="sampleinv-btn sampleinv-btn-secondary" onClick={() => handleEdit(sample)}>
+                              Edit
+                            </button>
+                            <button className="sampleinv-btn sampleinv-btn-danger" onClick={() => handleDelete(sample.id)}>
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
 
-          {/* Pagination */}
-          <div className="pagination">
-            <button
-              onClick={() => setPage(Math.max(1, page - 1))}
-              disabled={page === 1}
-            >
-              Previous
-            </button>
-            <span>
-              Page {page} of {totalPages} ({totalCount} total)
-            </span>
-            <button
-              onClick={() => setPage(Math.min(totalPages, page + 1))}
-              disabled={page === totalPages}
-            >
-              Next
-            </button>
-          </div>
-        </>
-      )}
+            {/* Pagination */}
+            <div className="sampleinv-pagination">
+              <button
+                onClick={() => setPage(Math.max(1, page - 1))}
+                disabled={page === 1}
+              >
+                Previous
+              </button>
+              <span>
+                Page {page} of {totalPages} ({totalCount} total)
+              </span>
+              <button
+                onClick={() => setPage(Math.min(totalPages, page + 1))}
+                disabled={page === totalPages}
+              >
+                Next
+              </button>
+            </div>
+          </>
+        )}
+      </div>
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+        <div className="sampleinv-modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="sampleinv-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="sampleinv-modal-header">
               <h2>{isEditing ? 'Edit Sample' : 'Add New Sample'}</h2>
-              <button className="close-btn" onClick={() => setShowModal(false)}>×</button>
+              <button className="sampleinv-close-btn" onClick={() => setShowModal(false)}>×</button>
             </div>
             
             <form onSubmit={handleSubmit}>
-              <div className="form-grid">
-                <div className="form-group">
+              <div className="sampleinv-form-grid">
+                <div className="sampleinv-form-group">
                   <label>Chemical Name *</label>
                   <input
                     type="text"
@@ -543,7 +559,7 @@ const SampleInventory: React.FC = () => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="sampleinv-form-group">
                   <label>Lot Number</label>
                   <input
                     type="text"
@@ -552,7 +568,7 @@ const SampleInventory: React.FC = () => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="sampleinv-form-group">
                   <label>CAS Number</label>
                   <input
                     type="text"
@@ -561,7 +577,7 @@ const SampleInventory: React.FC = () => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="sampleinv-form-group">
                   <label>Quantity</label>
                   <input
                     type="text"
@@ -570,7 +586,7 @@ const SampleInventory: React.FC = () => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="sampleinv-form-group">
                   <label>Concentration</label>
                   <input
                     type="text"
@@ -579,7 +595,7 @@ const SampleInventory: React.FC = () => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="sampleinv-form-group">
                   <label>Received Date</label>
                   <input
                     type="date"
@@ -588,7 +604,7 @@ const SampleInventory: React.FC = () => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="sampleinv-form-group">
                   <label>Expiration Date</label>
                   <input
                     type="date"
@@ -597,7 +613,7 @@ const SampleInventory: React.FC = () => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="sampleinv-form-group">
                   <label>Certification Date</label>
                   <input
                     type="date"
@@ -606,7 +622,7 @@ const SampleInventory: React.FC = () => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="sampleinv-form-group">
                   <label>Recertification Date</label>
                   <input
                     type="date"
@@ -615,7 +631,7 @@ const SampleInventory: React.FC = () => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="sampleinv-form-group">
                   <label>UN Number</label>
                   <input
                     type="text"
@@ -624,7 +640,7 @@ const SampleInventory: React.FC = () => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="sampleinv-form-group">
                   <label>HS Code</label>
                   <input
                     type="text"
@@ -633,7 +649,7 @@ const SampleInventory: React.FC = () => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="sampleinv-form-group">
                   <label>Hazard Class</label>
                   <input
                     type="text"
@@ -642,7 +658,7 @@ const SampleInventory: React.FC = () => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="sampleinv-form-group">
                   <label>Packing Group</label>
                   <input
                     type="text"
@@ -651,7 +667,7 @@ const SampleInventory: React.FC = () => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="sampleinv-form-group">
                   <label>Packing Instruction</label>
                   <input
                     type="text"
@@ -660,7 +676,7 @@ const SampleInventory: React.FC = () => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="sampleinv-form-group">
                   <label>Status</label>
                   <select
                     value={formData.status}
@@ -672,7 +688,7 @@ const SampleInventory: React.FC = () => {
                   </select>
                 </div>
 
-                <div className="form-group full-width">
+                <div className="sampleinv-form-group sampleinv-form-full">
                   <label>Hazard Description</label>
                   <textarea
                     rows={2}
@@ -681,12 +697,12 @@ const SampleInventory: React.FC = () => {
                   />
                 </div>
 
-                <div className="form-group full-width">
+                <div className="sampleinv-form-group sampleinv-form-full">
                   <label>Certificate of Analysis (CoA)</label>
                   {isEditing && selectedSample?.coa_file_name && !deleteCoaFile && (
-                    <div style={{ marginBottom: '10px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '4px' }}>
+                    <div className="sampleinv-file-info">
                       <div>Current file: {selectedSample.coa_file_name}</div>
-                      <label style={{ marginTop: '5px' }}>
+                      <label className="sampleinv-checkbox-label">
                         <input
                           type="checkbox"
                           checked={deleteCoaFile}
@@ -703,15 +719,15 @@ const SampleInventory: React.FC = () => {
                       onChange={(e) => setSelectedCoaFile(e.target.files?.[0] || null)}
                     />
                   )}
-                  {selectedCoaFile && <div style={{ marginTop: '5px', fontSize: '0.9em', color: '#666' }}>Selected: {selectedCoaFile.name}</div>}
+                  {selectedCoaFile && <div className="sampleinv-selected-file">Selected: {selectedCoaFile.name}</div>}
                 </div>
 
-                <div className="form-group full-width">
+                <div className="sampleinv-form-group sampleinv-form-full">
                   <label>Safety Data Sheet (SDS)</label>
                   {isEditing && selectedSample?.sds_file_name && !deleteSdsFile && (
-                    <div style={{ marginBottom: '10px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '4px' }}>
+                    <div className="sampleinv-file-info">
                       <div>Current file: {selectedSample.sds_file_name}</div>
-                      <label style={{ marginTop: '5px' }}>
+                      <label className="sampleinv-checkbox-label">
                         <input
                           type="checkbox"
                           checked={deleteSdsFile}
@@ -728,10 +744,10 @@ const SampleInventory: React.FC = () => {
                       onChange={(e) => setSelectedSdsFile(e.target.files?.[0] || null)}
                     />
                   )}
-                  {selectedSdsFile && <div style={{ marginTop: '5px', fontSize: '0.9em', color: '#666' }}>Selected: {selectedSdsFile.name}</div>}
+                  {selectedSdsFile && <div className="sampleinv-selected-file">Selected: {selectedSdsFile.name}</div>}
                 </div>
 
-                <div className="form-group full-width">
+                <div className="sampleinv-form-group sampleinv-form-full">
                   <label>Notes</label>
                   <textarea
                     rows={3}
@@ -741,11 +757,11 @@ const SampleInventory: React.FC = () => {
                 </div>
               </div>
 
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>
+              <div className="sampleinv-modal-footer">
+                <button type="button" className="sampleinv-btn sampleinv-btn-secondary" onClick={() => setShowModal(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary">
+                <button type="submit" className="sampleinv-btn sampleinv-btn-primary">
                   {isEditing ? 'Update Sample' : 'Add Sample'}
                 </button>
               </div>
