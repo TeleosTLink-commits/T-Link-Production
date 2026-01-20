@@ -247,7 +247,7 @@ const ManufacturerPortal: React.FC = () => {
         </div>
         <div className="header-right">
           <button className="contact-btn" onClick={() => setActiveModal('contact')}>
-            💬 Contact Support
+            Contact Support
           </button>
           <div className="user-badge-container">
             <button 
@@ -686,7 +686,7 @@ const ManufacturerPortal: React.FC = () => {
                   onClick={() => { setActiveModal(null); navigate('/manufacturer/support?type=lab'); }}
                   className="contact-type-btn lab"
                 >
-                  <div style={{ fontSize: '32px', marginBottom: '8px' }}>🧪</div>
+                  <div style={{ fontSize: '32px', marginBottom: '8px' }}></div>
                   <div style={{ fontWeight: 600, marginBottom: '4px' }}>Lab Support</div>
                   <div style={{ fontSize: '12px', color: '#666' }}>Sample & shipment questions</div>
                 </button>
@@ -708,7 +708,7 @@ const ManufacturerPortal: React.FC = () => {
             </button>
 
             <button className="action-btn inventory-btn" onClick={() => setActiveModal('inventory')}>
-              <span className="btn-icon">📦</span>
+              <span className="btn-icon"></span>
               <span className="btn-label">Sample Inventory Quantity</span>
               <span className="btn-desc">Check stock availability</span>
             </button>

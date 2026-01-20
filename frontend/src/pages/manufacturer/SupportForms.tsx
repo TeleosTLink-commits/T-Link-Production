@@ -36,7 +36,7 @@ const SupportForms: React.FC = () => {
       name: 'Lab Support',
       email: 'eboak@ajwalabs.com',
       description: 'Sample preparation, testing procedures, and lab documentation',
-      icon: '🧪',
+      icon: '',
       color: '#28a745',
     },
   };
@@ -134,7 +134,7 @@ const SupportForms: React.FC = () => {
     return (
       <div style={styles.container}>
         <div style={styles.successCard}>
-          <div style={styles.successIcon}>✅</div>
+          <div style={styles.successIcon}></div>
           <h1 style={styles.successTitle}>Support Request Submitted!</h1>
           <p style={styles.successMessage}>
             Your {info.name.toLowerCase()} request has been received and forwarded to our team.

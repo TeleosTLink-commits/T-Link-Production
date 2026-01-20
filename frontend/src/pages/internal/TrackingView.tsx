@@ -86,9 +86,9 @@ const TrackingView: React.FC = () => {
 
   const getStatusIcon = (status: string) => {
     switch(status?.toLowerCase()) {
-      case 'in_transit': return '📦';
+      case 'in_transit': return '';
       case 'out_for_delivery': return '🚚';
-      case 'delivered': return '✅';
+      case 'delivered': return '';
       case 'exception': return '⚠️';
       default: return '📮';
     }

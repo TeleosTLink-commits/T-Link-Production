@@ -57,13 +57,13 @@ const MyShipments: React.FC = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'initiated':
-        return '📋';
+        return '';
       case 'processing':
-        return '⚙️';
+        return '';
       case 'shipped':
         return '🚚';
       case 'delivered':
-        return '✅';
+        return '';
       default:
         return '❓';
     }
@@ -283,7 +283,7 @@ const MyShipments: React.FC = () => {
                           rel="noopener noreferrer"
                           style={styles.trackingLink}
                         >
-                          📦 Track Package on FedEx
+                          Track Package on FedEx
                         </a>
                       </div>
                     )}

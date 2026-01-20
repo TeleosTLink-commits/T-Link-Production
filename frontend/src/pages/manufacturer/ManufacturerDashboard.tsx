@@ -20,31 +20,31 @@ const ManufacturerDashboard: React.FC = () => {
       link: '/manufacturer/coa-lookup',
     },
     {
-      icon: '📦',
+      icon: '',
       title: 'Inventory Search',
       description: 'Check sample availability',
       link: '/manufacturer/inventory-search',
     },
     {
-      icon: '✈️',
+      icon: '',
       title: 'Shipment Requests',
       description: 'Create and track shipments',
       link: '/manufacturer/shipment-request',
     },
     {
-      icon: '📋',
+      icon: '',
       title: 'My Shipments',
       description: 'View shipment status and tracking',
       link: '/manufacturer/my-shipments',
     },
     {
-      icon: '💬',
+      icon: '',
       title: 'Tech Support',
       description: 'Get technical assistance',
       link: '/manufacturer/support?type=tech',
     },
     {
-      icon: '🧪',
+      icon: '',
       title: 'Lab Support',
       description: 'Questions about samples and shipments',
       link: '/manufacturer/support?type=lab',
@@ -85,7 +85,7 @@ const ManufacturerDashboard: React.FC = () => {
                 <span style={styles.featureText}>Secure Access</span>
               </div>
               <div style={styles.feature}>
-                <span style={styles.featureIcon}>📊</span>
+                <span style={styles.featureIcon}></span>
                 <span style={styles.featureText}>Real-time Status</span>
               </div>
               <div style={styles.feature}>

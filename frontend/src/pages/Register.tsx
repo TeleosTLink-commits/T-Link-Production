@@ -73,7 +73,7 @@ const Register: React.FC = () => {
         localStorage.setItem('user', JSON.stringify(response.data.data.user));
         
         // Show success and redirect
-        alert(`✅ Account created successfully! You've been assigned the role: ${response.data.data.user.role}`);
+        alert(`Account created successfully! You've been assigned the role: ${response.data.data.user.role}`);
         navigate('/dashboard');
       }
     } catch (err: any) {
@@ -120,7 +120,7 @@ const Register: React.FC = () => {
             marginBottom: '15px',
             color: '#155724'
           }}>
-            ✅ Email authorized! You'll be assigned role: <strong>{authorizedRole}</strong>
+            Email authorized! You'll be assigned role: <strong>{authorizedRole}</strong>
           </div>
         )}
 

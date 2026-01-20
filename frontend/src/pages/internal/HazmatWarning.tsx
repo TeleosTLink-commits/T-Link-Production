@@ -139,7 +139,7 @@ const HazmatWarning: React.FC = () => {
     return (
       <div style={styles.container}>
         <div style={styles.successCard}>
-          <div style={styles.successIcon}>✅</div>
+          <div style={styles.successIcon}></div>
           <h1 style={styles.successTitle}>Hazmat Processing Complete!</h1>
           <p style={styles.successMessage}>
             All dangerous goods documentation and warning labels have been recorded.

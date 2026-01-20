@@ -149,7 +149,7 @@ const Shipments: React.FC = () => {
       });
       
       const message = response.data.message || 'Shipment created successfully!';
-      alert(`✅ ${message}\n\nThe sample quantities have been automatically updated in inventory.`);
+      alert(`${message}\n\nThe sample quantities have been automatically updated in inventory.`);
       
       setShowModal(false);
       setFormData({
@@ -179,7 +179,7 @@ const Shipments: React.FC = () => {
       const newCount = selectedSupply.count + parseInt(restockAmount);
       await api.post(`/shipments/supplies/${selectedSupply.id}/restock`, { count: newCount });
       
-      alert(`✅ Updated ${selectedSupply.un_box_type} stock to ${newCount}`);
+      alert(`Updated ${selectedSupply.un_box_type} stock to ${newCount}`);
       setShowSupplyModal(false);
       setSelectedSupply(null);
       setRestockAmount('');
@@ -237,7 +237,7 @@ const Shipments: React.FC = () => {
               <div className="shipments-empty">Loading shipments...</div>
             ) : shipments.length === 0 ? (
               <div className="shipments-empty">
-                <div className="shipments-empty-icon">📦</div>
+                <div className="shipments-empty-icon"></div>
                 <h3>No Shipments Found</h3>
                 <p>Create your first shipment to get started</p>
               </div>
@@ -323,7 +323,7 @@ const Shipments: React.FC = () => {
               <div className="shipments-empty">Loading...</div>
             ) : shipments.filter(s => s.status === 'initiated').length === 0 ? (
               <div className="shipments-empty">
-                <div className="shipments-empty-icon">✅</div>
+                <div className="shipments-empty-icon"></div>
                 <h3>All Caught Up!</h3>
                 <p>No shipments pending processing</p>
               </div>

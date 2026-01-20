@@ -32,7 +32,7 @@ const Dashboard: React.FC = () => {
         </div>
         <div className="header-right">
           <button className="contact-btn" onClick={() => setActiveModal('contact')}>
-            💬 Contact Support
+            Contact Support
           </button>
           <div className="user-badge-container">
             <button 
@@ -63,26 +63,26 @@ const Dashboard: React.FC = () => {
           <h2>Platform Modules</h2>
           <div className="actions-grid">
             <button className="action-btn test-methods-btn" onClick={() => navigate('/test-methods')}>
-              <span className="btn-icon">📋</span>
+              <span className="btn-icon"></span>
               <span className="btn-label">Test Methods</span>
               <span className="btn-desc">Manage testing procedures</span>
             </button>
 
             <button className="action-btn inventory-btn" onClick={() => navigate('/inventory')}>
-              <span className="btn-icon">🧪</span>
+              <span className="btn-icon"></span>
               <span className="btn-label">Sample Inventory</span>
               <span className="btn-desc">Track samples and CoAs</span>
             </button>
 
             <button className="action-btn shipments-btn" onClick={() => navigate('/shipments')}>
-              <span className="btn-icon">📦</span>
+              <span className="btn-icon"></span>
               <span className="btn-label">Shipment Logistics</span>
               <span className="btn-desc">Manage shipping operations</span>
             </button>
 
             {effectiveUser?.role === 'super_admin' && (
               <button className="action-btn admin-btn" onClick={() => navigate('/internal/admin')}>
-                <span className="btn-icon">🛡️</span>
+                <span className="btn-icon"></span>
                 <span className="btn-label">Super Admin Panel</span>
                 <span className="btn-desc">Platform management & control</span>
               </button>
@@ -116,7 +116,7 @@ const Dashboard: React.FC = () => {
                   onClick={() => { setActiveModal(null); navigate('/manufacturer/support?type=lab'); }}
                   className="contact-type-btn lab"
                 >
-                  <div style={{ fontSize: '32px', marginBottom: '8px' }}>🧪</div>
+                  <div style={{ fontSize: '32px', marginBottom: '8px' }}></div>
                   <div style={{ fontWeight: 600, marginBottom: '4px' }}>Lab Support</div>
                   <div style={{ fontSize: '12px', color: '#666' }}>Sample & shipment questions</div>
                 </button>

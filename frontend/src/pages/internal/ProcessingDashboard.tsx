@@ -108,7 +108,7 @@ const ProcessingDashboard: React.FC = () => {
 
             {shipments.length === 0 ? (
               <div className="processing-empty">
-                <div className="empty-icon">📦</div>
+                <div className="empty-icon"></div>
                 <h3>No Pending Shipments</h3>
                 <p>All shipment requests have been processed</p>
               </div>

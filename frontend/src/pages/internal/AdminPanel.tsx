@@ -180,7 +180,7 @@ const AdminPanel: React.FC = () => {
     e.preventDefault();
     try {
       await api.post('/admin/users', newUser);
-      alert('✅ User created successfully');
+      alert('User created successfully');
       setShowAddUser(false);
       setNewUser({ email: '', firstName: '', lastName: '', password: '', role: 'manufacturer' });
       fetchUsers();
@@ -195,7 +195,7 @@ const AdminPanel: React.FC = () => {
     
     try {
       await api.post(`/admin/users/${userId}/reset-password`, { password: newPassword });
-      alert('✅ Password reset successfully');
+      alert('Password reset successfully');
     } catch (err: any) {
       alert(err.response?.data?.error || 'Failed to reset password');
     }
@@ -208,7 +208,7 @@ const AdminPanel: React.FC = () => {
     
     try {
       await api.post(`/admin/users/${userId}/change-role`, { role: newRole });
-      alert('✅ Role updated successfully');
+      alert('Role updated successfully');
       fetchUsers();
     } catch (err: any) {
       alert(err.response?.data?.error || 'Failed to change role');
@@ -218,7 +218,7 @@ const AdminPanel: React.FC = () => {
   const handleToggleUserStatus = async (userId: string, currentStatus: boolean) => {
     try {
       await api.post(`/admin/users/${userId}/toggle-status`, { isActive: !currentStatus });
-      alert(`✅ User ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
+      alert(`User ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
       fetchUsers();
     } catch (err: any) {
       alert(err.response?.data?.error || 'Failed to update user status');
@@ -230,7 +230,7 @@ const AdminPanel: React.FC = () => {
     
     try {
       await api.delete(`/admin/shipments/${id}`);
-      alert('✅ Shipment deleted successfully');
+      alert('Shipment deleted successfully');
       fetchShipments();
     } catch (err: any) {
       alert(err.response?.data?.error || 'Failed to delete shipment');
@@ -242,7 +242,7 @@ const AdminPanel: React.FC = () => {
     
     try {
       await api.delete(`/admin/samples/${id}`);
-      alert('✅ Sample deleted successfully');
+      alert('Sample deleted successfully');
       fetchSamples();
     } catch (err: any) {
       alert(err.response?.data?.error || 'Failed to delete sample');
@@ -254,7 +254,7 @@ const AdminPanel: React.FC = () => {
     
     try {
       await api.delete(`/admin/test-methods/${id}`);
-      alert('✅ Test method deleted successfully');
+      alert('Test method deleted successfully');
       fetchTestMethods();
     } catch (err: any) {
       alert(err.response?.data?.error || 'Failed to delete test method');
@@ -269,7 +269,7 @@ const AdminPanel: React.FC = () => {
             ← Back to Dashboard
           </button>
           <div>
-            <h1>🛡️ Super Admin Panel</h1>
+            <h1>Super Admin Panel</h1>
             <p>Full platform management and control</p>
           </div>
         </div>
@@ -284,32 +284,32 @@ const AdminPanel: React.FC = () => {
                       className={`admin-tab ${activeTab === 'activity' ? 'active' : ''}`}
                       onClick={() => setActiveTab('activity')}
                     >
-                      📊 Activity
-                    </button>
+            Activity
+          </button>
           </button>
           <button 
             className={`admin-tab ${activeTab === 'shipments' ? 'active' : ''}`}
             onClick={() => setActiveTab('shipments')}
           >
-            📦 Shipments
+            Shipments
           </button>
           <button 
             className={`admin-tab ${activeTab === 'samples' ? 'active' : ''}`}
             onClick={() => setActiveTab('samples')}
           >
-            🧪 Samples
+            Samples
           </button>
           <button 
             className={`admin-tab ${activeTab === 'testmethods' ? 'active' : ''}`}
             onClick={() => setActiveTab('testmethods')}
           >
-            📋 Test Methods
+            Test Methods
           </button>
           <button 
             className={`admin-tab ${activeTab === 'system' ? 'active' : ''}`}
             onClick={() => setActiveTab('system')}
           >
-            ⚙️ System
+            System
           </button>
         </div>
       </div>
@@ -397,17 +397,17 @@ const AdminPanel: React.FC = () => {
                 {/* Summary Cards */}
                 <div className="activity-stats">
                   <div className="stat-card">
-                              <div className="stat-icon">✅</div>
+                              <div className="stat-icon"></div>
                               <div className="stat-value">{activityData.activeUsers}</div>
                               <div className="stat-label">Active Users (30 days)</div>
                             </div>
                             <div className="stat-card">
-                              <div className="stat-icon">⏸️</div>
+                              <div className="stat-icon"></div>
                               <div className="stat-value">{activityData.neverLoggedIn}</div>
                               <div className="stat-label">Never Logged In</div>
                             </div>
                             <div className="stat-card">
-                              <div className="stat-icon">📈</div>
+                              <div className="stat-icon"></div>
                               <div className="stat-value">
                                 {activityData.recentLogins.length > 0 
                                   ? new Date(activityData.recentLogins[0].last_login).toLocaleDateString()
@@ -640,22 +640,22 @@ const AdminPanel: React.FC = () => {
             ) : dbStats ? (
               <div className="system-stats">
                 <div className="stat-card">
-                  <div className="stat-icon">👥</div>
+                  <div className="stat-icon"></div>
                   <div className="stat-value">{dbStats.totalUsers || 0}</div>
                   <div className="stat-label">Total Users</div>
                 </div>
                 <div className="stat-card">
-                  <div className="stat-icon">📦</div>
+                  <div className="stat-icon"></div>
                   <div className="stat-value">{dbStats.totalShipments || 0}</div>
                   <div className="stat-label">Total Shipments</div>
                 </div>
                 <div className="stat-card">
-                  <div className="stat-icon">🧪</div>
+                  <div className="stat-icon"></div>
                   <div className="stat-value">{dbStats.totalSamples || 0}</div>
                   <div className="stat-label">Total Samples</div>
                 </div>
                 <div className="stat-card">
-                  <div className="stat-icon">📋</div>
+                  <div className="stat-icon"></div>
                   <div className="stat-value">{dbStats.totalTestMethods || 0}</div>
                   <div className="stat-label">Test Methods</div>
                 </div>

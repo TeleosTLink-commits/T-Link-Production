@@ -86,7 +86,7 @@ const SupplyInventory: React.FC = () => {
     } else if (current < reorder * 1.5) {
       return { color: '#ffc107', text: 'LOW STOCK', emoji: '⚠️' };
     } else {
-      return { color: '#28a745', text: 'IN STOCK', emoji: '✅' };
+      return { color: '#28a745', text: 'IN STOCK', emoji: '' };
     }
   };
 
@@ -142,7 +142,7 @@ const SupplyInventory: React.FC = () => {
           </div>
         ) : supplies.length === 0 ? (
           <div style={styles.emptyMessage}>
-            <p style={styles.emptyIcon}>📦</p>
+            <p style={styles.emptyIcon}></p>
             <p style={styles.emptyText}>No supplies configured</p>
           </div>
         ) : (

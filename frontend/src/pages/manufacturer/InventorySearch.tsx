@@ -163,7 +163,7 @@ const InventorySearch: React.FC = () => {
 
           {!searched && (
             <div className="inventory-empty-state">
-              <div className="inventory-empty-icon">📦</div>
+              <div className="inventory-empty-icon"></div>
               <h2 className="inventory-empty-title">Search Sample Inventory</h2>
               <p className="inventory-empty-text">
                 Enter a sample name above to check current availability and quantity in our inventory.
