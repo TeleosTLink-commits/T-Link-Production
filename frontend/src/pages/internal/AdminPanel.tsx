@@ -33,8 +33,9 @@ interface Shipment {
 
 interface TestMethod {
   id: string;
-  test_name: string;
-  method_number: string;
+  tm_number: string;
+  title: string;
+  version?: string;
   status: string;
 }
 
@@ -144,7 +145,7 @@ const AdminPanel: React.FC = () => {
     setLoading(true);
     try {
       const response = await api.get('/test-methods', { params: { limit: 1000 } });
-      setTestMethods(response.data.data?.testMethods || []);
+      setTestMethods(response.data.data || []);
     } catch (err) {
       console.error('Error fetching test methods:', err);
     } finally {
@@ -279,13 +280,13 @@ const AdminPanel: React.FC = () => {
             className={`admin-tab ${activeTab === 'users' ? 'active' : ''}`}
             onClick={() => setActiveTab('users')}
           >
-            👥 Users
-                    <button 
-                      className={`admin-tab ${activeTab === 'activity' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('activity')}
-                    >
-            Activity
+            Users
           </button>
+          <button 
+            className={`admin-tab ${activeTab === 'activity' ? 'active' : ''}`}
+            onClick={() => setActiveTab('activity')}
+          >
+            Activity
           </button>
           <button 
             className={`admin-tab ${activeTab === 'shipments' ? 'active' : ''}`}
@@ -599,8 +600,9 @@ const AdminPanel: React.FC = () => {
                 <table className="admin-table">
                   <thead>
                     <tr>
-                      <th>Test Name</th>
-                      <th>Method Number</th>
+                      <th>TM Number</th>
+                      <th>Title</th>
+                      <th>Version</th>
                       <th>Status</th>
                       <th>Actions</th>
                     </tr>
@@ -608,13 +610,14 @@ const AdminPanel: React.FC = () => {
                   <tbody>
                     {testMethods.map((method) => (
                       <tr key={method.id}>
-                        <td><strong>{method.test_name}</strong></td>
-                        <td>{method.method_number}</td>
+                        <td><strong>{method.tm_number}</strong></td>
+                        <td>{method.title}</td>
+                        <td>{method.version || 'N/A'}</td>
                         <td><span className={`status-badge ${method.status}`}>{method.status}</span></td>
                         <td>
                           <button 
                             className="action-btn small danger"
-                            onClick={() => handleDeleteTestMethod(method.id, method.test_name)}
+                            onClick={() => handleDeleteTestMethod(method.id, method.title)}
                           >
                             Delete
                           </button>
