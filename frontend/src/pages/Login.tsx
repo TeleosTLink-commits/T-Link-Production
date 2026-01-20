@@ -28,7 +28,7 @@ const Login: React.FC = () => {
         // Redirect based on user role
         const userRole = response.data.data.user?.role;
         if (userRole === 'manufacturer') {
-          navigate('/manufacturer');
+          navigate('/manufacturer/dashboard');
         } else {
           navigate('/dashboard');
         }

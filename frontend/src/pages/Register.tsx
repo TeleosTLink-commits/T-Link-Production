@@ -72,9 +72,14 @@ const Register: React.FC = () => {
         localStorage.setItem('auth_token', response.data.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.data.user));
         
-        // Show success and redirect
+        // Show success and redirect based on role
         alert(`Account created successfully! You've been assigned the role: ${response.data.data.user.role}`);
-        navigate('/dashboard');
+        const userRole = response.data.data.user?.role;
+        if (userRole === 'manufacturer') {
+          navigate('/manufacturer/dashboard');
+        } else {
+          navigate('/dashboard');
+        }
       }
     } catch (err: any) {
       const message = err.response?.data?.message || err.response?.data?.error || 'Registration failed. Please try again.';
