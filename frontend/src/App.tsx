@@ -32,19 +32,20 @@ function App() {
     <Router>
       <ToastContainer position="top-right" autoClose={3000} />
       <Routes>
+        {/* Public Routes */}
         <Route path="/login" element={!token ? <Login /> : <Navigate to="/dashboard" />} />
         <Route path="/register" element={!token ? <Register /> : <Navigate to="/dashboard" />} />
-        
-        {/* Manufacturer Portal Routes */}
         <Route path="/manufacturer/signup" element={!token ? <ManufacturerSignUp /> : <Navigate to="/manufacturer/dashboard" />} />
         
+        {/* Protected Routes */}
         <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Navigate to="/dashboard" />} />
+          
+          {/* Internal Dashboard & Pages */}
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="test-methods" element={<TestMethods />} />
           <Route path="inventory" element={<SampleInventory />} />
           <Route path="shipments" element={<Shipments />} />
-          <Route path="manufacturer" element={<Navigate to="/manufacturer/dashboard" replace />} />
           
           {/* Manufacturer Portal Pages */}
           <Route path="manufacturer/dashboard" element={<ManufacturerDashboard />} />
@@ -63,6 +64,7 @@ function App() {
           <Route path="internal/admin" element={<AdminPanel />} />
         </Route>
 
+        {/* Catch-all redirect */}
         <Route path="*" element={<Navigate to={token ? '/dashboard' : '/login'} />} />
       </Routes>
     </Router>
