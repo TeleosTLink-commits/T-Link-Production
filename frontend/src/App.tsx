@@ -7,7 +7,6 @@ import Dashboard from './pages/Dashboard';
 import TestMethods from './pages/TestMethods';
 import SampleInventory from './pages/SampleInventory';
 import Shipments from './pages/Shipments';
-import ManufacturerPortal from './pages/ManufacturerPortal';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 // Manufacturer portal components
@@ -45,7 +44,7 @@ function App() {
           <Route path="test-methods" element={<TestMethods />} />
           <Route path="inventory" element={<SampleInventory />} />
           <Route path="shipments" element={<Shipments />} />
-          <Route path="manufacturer" element={<ManufacturerPortal />} />
+          <Route path="manufacturer" element={<Navigate to="/manufacturer/dashboard" replace />} />
           
           {/* Manufacturer Portal Pages */}
           <Route path="manufacturer/dashboard" element={<ManufacturerDashboard />} />
