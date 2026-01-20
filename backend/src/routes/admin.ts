@@ -103,8 +103,8 @@ router.post('/users', async (req, res) => {
 
     // Create user with placeholder names (will be updated during registration)
     const result = await pool.query(`
-      INSERT INTO users (email, first_name, last_name, password_hash, role, is_active, email_verified)
-      VALUES ($1, 'Pending', 'Registration', $2, $3, false, false)
+      INSERT INTO users (email, username, first_name, last_name, password_hash, role, is_active, email_verified)
+      VALUES ($1, $1, 'Pending', 'Registration', $2, $3, false, false)
       RETURNING id, email, role, is_active, created_at
     `, [email, tempPassword, role]);
 
