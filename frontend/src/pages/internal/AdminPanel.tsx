@@ -62,7 +62,7 @@ const AdminPanel: React.FC = () => {
   // Users
   const [users, setUsers] = useState<User[]>([]);
   const [showAddUser, setShowAddUser] = useState(false);
-  const [newUser, setNewUser] = useState({ email: '', firstName: '', lastName: '', password: '', role: 'manufacturer' });
+  const [newUser, setNewUser] = useState({ email: '', role: 'manufacturer' });
   
   // Shipments
   const [shipments, setShipments] = useState<Shipment[]>([]);
@@ -181,9 +181,9 @@ const AdminPanel: React.FC = () => {
     e.preventDefault();
     try {
       await api.post('/admin/users', newUser);
-      alert('User created successfully');
+      alert('User invitation sent successfully. They will receive instructions to complete registration.');
       setShowAddUser(false);
-      setNewUser({ email: '', firstName: '', lastName: '', password: '', role: 'manufacturer' });
+      setNewUser({ email: '', role: 'manufacturer' });
       fetchUsers();
     } catch (err: any) {
       alert(err.response?.data?.error || 'Failed to create user');
@@ -686,34 +686,9 @@ const AdminPanel: React.FC = () => {
                   value={newUser.email}
                   onChange={(e) => setNewUser({...newUser, email: e.target.value})}
                   required
+                  placeholder="user@company.com"
                 />
-              </div>
-              <div className="form-group">
-                <label>First Name</label>
-                <input
-                  type="text"
-                  value={newUser.firstName}
-                  onChange={(e) => setNewUser({...newUser, firstName: e.target.value})}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Last Name</label>
-                <input
-                  type="text"
-                  value={newUser.lastName}
-                  onChange={(e) => setNewUser({...newUser, lastName: e.target.value})}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Password</label>
-                <input
-                  type="password"
-                  value={newUser.password}
-                  onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                  required
-                />
+                <small style={{ color: '#666', fontSize: '0.85rem' }}>User will receive registration instructions at this email</small>
               </div>
               <div className="form-group">
                 <label>Role</label>

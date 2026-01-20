@@ -122,32 +122,52 @@ router.post('/register', async (req, res, next) => {
       [email.toLowerCase()]
     );
 
-    if (authCheck.rows.length === 0) {
-      throw new AppError('This email is not authorized to register. Please contact your administrator.', 403);
-    }
-
-    const authorizedEmail = authCheck.rows[0];
-
-    // Check if user already exists
+    // Check if user was created by admin (pending registration)
     const existingUser = await query(
       'SELECT * FROM users WHERE email = $1',
       [email.toLowerCase()]
     );
 
+    let userRole = null;
+    let isAdminCreated = false;
+
     if (existingUser.rows.length > 0) {
-      throw new AppError('User with this email already exists', 409);
+      const user = existingUser.rows[0];
+      // If user has placeholder name, they were created by admin and can complete registration
+      if (user.first_name === 'Pending' && user.last_name === 'Registration') {
+        isAdminCreated = true;
+        userRole = user.role;
+      } else {
+        throw new AppError('User with this email already exists', 409);
+      }
+    } else if (authCheck.rows.length === 0) {
+      throw new AppError('This email is not authorized to register. Please contact your administrator.', 403);
+    } else {
+      userRole = authCheck.rows[0].role;
     }
 
     // Hash password
     const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
 
-    // Create user with role from authorized_emails
-    const result = await query(
-      `INSERT INTO users (email, password_hash, first_name, last_name, role, is_active, email_verified, username)
-       VALUES ($1, $2, $3, $4, $5, true, true, $1)
-       RETURNING id, email, first_name, last_name, role, created_at`,
-      [email.toLowerCase(), password_hash, first_name, last_name, authorizedEmail.role]
-    );
+    let result;
+    if (isAdminCreated) {
+      // Update existing user created by admin
+      result = await query(
+        `UPDATE users 
+         SET first_name = $1, last_name = $2, password_hash = $3, is_active = true, email_verified = true, username = $4
+         WHERE email = $5
+         RETURNING id, email, first_name, last_name, role, created_at`,
+        [first_name, last_name, password_hash, email.toLowerCase(), email.toLowerCase()]
+      );
+    } else {
+      // Create new user from authorized_emails
+      result = await query(
+        `INSERT INTO users (email, password_hash, first_name, last_name, role, is_active, email_verified, username)
+         VALUES ($1, $2, $3, $4, $5, true, true, $1)
+         RETURNING id, email, first_name, last_name, role, created_at`,
+        [email.toLowerCase(), password_hash, first_name, last_name, userRole]
+      );
+    }
 
     const user = result.rows[0];
 
@@ -218,18 +238,35 @@ router.post('/check-email', async (req, res, next) => {
       throw new AppError('Email is required', 400);
     }
 
-    const result = await query(
+    // Check authorized_emails table
+    const authResult = await query(
       'SELECT email, role FROM authorized_emails WHERE email = $1',
       [email.toLowerCase()]
     );
 
-    const isAuthorized = result.rows.length > 0;
+    // Also check if user was created by admin but hasn't completed registration
+    const userResult = await query(
+      'SELECT email, role, first_name, last_name FROM users WHERE email = $1',
+      [email.toLowerCase()]
+    );
+
+    let isAuthorized = authResult.rows.length > 0;
+    let role = isAuthorized ? authResult.rows[0].role : null;
+
+    // If user exists with placeholder name, they can complete registration
+    if (userResult.rows.length > 0) {
+      const user = userResult.rows[0];
+      if (user.first_name === 'Pending' && user.last_name === 'Registration') {
+        isAuthorized = true;
+        role = user.role;
+      }
+    }
     
     res.json({
       success: true,
       data: {
         authorized: isAuthorized,
-        role: isAuthorized ? result.rows[0].role : null
+        role: role
       }
     });
   } catch (error) {

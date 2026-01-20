@@ -66,13 +66,13 @@ router.get('/users', async (req, res) => {
 // Create new user
 router.post('/users', async (req, res) => {
   try {
-    const { email, firstName, lastName, password, role } = req.body;
+    const { email, role } = req.body;
 
     // Validate required fields
-    if (!email || !firstName || !lastName || !password || !role) {
+    if (!email || !role) {
       return res.status(400).json({ 
         error: 'Missing required fields',
-        required: ['email', 'firstName', 'lastName', 'password', 'role']
+        required: ['email', 'role']
       });
     }
 
@@ -97,19 +97,23 @@ router.post('/users', async (req, res) => {
       });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Generate temporary password (user will need to register)
+    // Use a random string that user cannot use - forces them to go through registration
+    const tempPassword = await bcrypt.hash(`temp_${Date.now()}_${Math.random()}`, 10);
 
-    // Create user
+    // Create user with placeholder names (will be updated during registration)
     const result = await pool.query(`
-      INSERT INTO users (email, first_name, last_name, password, role, is_active)
-      VALUES ($1, $2, $3, $4, $5, true)
-      RETURNING id, email, first_name, last_name, role, is_active, created_at
-    `, [email, firstName, lastName, hashedPassword, role]);
+      INSERT INTO users (email, first_name, last_name, password_hash, role, is_active, email_verified)
+      VALUES ($1, 'Pending', 'Registration', $2, $3, false, false)
+      RETURNING id, email, role, is_active, created_at
+    `, [email, tempPassword, role]);
+
+    // TODO: Send email invitation with registration link
+    // await emailService.sendUserInvitation(email, role);
 
     res.json({ 
       success: true, 
-      message: 'User created successfully',
+      message: 'User invitation created. User must complete registration.',
       data: result.rows[0] 
     });
   } catch (error: any) {
