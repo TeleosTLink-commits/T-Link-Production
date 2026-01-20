@@ -38,9 +38,24 @@ interface TestMethod {
   status: string;
 }
 
+interface ActivityData {
+  activeUsers: number;
+  usersByRole: Array<{ role: string; count: string }>;
+  recentLogins: Array<{
+    id: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+    role: string;
+    last_login: string;
+  }>;
+  neverLoggedIn: number;
+  loginsByDay: Array<{ date: string; logins: string }>;
+}
+
 const AdminPanel: React.FC = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'users' | 'shipments' | 'samples' | 'testmethods' | 'system'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'activity' | 'shipments' | 'samples' | 'testmethods' | 'system'>('users');
   const [loading, setLoading] = useState(false);
   
   // Users
@@ -60,12 +75,16 @@ const AdminPanel: React.FC = () => {
   // System
   const [dbStats, setDbStats] = useState<any>(null);
 
+  // Activity
+  const [activityData, setActivityData] = useState<ActivityData | null>(null);
+
   useEffect(() => {
     checkAdminAccess();
   }, []);
 
   useEffect(() => {
     if (activeTab === 'users') fetchUsers();
+      if (activeTab === 'activity') fetchActivity();
     if (activeTab === 'shipments') fetchShipments();
     if (activeTab === 'samples') fetchSamples();
     if (activeTab === 'testmethods') fetchTestMethods();
@@ -140,6 +159,18 @@ const AdminPanel: React.FC = () => {
       setDbStats(response.data.data || response.data);
     } catch (err) {
       console.error('Error fetching system stats:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchActivity = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/admin/user-activity');
+      setActivityData(response.data.data || response.data);
+    } catch (err) {
+      console.error('Error fetching activity data:', err);
     } finally {
       setLoading(false);
     }
@@ -249,6 +280,12 @@ const AdminPanel: React.FC = () => {
             onClick={() => setActiveTab('users')}
           >
             👥 Users
+                    <button 
+                      className={`admin-tab ${activeTab === 'activity' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('activity')}
+                    >
+                      📊 Activity
+                    </button>
           </button>
           <button 
             className={`admin-tab ${activeTab === 'shipments' ? 'active' : ''}`}
@@ -342,6 +379,118 @@ const AdminPanel: React.FC = () => {
                   </tbody>
                 </table>
               </div>
+            )}
+          </div>
+        )}
+
+        {/* Activity Tab */}
+        {activeTab === 'activity' && (
+          <div className="admin-section">
+            <div className="admin-section-header">
+              <h2>User Activity & Statistics</h2>
+            </div>
+            
+            {loading ? (
+              <div className="admin-loading">Loading activity data...</div>
+            ) : activityData ? (
+              <div className="activity-dashboard">
+                {/* Summary Cards */}
+                <div className="activity-stats">
+                  <div className="stat-card">
+                              <div className="stat-icon">✅</div>
+                              <div className="stat-value">{activityData.activeUsers}</div>
+                              <div className="stat-label">Active Users (30 days)</div>
+                            </div>
+                            <div className="stat-card">
+                              <div className="stat-icon">⏸️</div>
+                              <div className="stat-value">{activityData.neverLoggedIn}</div>
+                              <div className="stat-label">Never Logged In</div>
+                            </div>
+                            <div className="stat-card">
+                              <div className="stat-icon">📈</div>
+                              <div className="stat-value">
+                                {activityData.recentLogins.length > 0 
+                                  ? new Date(activityData.recentLogins[0].last_login).toLocaleDateString()
+                                  : 'N/A'}
+                              </div>
+                              <div className="stat-label">Latest Login</div>
+                            </div>
+                </div>
+
+                {/* Users by Role */}
+                <div className="activity-section">
+                            <h3>Users by Role</h3>
+                            <div className="role-distribution">
+                              {activityData.usersByRole.map((roleData) => (
+                                <div key={roleData.role} className="role-stat">
+                                  <span className={`role-badge ${roleData.role}`}>{roleData.role}</span>
+                                  <span className="role-count">{roleData.count} users</span>
+                                </div>
+                              ))}
+                            </div>
+                </div>
+
+                {/* Recent Logins */}
+                <div className="activity-section">
+                            <h3>Recent Logins (Last 10)</h3>
+                            <div className="admin-table-wrapper">
+                              <table className="admin-table">
+                                <thead>
+                                  <tr>
+                                    <th>User</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Last Login</th>
+                                    <th>Days Ago</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {activityData.recentLogins.map((user) => {
+                                    const daysAgo = Math.floor(
+                                      (Date.now() - new Date(user.last_login).getTime()) / (1000 * 60 * 60 * 24)
+                                    );
+                                    return (
+                                      <tr key={user.id}>
+                                        <td>{user.first_name} {user.last_name}</td>
+                                        <td>{user.email}</td>
+                                        <td><span className={`role-badge ${user.role}`}>{user.role}</span></td>
+                                        <td>{new Date(user.last_login).toLocaleString()}</td>
+                                        <td>
+                                          <span className={daysAgo === 0 ? 'recent-badge' : ''}>
+                                            {daysAgo === 0 ? 'Today' : `${daysAgo} day${daysAgo > 1 ? 's' : ''} ago`}
+                                          </span>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                </div>
+
+                {/* Login Activity by Day */}
+                <div className="activity-section">
+                            <h3>Login Activity (Last 30 Days)</h3>
+                            <div className="login-timeline">
+                              {activityData.loginsByDay.length > 0 ? (
+                                activityData.loginsByDay.map((day) => (
+                                  <div key={day.date} className="timeline-item">
+                                    <div className="timeline-date">
+                                      {new Date(day.date).toLocaleDateString()}
+                                    </div>
+                                    <div className="timeline-bar" style={{ width: `${Math.min(parseInt(day.logins) * 20, 100)}%` }}>
+                                      {day.logins} login{parseInt(day.logins) > 1 ? 's' : ''}
+                                    </div>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="admin-empty">No login activity in the last 30 days</div>
+                              )}
+                            </div>
+                </div>
+              </div>
+            ) : (
+              <div className="admin-empty">No activity data available</div>
             )}
           </div>
         )}

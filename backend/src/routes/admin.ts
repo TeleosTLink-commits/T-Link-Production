@@ -349,4 +349,77 @@ router.get('/system-stats', async (req, res) => {
   }
 });
 
+// Get user activity statistics
+router.get('/user-activity', async (req, res) => {
+  try {
+    // Get active users (logged in within last 30 days)
+    const activeUsers = await pool.query(`
+      SELECT COUNT(*) 
+      FROM users 
+      WHERE last_login >= NOW() - INTERVAL '30 days'
+        AND is_active = true
+    `);
+
+    // Get users by role
+    const usersByRole = await pool.query(`
+      SELECT role, COUNT(*) as count
+      FROM users
+      WHERE is_active = true
+      GROUP BY role
+      ORDER BY count DESC
+    `);
+
+    // Get recent logins (last 10)
+    const recentLogins = await pool.query(`
+      SELECT 
+        id,
+        email,
+        first_name,
+        last_name,
+        role,
+        last_login
+      FROM users
+      WHERE last_login IS NOT NULL
+      ORDER BY last_login DESC
+      LIMIT 10
+    `);
+
+    // Get users who never logged in
+    const neverLoggedIn = await pool.query(`
+      SELECT COUNT(*)
+      FROM users
+      WHERE last_login IS NULL
+        AND is_active = true
+    `);
+
+    // Get login activity by day (last 30 days)
+    const loginsByDay = await pool.query(`
+      SELECT 
+        DATE(last_login) as date,
+        COUNT(*) as logins
+      FROM users
+      WHERE last_login >= NOW() - INTERVAL '30 days'
+      GROUP BY DATE(last_login)
+      ORDER BY date DESC
+    `);
+
+    res.json({
+      success: true,
+      data: {
+        activeUsers: parseInt(activeUsers.rows[0].count),
+        usersByRole: usersByRole.rows,
+        recentLogins: recentLogins.rows,
+        neverLoggedIn: parseInt(neverLoggedIn.rows[0].count),
+        loginsByDay: loginsByDay.rows
+      }
+    });
+  } catch (error: any) {
+    console.error('Error fetching user activity:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch user activity',
+      details: error.message 
+    });
+  }
+});
+
 export default router;
