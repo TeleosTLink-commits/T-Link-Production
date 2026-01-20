@@ -1,160 +1,68 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import './ManufacturerDashboard.css';
 
 const ManufacturerDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  const menuItems = [
-    {
-      icon: '📄',
-      title: 'CoA Lookup',
-      description: 'Search and download Certificates of Analysis',
-      link: '/manufacturer/coa-lookup',
-    },
-    {
-      icon: '',
-      title: 'Inventory Search',
-      description: 'Check sample availability',
-      link: '/manufacturer/inventory-search',
-    },
-    {
-      icon: '',
-      title: 'Shipment Requests',
-      description: 'Create and track shipments',
-      link: '/manufacturer/shipment-request',
-    },
-    {
-      icon: '',
-      title: 'My Shipments',
-      description: 'View shipment status and tracking',
-      link: '/manufacturer/my-shipments',
-    },
-    {
-      icon: '',
-      title: 'Tech Support',
-      description: 'Get technical assistance',
-      link: '/manufacturer/support?type=tech',
-    },
-    {
-      icon: '',
-      title: 'Lab Support',
-      description: 'Questions about samples and shipments',
-      link: '/manufacturer/support?type=lab',
-    },
-  ];
-
   return (
-    <div style={styles.container}>
-      {/* Header */}
-      <header style={styles.header}>
-        <div style={styles.headerContent}>
-          <div>
-            <h1 style={styles.headerTitle}>Manufacturer Portal</h1>
-            {user && (
-              <p style={styles.headerSubtitle}>
-                Welcome, {user.firstName} {user.lastName}
-              </p>
+    <div className="manufacturer-portal">
+      {/* Header with green gradient */}
+      <header className="manufacturer-header">
+        <div className="header-left">
+          <img src="/images/tlink-official-logo.png" alt="T-Link" className="logo" />
+          <div className="header-text">
+            <h1>Manufacturer Portal</h1>
+            {user && <p className="subtitle">Welcome, {user.firstName} {user.lastName}</p>}
+          </div>
+        </div>
+        <div className="header-right">
+          <button className="contact-btn" onClick={() => setShowContactModal(true)}>
+            Contact Support
+          </button>
+          <div className="user-badge-container">
+            <button 
+              className="user-badge" 
+              onClick={() => setShowUserMenu(!showUserMenu)}
+            >
+              <div className="user-icon">👤</div>
+              <div className="user-details">
+                <div className="user-email">{user?.email}</div>
+                <div className="user-role">{user?.role}</div>
+              </div>
+              <span className="dropdown-icon">▼</span>
+            </button>
+            {showUserMenu && (
+              <div className="user-menu">
+                <button onClick={handleLogout} className="menu-item logout">
+                  Sign Out
+                </button>
+              </div>
             )}
           </div>
-          <button onClick={handleLogout} style={styles.logoutButton}>
-            Sign Out
-          </button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main style={styles.main}>
-        {/* Welcome Section */}
-        <section style={styles.welcomeSection}>
-          <div style={styles.welcomeCard}>
-            <h2 style={styles.sectionTitle}>Welcome to T-Link</h2>
-            <p style={styles.sectionDescription}>
-              Your secure portal for accessing certificates of analysis, managing shipments, and communicating with our lab team.
-            </p>
-            <div style={styles.features}>
-              <div style={styles.feature}>
-                <span style={styles.featureIcon}>🔒</span>
-                <span style={styles.featureText}>Secure Access</span>
-              </div>
-              <div style={styles.feature}>
-                <span style={styles.featureIcon}></span>
-                <span style={styles.featureText}>Real-time Status</span>
-              </div>
-              <div style={styles.feature}>
-                <span style={styles.featureIcon}>⚡</span>
-                <span style={styles.featureText}>Fast Support</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Menu Grid */}
-        <section style={styles.menuSection}>
-          <h2 style={styles.sectionTitle}>What would you like to do?</h2>
-          <div style={styles.menuGrid}>
-            {menuItems.map((item, index) => (
-              <Link key={index} to={item.link} style={{ textDecoration: 'none' }}>
-                <div style={styles.menuCard}>
-                  <div style={styles.menuIcon}>{item.icon}</div>
-                  <h3 style={styles.menuTitle}>{item.title}</h3>
-                  <p style={styles.menuDescription}>{item.description}</p>
-                  <div style={styles.menuArrow}>→</div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        {/* Quick Info */}
-        <section style={styles.infoSection}>
-          <div style={styles.infoGrid}>
-            <div style={styles.infoCard}>
-              <h3 style={styles.infoTitle}>Contact Support</h3>
-              <p style={styles.infoText}>
-                <strong>Technical Issues:</strong>
-                <br />
-                jhunzie@ajwalabs.com
-              </p>
-              <p style={styles.infoText}>
-                <strong>Lab Questions:</strong>
-                <br />
-                eboak@ajwalabs.com
-              </p>
-            </div>
-
-            <div style={styles.infoCard}>
-              <h3 style={styles.infoTitle}>Shipment Timeline</h3>
-              <div style={styles.timeline}>
-                <div style={styles.timelineItem}>
-                  <div style={styles.timelineDot}>1</div>
-                  <span>Request Created</span>
-                </div>
-                <div style={styles.timelineItem}>
-                  <div style={styles.timelineDot}>2</div>
-                  <span>Processing</span>
-                </div>
-                <div style={styles.timelineItem}>
-                  <div style={styles.timelineDot}>3</div>
-                  <span>Shipped</span>
-                </div>
-                <div style={styles.timelineItem}>
-                  <div style={styles.timelineDot}>4</div>
-                  <span>Delivered</span>
-                </div>
-              </div>
-            </div>
-
-            <div style={styles.infoCard}>
-              <h3 style={styles.infoTitle}>Important Notes</h3>
-              <ul style={styles.infoList}>
+      {/* Main Content - removed welcome banner */}
+      <div className="manufacturer-content">
+        {/* Removed Welcome Banner per user request */}
+        
+        {/* Info Cards - Removed Shipment Timeline per user request */}
+        <div className="info-section">
+          <h2>Important Information</h2>
+          <div className="info-grid">
+            <div className="info-card">
+              <h3>Important Notes</h3>
+              <ul>
                 <li>All shipments require valid sample lot numbers</li>
                 <li>Quantities over 30ml may require additional documentation</li>
                 <li>Track your shipments in real-time</li>
@@ -162,302 +70,59 @@ const ManufacturerDashboard: React.FC = () => {
               </ul>
             </div>
           </div>
-        </section>
-
-        {/* End Main Content */}
-      </main>
-
-      {/* Quick Actions (Bottom) */}
-      <section style={styles.quickActionsSection}>
-        <h2 style={styles.quickActionsTitle}>Quick Actions</h2>
-        <div style={styles.quickActionsGrid}>
-          <Link to="/manufacturer/coa-lookup" style={{ textDecoration: 'none', display: 'block' }}>
-            <button style={styles.quickActionBtn}>
-              <span style={styles.quickBtnLabel}>CoA Lookup</span>
-              <span style={styles.quickBtnDesc}>Search & download</span>
-            </button>
-          </Link>
-          <Link to="/manufacturer/inventory-search" style={{ textDecoration: 'none', display: 'block' }}>
-            <button style={styles.quickActionBtn}>
-              <span style={styles.quickBtnLabel}>Inventory Search</span>
-              <span style={styles.quickBtnDesc}>Check availability</span>
-            </button>
-          </Link>
-          <Link to="/manufacturer/shipment-request" style={{ textDecoration: 'none', display: 'block' }}>
-            <button style={styles.quickActionBtn}>
-              <span style={styles.quickBtnLabel}>Create Shipment</span>
-              <span style={styles.quickBtnDesc}>Request samples</span>
-            </button>
-          </Link>
-          <Link to="/manufacturer/my-shipments" style={{ textDecoration: 'none', display: 'block' }}>
-            <button style={styles.quickActionBtn}>
-              <span style={styles.quickBtnLabel}>My Shipments</span>
-              <span style={styles.quickBtnDesc}>View status</span>
-            </button>
-          </Link>
         </div>
-      </section>
+      </div>
 
-      {/* Footer */}
-      <footer style={styles.footer}>
-        <p style={styles.footerText}>T-Link Manufacturer Portal &copy; 2026 Teleos. All rights reserved.</p>
-      </footer>
+      {/* Quick Actions Bar - 4 buttons at bottom with green styling */}
+      <div className="quick-actions-bar">
+        <div className="quick-actions-container">
+          <h3 className="quick-actions-title">Quick Actions</h3>
+          <div className="quick-actions-grid">
+            <Link to="/manufacturer/coa-lookup" className="quick-action-btn">
+              <span className="quick-btn-label">CoA Lookup</span>
+              <span className="quick-btn-desc">Search & download</span>
+            </Link>
+            <Link to="/manufacturer/inventory-search" className="quick-action-btn">
+              <span className="quick-btn-label">Inventory Search</span>
+              <span className="quick-btn-desc">Check availability</span>
+            </Link>
+            <Link to="/manufacturer/shipment-request" className="quick-action-btn">
+              <span className="quick-btn-label">Request Shipment</span>
+              <span className="quick-btn-desc">Create new request</span>
+            </Link>
+            <Link to="/manufacturer/my-shipments" className="quick-action-btn">
+              <span className="quick-btn-label">My Shipments</span>
+              <span className="quick-btn-desc">View status</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Contact Modal */}
+      {showContactModal && (
+        <div className="modal-overlay" onClick={() => setShowContactModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Contact Support</h3>
+              <button className="close-btn" onClick={() => setShowContactModal(false)}>✕</button>
+            </div>
+            <div className="modal-content">
+              <div className="contact-section">
+                <h4>Technical Issues</h4>
+                <p>For login problems, access issues, or technical difficulties:</p>
+                <p><strong>Email:</strong> jhunzie@ajwalabs.com</p>
+              </div>
+              <div className="contact-section">
+                <h4>Lab Questions</h4>
+                <p>For questions about samples, shipments, or lab procedures:</p>
+                <p><strong>Email:</strong> eboak@ajwalabs.com</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
-
-const styles: { [key: string]: React.CSSProperties } = {
-  container: {
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
-    backgroundColor: '#ffffff',
-    borderBottom: '1px solid #e0e0e0',
-    padding: '20px 0',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-  },
-  headerContent: {
-    maxWidth: '1200px',
-    margin: '0 auto',
-    padding: '0 20px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    margin: 0,
-    fontSize: '28px',
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  headerSubtitle: {
-    margin: '4px 0 0 0',
-    fontSize: '14px',
-    color: '#666',
-  },
-  logoutButton: {
-    padding: '8px 16px',
-    fontSize: '14px',
-    backgroundColor: '#dc3545',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontWeight: '500',
-  },
-  main: {
-    flex: 1,
-    maxWidth: '1200px',
-    margin: '0 auto',
-    padding: '40px 20px',
-    width: '100%',
-  },
-  welcomeSection: {
-    marginBottom: '40px',
-  },
-  welcomeCard: {
-    backgroundColor: 'white',
-    padding: '30px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-    borderLeft: '4px solid #007bff',
-  },
-  sectionTitle: {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    color: '#333',
-    margin: '0 0 12px 0',
-  },
-  sectionDescription: {
-    fontSize: '16px',
-    color: '#666',
-    margin: '0 0 20px 0',
-    lineHeight: '1.6',
-  },
-  features: {
-    display: 'flex',
-    gap: '20px',
-    marginTop: '20px',
-  },
-  feature: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    fontSize: '14px',
-    color: '#333',
-  },
-  featureIcon: {
-    fontSize: '20px',
-  },
-  featureText: {
-    fontWeight: '500',
-  },
-  menuSection: {
-    marginBottom: '40px',
-  },
-  menuGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-    gap: '20px',
-    marginTop: '20px',
-  },
-  menuCard: {
-    backgroundColor: 'white',
-    padding: '24px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    position: 'relative',
-    border: '1px solid #e0e0e0',
-  },
-  menuIcon: {
-    fontSize: '40px',
-    marginBottom: '12px',
-  },
-  menuTitle: {
-    fontSize: '18px',
-    fontWeight: 'bold',
-    color: '#333',
-    margin: '0 0 8px 0',
-  },
-  menuDescription: {
-    fontSize: '14px',
-    color: '#666',
-    margin: 0,
-    lineHeight: '1.5',
-  },
-  menuArrow: {
-    position: 'absolute',
-    right: '24px',
-    top: '50%',
-    transform: 'translateY(-50%)',
-    fontSize: '20px',
-    color: '#007bff',
-    opacity: 0,
-    transition: 'opacity 0.3s ease',
-  },
-  infoSection: {
-    marginBottom: '40px',
-  },
-  infoGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-    gap: '20px',
-  },
-  infoCard: {
-    backgroundColor: 'white',
-    padding: '20px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-  },
-  infoTitle: {
-    fontSize: '16px',
-    fontWeight: 'bold',
-    color: '#333',
-    margin: '0 0 12px 0',
-  },
-  infoText: {
-    fontSize: '13px',
-    color: '#666',
-    margin: '0 0 12px 0',
-    lineHeight: '1.6',
-  },
-  infoList: {
-    fontSize: '13px',
-    color: '#666',
-    margin: 0,
-    paddingLeft: '20px',
-  },
-  timeline: {
-    display: 'flex',
-    gap: '12px',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-  },
-  timelineItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    fontSize: '12px',
-    color: '#666',
-  },
-  timelineDot: {
-    width: '24px',
-    height: '24px',
-    borderRadius: '50%',
-    backgroundColor: '#007bff',
-    color: 'white',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontWeight: 'bold',
-    fontSize: '12px',
-  },
-  footer: {
-    backgroundColor: '#f0f0f0',
-    borderTop: '1px solid #e0e0e0',
-    padding: '20px',
-    textAlign: 'center' as const,
-    marginTop: 'auto',
-  },
-  footerText: {
-    fontSize: '12px',
-    color: '#666',
-    margin: 0,
-  },
-  quickActionsSection: {
-    marginTop: 'auto',
-    marginBottom: '20px',
-    backgroundColor: 'white',
-    padding: '30px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-  },
-  quickActionsTitle: {
-    fontSize: '13px',
-    fontWeight: 700,
-    color: '#333',
-    margin: '0 0 16px 0',
-    textAlign: 'left' as const,
-  },
-  quickActionsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: '20px',
-  },
-  quickActionBtn: {
-    background: 'white',
-    border: '2px solid #e0e0e0',
-    padding: '10px 24px',
-    borderRadius: '8px',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '4px',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
-    width: '100%',
-    height: '70px',
-  },
-  quickBtnLabel: {
-    fontSize: '12px',
-    fontWeight: 700,
-    color: '#333',
-    textAlign: 'center' as const,
-    lineHeight: '1.2',
-  },
-  quickBtnDesc: {
-    fontSize: '10px',
-    color: '#666',
-    textAlign: 'center' as const,
-    lineHeight: '1.2',
-  },
 };
 
 export default ManufacturerDashboard;
