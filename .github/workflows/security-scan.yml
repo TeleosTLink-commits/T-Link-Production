@@ -42,16 +42,28 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --file=frontend/package-lock.json --severity-threshold=high
+          args: --file=frontend/package-lock.json --severity-threshold=high --sarif-file-output=snyk-frontend.sarif
         continue-on-error: true
+
+      - name: Upload Snyk Frontend SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: snyk-frontend.sarif
 
       - name: Run Snyk Backend Security Scan
         uses: snyk/actions/node@master
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --file=backend/package-lock.json --severity-threshold=high
+          args: --file=backend/package-lock.json --severity-threshold=high --sarif-file-output=snyk-backend.sarif
         continue-on-error: true
+
+      - name: Upload Snyk Backend SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: snyk-backend.sarif
 
   dependency-check:
     name: OWASP Dependency Check
