@@ -48,7 +48,6 @@ const Dashboard: React.FC = () => {
       </div>
 
       <div className="actions-container">
-        <h2>Platform Modules</h2>
         <div className="actions-grid">
           <button className="action-btn test-methods-btn" onClick={() => navigate('/test-methods')}>
             <span className="btn-label">Test Methods</span>

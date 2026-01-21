@@ -188,16 +188,11 @@
   line-height: 1.4;
 }
 
-.action-btn.test-methods-btn:hover {
-  background: linear-gradient(135deg, rgba(45, 80, 22, 0.05) 0%, rgba(61, 107, 31, 0.05) 100%);
-}
-
-.action-btn.inventory-btn:hover {
-  background: linear-gradient(135deg, rgba(45, 80, 22, 0.05) 0%, rgba(61, 107, 31, 0.05) 100%);
-}
-
+.action-btn.test-methods-btn:hover,
+.action-btn.inventory-btn:hover,
 .action-btn.shipments-btn:hover {
-  background: linear-gradient(135deg, rgba(45, 80, 22, 0.05) 0%, rgba(61, 107, 31, 0.05) 100%);
+  background: rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
 }
 
 .action-btn.admin-btn {
