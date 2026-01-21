@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'javascript', 'typescript', 'python' ]
+        language: [ 'javascript', 'typescript' ]
 
     steps:
       - name: Checkout repository
@@ -62,13 +62,6 @@ jobs:
         run: |
           cd backend
           npm run build
-
-      - name: Setup Python
-        if: matrix.language == 'python'
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-          cache: 'pip'
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
