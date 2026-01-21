@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import path from 'path';
 import { errorHandler } from './middleware/errorHandler';
+import { apiLimiter, authLimiter } from './middleware/rateLimiter';
 import logger from './config/logger';
 
 // Import routes
@@ -28,6 +29,7 @@ const BUILD_VERSION = '2.0.0'; // Updated with schema fixes
 
 // Middleware
 app.use(helmet());
+app.use(apiLimiter); // Apply rate limiting to all routes
 const corsOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:3000',
   'https://t-link-production.vercel.app', // Production Vercel
@@ -36,8 +38,8 @@ const corsOrigins = [
   'http://localhost:3000',
   'http://10.0.0.41:3000',             // Network access
 ];
-console.log('CORS origins:', corsOrigins);
-console.log('Build version:', BUILD_VERSION);
+logger.info(`CORS origins configured: ${corsOrigins.join(', ')}`);
+logger.info(`Build version: ${BUILD_VERSION}`);
 app.use(cors({
   origin: corsOrigins,
   credentials: true,
@@ -59,8 +61,8 @@ app.get('/health', (req, res) => {
 });
 
 // API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/auth/manufacturer', manufacturerAuthRoutes);
+app.use('/api/auth', authLimiter, authRoutes); // Apply stricter rate limiting to auth
+app.use('/api/auth/manufacturer', authLimiter, manufacturerAuthRoutes);
 app.use('/api/test-methods', testMethodsRoutes);
 // CoA routes removed — functionality handled via sample-inventory
 app.use('/api/inventory', inventoryRoutes);
