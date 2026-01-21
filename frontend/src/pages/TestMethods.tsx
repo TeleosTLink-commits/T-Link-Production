@@ -404,6 +404,14 @@ const TestMethods: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Footer */}
+      <footer className="dashboard-footer">
+        <div className="footer-content">
+          <span className="footer-text">Developed and operated by</span>
+          <img src="/images/AAL_Dig_Dev.png" alt="AAL Digital Development" className="footer-logo" />
+        </div>
+      </footer>
     </div>
   );
 };

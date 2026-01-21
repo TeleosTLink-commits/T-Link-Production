@@ -714,6 +714,18 @@ const AdminPanel: React.FC = () => {
           </div>
         </div>
       )}
+
+      <footer className="dashboard-footer">
+        <div className="footer-content">
+          <div className="footer-text">
+            © 2024 T-Link Portal. All rights reserved.
+          </div>
+          <div className="footer-logo">
+            <span>Powered by </span>
+            <strong>AAL Digital Development</strong>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
