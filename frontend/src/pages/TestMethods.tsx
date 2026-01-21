@@ -250,7 +250,7 @@ const TestMethods: React.FC = () => {
                     <td className="tm-number"><strong>{method.tm_number}</strong></td>
                     <td>{method.version}</td>
                     <td>{method.title}</td>
-                    <td className="description">{method.description || '—'}</td>
+                    <td className="description">{method.description || 'N/A'}</td>
                     <td>
                       <span className={`status-badge status-${method.status}`}>
                         {method.status}
@@ -258,9 +258,9 @@ const TestMethods: React.FC = () => {
                     </td>
                     <td className="center">
                       {method.is_current_version ? (
-                        <span className="badge-current">✓</span>
+                        <span className="badge-current">Active</span>
                       ) : (
-                        <span className="badge-inactive">—</span>
+                        <span className="badge-inactive">Inactive</span>
                       )}
                     </td>
                     <td className="actions">
@@ -270,7 +270,7 @@ const TestMethods: React.FC = () => {
                           onClick={() => handleViewDocument(method)}
                           title="View Document"
                         >
-                          📄
+                          View
                         </button>
                       )}
                       <button 
@@ -278,14 +278,14 @@ const TestMethods: React.FC = () => {
                         onClick={() => handleEdit(method)}
                         title="Edit"
                       >
-                        ✏️
+                        Edit
                       </button>
                       <button 
                         className="btn-small btn-delete"
                         onClick={() => handleDelete(method.id!)}
                         title="Delete"
                       >
-                        🗑️
+                        Delete
                       </button>
                     </td>
                   </tr>
@@ -301,7 +301,7 @@ const TestMethods: React.FC = () => {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>{editingMethod ? 'Edit Test Method' : 'Add Test Method'}</h2>
-              <button className="btn-close" onClick={() => setShowModal(false)}>✕</button>
+              <button className="btn-close" onClick={() => setShowModal(false)}>Close</button>
             </div>
             <form onSubmit={handleSubmit} className="modal-form">
               <div className="form-grid">

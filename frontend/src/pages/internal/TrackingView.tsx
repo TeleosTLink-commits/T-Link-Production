@@ -87,10 +87,10 @@ const TrackingView: React.FC = () => {
   const getStatusIcon = (status: string) => {
     switch(status?.toLowerCase()) {
       case 'in_transit': return '';
-      case 'out_for_delivery': return '🚚';
-      case 'delivered': return '';
-      case 'exception': return '⚠️';
-      default: return '📮';
+      case 'out_for_delivery': return 'Out for Delivery';
+      case 'delivered': return 'Delivered';
+      case 'exception': return 'Exception';
+      default: return 'In Transit';
     }
   };
 
@@ -179,14 +179,14 @@ const TrackingView: React.FC = () => {
 
                 <div className="tracking-dates">
                   <div className="tracking-date-item">
-                    <label>📤 Shipped</label>
+                    <label>Shipped</label>
                     <div className="tracking-date-value">
                       {shipment.shipped_date ? new Date(shipment.shipped_date).toLocaleString() : 'N/A'}
                     </div>
                   </div>
                   
                   <div className="tracking-date-item">
-                    <label>🎯 Estimated Delivery</label>
+                    <label>Estimated Delivery</label>
                     <div className="tracking-date-value highlight">
                       {shipment.estimated_delivery ? new Date(shipment.estimated_delivery).toLocaleDateString() : 'TBD'}
                     </div>
@@ -268,7 +268,7 @@ const TrackingView: React.FC = () => {
             <div className="tracking-card">
               <div className="tracking-card-body">
                 <div className="tracking-empty">
-                  <div className="tracking-empty-icon">📮</div>
+                  <div className="tracking-empty-icon"></div>
                   <h3>Tracking Information Not Available</h3>
                   <p>Tracking details will be available once the shipment is in transit.</p>
                   <p className="tracking-number-info">Tracking #: {shipment.tracking_number || 'N/A'}</p>

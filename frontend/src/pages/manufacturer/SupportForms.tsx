@@ -29,7 +29,7 @@ const SupportForms: React.FC = () => {
       name: 'Technical Support',
       email: 'jhunzie@ajwalabs.com',
       description: 'Network, software, portal access, and technical issues',
-      icon: '🖥️',
+      icon: 'Tech',
       color: '#007bff',
     },
     lab: {
@@ -222,7 +222,7 @@ const SupportForms: React.FC = () => {
                   <div style={{ fontSize: '48px', marginBottom: '16px' }}>{info.icon}</div>
                   <h3 style={{ ...styles.typeCardTitle, color: info.color }}>{info.name}</h3>
                   <p style={styles.typeCardDescription}>{info.description}</p>
-                  <span style={{ ...styles.typeCardCTA, color: info.color }}>Click to start →</span>
+                  <span style={{ ...styles.typeCardCTA, color: info.color }}>Click to start</span>
                 </button>
               );
             })}
@@ -291,7 +291,7 @@ const SupportForms: React.FC = () => {
 
             {/* Important Notes */}
             <div style={styles.notesBox}>
-              <p style={styles.notesTitle}>📝 Tips for faster response:</p>
+              <p style={styles.notesTitle}>Tips for faster response:</p>
               <ul style={styles.notesList}>
                 <li>Provide specific details about your issue</li>
                 <li>Include any error messages you're seeing</li>

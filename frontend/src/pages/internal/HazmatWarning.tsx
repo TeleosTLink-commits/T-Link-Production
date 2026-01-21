@@ -182,7 +182,7 @@ const HazmatWarning: React.FC = () => {
 
       {/* Warning Banner */}
       <div style={styles.warningBanner}>
-        <span style={styles.warningIcon}>⚠️</span>
+        <span style={styles.warningIcon}>Warning</span>
         <div>
           <p style={styles.warningTitle}>Dangerous Goods Alert</p>
           <p style={styles.warningText}>
@@ -201,7 +201,7 @@ const HazmatWarning: React.FC = () => {
               Step 1: Dangerous Goods Declaration
             </h2>
             {declarationSubmitted && (
-              <span style={styles.completeBadge}>✓ Completed</span>
+              <span style={styles.completeBadge}>Completed</span>
             )}
           </div>
 
@@ -340,7 +340,7 @@ const HazmatWarning: React.FC = () => {
             </form>
           ) : (
             <div style={styles.completedBox}>
-              <p style={styles.completedText}>✓ Dangerous goods declaration has been recorded.</p>
+              <p style={styles.completedText}>Dangerous goods declaration has been recorded.</p>
             </div>
           )}
         </div>
@@ -386,7 +386,7 @@ const HazmatWarning: React.FC = () => {
               }}
               disabled={!labelsMarked || !declarationSubmitted || loading}
             >
-              {loading ? 'Recording...' : '🏷️ Mark Labels as Printed'}
+              {loading ? 'Recording...' : 'Mark Labels as Printed'}
             </button>
           </div>
         )}

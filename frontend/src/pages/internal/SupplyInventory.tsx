@@ -82,9 +82,9 @@ const SupplyInventory: React.FC = () => {
 
   const getStockStatus = (current: number, reorder: number) => {
     if (current <= reorder) {
-      return { color: '#dc3545', text: 'REORDER NEEDED', emoji: '❌' };
+      return { color: '#dc3545', text: 'REORDER NEEDED', emoji: '' };
     } else if (current < reorder * 1.5) {
-      return { color: '#ffc107', text: 'LOW STOCK', emoji: '⚠️' };
+      return { color: '#ffc107', text: 'LOW STOCK', emoji: '' };
     } else {
       return { color: '#28a745', text: 'IN STOCK', emoji: '' };
     }

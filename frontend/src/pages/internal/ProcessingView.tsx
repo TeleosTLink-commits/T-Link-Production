@@ -330,7 +330,7 @@ const ProcessingView: React.FC = () => {
               onClick={handleValidateAddress}
               disabled={validating}
             >
-              {validating ? 'Validating...' : addressValidated ? '✓ Validated' : 'Validate Address'}
+              {validating ? 'Validating...' : addressValidated ? 'Validated' : 'Validate Address'}
             </button>
           </div>
           <div className="procview-card-body">
@@ -392,7 +392,7 @@ const ProcessingView: React.FC = () => {
                 </div>
               </div>
               
-              {shipment.recipient_phone && <div>📞 {shipment.recipient_phone}</div>}
+              {shipment.recipient_phone && <div>Phone: {shipment.recipient_phone}</div>}
             </div>
 
             {validationResult && !validationResult.valid && validationResult.correctedAddress && (
@@ -415,7 +415,7 @@ const ProcessingView: React.FC = () => {
               <div className="sds-list">
                 {shipment.sds_documents.map((sds) => (
                   <div key={sds.id} className="sds-item">
-                    <span>📄 {sds.file_name}</span>
+                    <span>File: {sds.file_name}</span>
                     <span className="sds-date">Rev: {new Date(sds.revision_date).toLocaleDateString()}</span>
                     <a href={sds.file_path} target="_blank" rel="noopener noreferrer" className="procview-btn-link">
                       Download
@@ -484,7 +484,7 @@ const ProcessingView: React.FC = () => {
 
             {isHazmat && (
               <div className="procview-hazmat-warning">
-                ⚠️ <strong>HAZMAT SHIPMENT</strong> - Dangerous Goods Declaration required. UN Box and proper labeling must be used.
+                HAZMAT: <strong>HAZMAT SHIPMENT</strong> - Dangerous Goods Declaration required. UN Box and proper labeling must be used.
               </div>
             )}
 
@@ -537,7 +537,7 @@ const ProcessingView: React.FC = () => {
             onClick={handleGenerateLabel}
             disabled={processing || !addressValidated || !weight}
           >
-            {processing ? 'Generating Label...' : '🚚 Generate FedEx Label & Ship'}
+            {processing ? 'Generating Label...' : 'Generate FedEx Label & Ship'}
           </button>
         </div>
       </div>

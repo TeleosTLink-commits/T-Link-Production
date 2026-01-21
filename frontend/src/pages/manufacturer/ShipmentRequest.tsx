@@ -142,7 +142,7 @@ const ShipmentRequest: React.FC = () => {
     return (
       <div style={styles.container}>
         <div style={styles.successCard}>
-          <div style={styles.successIcon}>âœ…</div>
+          <div style={styles.successIcon}>Success</div>
           <h1 style={styles.successTitle}>Shipment Request Submitted!</h1>
           <p style={styles.successMessage}>Your shipment request has been created and a confirmation email has been sent.</p>
 
@@ -211,7 +211,7 @@ const ShipmentRequest: React.FC = () => {
       {/* Header */}
       <div style={styles.header}>
         <button onClick={handleGoBack} style={styles.backButton}>
-          â† Back
+          Back to Dashboard
         </button>
         <h1 style={styles.title}>Create Shipment Request</h1>
         <p style={styles.subtitle}>Add up to 10 samples per shipment</p>
@@ -401,7 +401,7 @@ const ShipmentRequest: React.FC = () => {
           {/* Hazmat Warning */}
           {isHazmat && (
             <div style={styles.warningBox}>
-              <span style={styles.warningIcon}>âš ï¸</span>
+              <span style={styles.warningIcon}>Warning</span>
               <div>
                 <p style={styles.warningTitle}>Hazmat Notice</p>
                 <p style={styles.warningText}>
@@ -707,4 +707,4 @@ const styles: { [key: string]: React.CSSProperties } = {
 };
 
 export default ShipmentRequest;
-
+

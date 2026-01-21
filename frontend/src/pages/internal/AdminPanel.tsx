@@ -676,7 +676,7 @@ const AdminPanel: React.FC = () => {
           <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
             <div className="admin-modal-header">
               <h2>Add New User</h2>
-              <button className="admin-modal-close" onClick={() => setShowAddUser(false)}>×</button>
+              <button className="admin-modal-close" onClick={() => setShowAddUser(false)}>Close</button>
             </div>
             <form onSubmit={handleAddUser} className="admin-form">
               <div className="form-group">

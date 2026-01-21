@@ -96,7 +96,7 @@ const Register: React.FC = () => {
           <div className="collab-title">A partnership between</div>
           <div className="collab-logos">
             <img src="/images/teleos-logo.png" alt="Teleos AG Solutions" className="collab-logo" />
-            <span className="collab-separator">×</span>
+            <span className="collab-separator">-</span>
             <div className="collab-subblock">
               <span className="collab-subtext">Built & maintained by</span>
               <img src="/images/ajwa-logo.png" alt="AJWA Analytical Laboratories" className="collab-logo small" />
@@ -112,7 +112,7 @@ const Register: React.FC = () => {
 
         {emailChecked && !emailAuthorized && (
           <div className="error-message">
-            ⚠️ This email is not authorized. Contact your administrator to get access.
+            This email is not authorized. Contact your administrator to get access.
           </div>
         )}
 

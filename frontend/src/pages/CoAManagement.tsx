@@ -120,7 +120,7 @@ const CoAManagement: React.FC = () => {
                         className="btn btn-sm btn-primary" 
                         onClick={() => handleViewCoa(coa)}
                       >
-                        📄 View CoA
+                        View CoA
                       </button>
                     </td>
                   </tr>

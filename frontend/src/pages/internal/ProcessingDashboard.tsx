@@ -67,7 +67,7 @@ const ProcessingDashboard: React.FC = () => {
             <h1 className="processing-title">Shipment Processing</h1>
           </div>
           <button className="processing-refresh-btn" onClick={fetchShipments}>
-            ↻ Refresh
+            Refresh
           </button>
         </div>
       </div>
@@ -163,7 +163,7 @@ const ProcessingDashboard: React.FC = () => {
                             <div className="flags-container">
                               {(shipment.is_hazmat || shipment.requires_dg_declaration) && (
                                 <span className="flag-badge hazmat-badge" title="Hazardous Materials">
-                                  ⚠️ HAZMAT
+                                  HAZMAT
                                 </span>
                               )}
                             </div>

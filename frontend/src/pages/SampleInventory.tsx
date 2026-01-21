@@ -544,7 +544,7 @@ const SampleInventory: React.FC = () => {
           <div className="sampleinv-modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="sampleinv-modal-header">
               <h2>{isEditing ? 'Edit Sample' : 'Add New Sample'}</h2>
-              <button className="sampleinv-close-btn" onClick={() => setShowModal(false)}>×</button>
+              <button className="sampleinv-close-btn" onClick={() => setShowModal(false)}>Close</button>
             </div>
             
             <form onSubmit={handleSubmit}>

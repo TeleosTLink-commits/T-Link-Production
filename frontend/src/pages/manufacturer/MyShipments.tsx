@@ -61,11 +61,11 @@ const MyShipments: React.FC = () => {
       case 'processing':
         return '';
       case 'shipped':
-        return '🚚';
+        return 'Shipped';
       case 'delivered':
-        return '';
+        return 'Delivered';
       default:
-        return '❓';
+        return 'Unknown';
     }
   };
 
@@ -191,7 +191,7 @@ const MyShipments: React.FC = () => {
 
                     <div style={styles.headerRight}>
                       {shipment.is_hazmat && (
-                        <span style={styles.hazmatBadge}>⚠️ HAZMAT</span>
+                        <span style={styles.hazmatBadge}>HAZMAT</span>
                       )}
                       <div
                         style={{
@@ -203,7 +203,7 @@ const MyShipments: React.FC = () => {
                         <span>{shipment.status.charAt(0).toUpperCase() + shipment.status.slice(1)}</span>
                       </div>
                       <span style={styles.expandIcon}>
-                        {expandedId === shipment.id ? '▼' : '▶'}
+                        {expandedId === shipment.id ? 'Hide' : 'Show'}
                       </span>
                     </div>
                   </div>
