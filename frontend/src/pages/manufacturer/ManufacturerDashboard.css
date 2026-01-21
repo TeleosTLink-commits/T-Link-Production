@@ -70,83 +70,48 @@
   transform: translateY(-2px);
 }
 
-.user-badge-container {
-  position: relative;
-}
-
-.user-badge {
+.user-info {
   display: flex;
   align-items: center;
-  gap: 12px;
   padding: 8px 16px;
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 8px;
   color: white;
-  cursor: pointer;
-  transition: all 0.2s ease;
   font-size: 14px;
   font-weight: 500;
 }
 
-.user-badge:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.5);
-}
-
-.user-icon {
-  font-size: 20px;
-}
-
-.user-details {
-  text-align: left;
-}
-
-.user-email {
-  font-size: 13px;
+.user-name {
+  color: white;
   font-weight: 600;
 }
 
-.user-role {
-  font-size: 11px;
-  opacity: 0.8;
-  text-transform: capitalize;
-}
-
-.dropdown-icon {
-  font-size: 10px;
-  opacity: 0.7;
-}
-
-.user-menu {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  background: white;
+.sign-out-btn {
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  overflow: hidden;
-  min-width: 160px;
-  z-index: 1000;
-}
-
-.menu-item {
-  width: 100%;
-  padding: 12px 16px;
-  border: none;
-  background: white;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.2s;
+  color: white;
   font-size: 14px;
-  color: #333;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
-.menu-item:hover {
-  background: #f5f5f5;
+.sign-out-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: translateY(-2px);
 }
 
+.sign-out-btn:active {
+  transform: translateY(0);
+}
+
+/* Remove old menu styles */
 .menu-item.logout {
   color: #dc3545;
   font-weight: 600;

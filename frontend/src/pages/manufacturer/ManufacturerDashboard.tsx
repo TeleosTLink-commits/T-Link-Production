@@ -6,7 +6,6 @@ import './ManufacturerDashboard.css';
 const ManufacturerDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const [showUserMenu, setShowUserMenu] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
 
   const handleLogout = () => {
@@ -29,25 +28,12 @@ const ManufacturerDashboard: React.FC = () => {
           <button className="contact-btn" onClick={() => setShowContactModal(true)}>
             Contact Support
           </button>
-          <div className="user-badge-container">
-            <button 
-              className="user-badge" 
-              onClick={() => setShowUserMenu(!showUserMenu)}
-            >
-              <div className="user-details">
-                <div className="user-email">{user?.email}</div>
-                <div className="user-role">{user?.role}</div>
-              </div>
-              <span className="dropdown-icon">Menu</span>
-            </button>
-            {showUserMenu && (
-              <div className="user-menu">
-                <button onClick={handleLogout} className="menu-item logout">
-                  Sign Out
-                </button>
-              </div>
-            )}
+          <div className="user-info">
+            <span className="user-name">{user?.firstName} {user?.lastName}</span>
           </div>
+          <button className="sign-out-btn" onClick={handleLogout}>
+            Sign Out
+          </button>
         </div>
       </header>
 
