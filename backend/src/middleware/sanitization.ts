@@ -1,16 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 
 /**
- * Sanitize string by removing potentially dangerous characters
+ * Sanitize string by escaping HTML special characters
+ * More secure approach: escape everything instead of trying to remove tags
  */
 function sanitizeString(value: any): any {
   if (typeof value === 'string') {
-    // Remove HTML tags and script content
-    let sanitized = value.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-    sanitized = sanitized.replace(/<[^>]+>/g, '');
-    
-    // Escape special characters that could be used in XSS
-    sanitized = sanitized
+    // Escape all HTML special characters to prevent XSS
+    const sanitized = value
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
