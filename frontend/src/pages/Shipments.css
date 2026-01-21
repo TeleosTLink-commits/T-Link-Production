@@ -19,6 +19,25 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 1rem;
+}
+
+.shipments-back-btn {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.shipments-back-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: translateX(-2px);
 }
 
 .shipments-title-section h1 {

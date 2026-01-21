@@ -34,12 +34,11 @@ const ManufacturerDashboard: React.FC = () => {
               className="user-badge" 
               onClick={() => setShowUserMenu(!showUserMenu)}
             >
-              <div className="user-icon">👤</div>
               <div className="user-details">
                 <div className="user-email">{user?.email}</div>
                 <div className="user-role">{user?.role}</div>
               </div>
-              <span className="dropdown-icon">▼</span>
+              <span className="dropdown-icon">Menu</span>
             </button>
             {showUserMenu && (
               <div className="user-menu">
@@ -52,25 +51,9 @@ const ManufacturerDashboard: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Content - removed welcome banner */}
+      {/* Main Content - background only */}
       <div className="manufacturer-content">
-        {/* Removed Welcome Banner per user request */}
-        
-        {/* Info Cards - Removed Shipment Timeline per user request */}
-        <div className="info-section">
-          <h2>Important Information</h2>
-          <div className="info-grid">
-            <div className="info-card">
-              <h3>Important Notes</h3>
-              <ul>
-                <li>All shipments require valid sample lot numbers</li>
-                <li>Quantities over 30ml may require additional documentation</li>
-                <li>Track your shipments in real-time</li>
-                <li>Contact support for special requests</li>
-              </ul>
-            </div>
-          </div>
-        </div>
+        <div className="logo-spacer" />
       </div>
 
       {/* Quick Actions Bar - 4 buttons at bottom with green styling */}
@@ -104,7 +87,7 @@ const ManufacturerDashboard: React.FC = () => {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Contact Support</h3>
-              <button className="close-btn" onClick={() => setShowContactModal(false)}>✕</button>
+              <button className="close-btn" onClick={() => setShowContactModal(false)}>Close</button>
             </div>
             <div className="modal-content">
               <div className="contact-section">

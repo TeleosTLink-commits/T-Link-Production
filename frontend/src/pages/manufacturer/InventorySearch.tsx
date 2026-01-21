@@ -15,7 +15,8 @@ interface InventoryResult {
 
 const InventorySearch: React.FC = () => {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [sampleName, setSampleName] = useState('');
+  const [lotNumber, setLotNumber] = useState('');
   const [results, setResults] = useState<InventoryResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -23,8 +24,8 @@ const InventorySearch: React.FC = () => {
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!searchTerm.trim()) {
-      toast.error('Please enter a sample name');
+    if (!sampleName.trim() && !lotNumber.trim()) {
+      toast.error('Please enter a sample name or lot number');
       return;
     }
 
@@ -32,7 +33,10 @@ const InventorySearch: React.FC = () => {
     setSearched(true);
     try {
       const response = await api.get('/manufacturer/inventory/search', {
-        params: { sample_name: searchTerm },
+        params: {
+          sample_name: sampleName || undefined,
+          lot_number: lotNumber || undefined,
+        },
       });
 
       setResults(response.data.samples);
@@ -81,7 +85,7 @@ const InventorySearch: React.FC = () => {
       <div className="inventory-portal-header">
         <div className="inventory-header-top">
           <button onClick={handleGoBack} className="inventory-btn-back">
-            ← Dashboard
+            Back to Dashboard
           </button>
           <h1>Sample Inventory</h1>
         </div>
@@ -95,9 +99,20 @@ const InventorySearch: React.FC = () => {
               <input
                 type="text"
                 id="sampleName"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={sampleName}
+                onChange={(e) => setSampleName(e.target.value)}
                 placeholder="e.g., Sample XYZ, Product A"
+                className="inventory-search-input"
+              />
+            </div>
+            <div className="inventory-search-group">
+              <label htmlFor="lotNumber">Lot Number</label>
+              <input
+                type="text"
+                id="lotNumber"
+                value={lotNumber}
+                onChange={(e) => setLotNumber(e.target.value)}
+                placeholder="e.g., LOT-2026-001"
                 className="inventory-search-input"
               />
             </div>
@@ -162,7 +177,6 @@ const InventorySearch: React.FC = () => {
           )}
 
           {!searched && (
-            <div className="inventory-empty-state">
               <div className="inventory-empty-icon"></div>
               <h2 className="inventory-empty-title">Search Sample Inventory</h2>
               <p className="inventory-empty-text">
@@ -170,27 +184,15 @@ const InventorySearch: React.FC = () => {
               </p>
             </div>
           )}
-        </div>
-
-        <div className="inventory-info-section">
+        <div className="inventory-info-section" aria-hidden>
           <h3 className="inventory-info-title">About Inventory</h3>
           <div className="inventory-info-grid">
-            <div className="inventory-info-item">
-              <span className="inventory-info-icon">✓</span>
-              <span>Real-time inventory updates</span>
-            </div>
-            <div className="inventory-info-item">
-              <span className="inventory-info-icon">✓</span>
-              <span>Accurate quantity tracking</span>
-            </div>
-            <div className="inventory-info-item">
-              <span className="inventory-info-icon">✓</span>
-              <span>Lot number identification</span>
-            </div>
-            <div className="inventory-info-item">
-              <span className="inventory-info-icon">✓</span>
-              <span>Ready for shipment requests</span>
-            </div>
+            <div className="inventory-info-item">Real-time inventory updates</div>
+            <div className="inventory-info-item">Accurate quantity tracking</div>
+            <div className="inventory-info-item">Lot number identification</div>
+            <div className="inventory-info-item">Ready for shipment requests</div>
+          </div>
+        </div>
           </div>
         </div>
       </div>

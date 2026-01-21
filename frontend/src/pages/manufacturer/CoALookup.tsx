@@ -77,7 +77,7 @@ const CoALookup: React.FC = () => {
       <div className="portal-header">
         <div className="header-top">
           <button onClick={handleGoBack} className="btn-back">
-            ← Dashboard
+            Back to Dashboard
           </button>
           <h1>Certificate of Analysis</h1>
         </div>
@@ -105,7 +105,7 @@ const CoALookup: React.FC = () => {
           </form>
         </div>
 
-        {/* Results Section */}
+                      Download PDF
         <div className="results-section">
           {searched && results.length === 0 && !loading && (
             <div className="no-results">
@@ -128,7 +128,7 @@ const CoALookup: React.FC = () => {
                       onClick={() => handleDownload(result.id, result.lot_number)}
                       className="download-button"
                     >
-                      📥 Download PDF
+                      Download PDF
                     </button>
                   </div>
                   <p className="result-date">Created: {new Date(result.created_at).toLocaleDateString()}</p>
@@ -139,7 +139,6 @@ const CoALookup: React.FC = () => {
 
           {!searched && (
             <div className="empty-state">
-              <div className="empty-icon">📄</div>
               <h2 className="empty-title">Search for Certificates of Analysis</h2>
               <p className="empty-text">
                 Enter a lot number above to find and download the corresponding Certificate of Analysis.

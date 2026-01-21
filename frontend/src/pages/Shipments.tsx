@@ -167,7 +167,7 @@ const Shipments: React.FC = () => {
       fetchSamples(); // Refresh to show updated quantities
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || err.message || 'Failed to create shipment';
-      alert('❌ Error: ' + errorMsg);
+      alert('Error: ' + errorMsg);
     }
   };
 
@@ -194,6 +194,9 @@ const Shipments: React.FC = () => {
       {/* Green Gradient Portal Header */}
       <div className="shipments-header">
         <div className="shipments-header-content">
+          <button className="shipments-back-btn" onClick={() => navigate('/dashboard')}>
+            Back to Dashboard
+          </button>
           <div className="shipments-title-section">
             <h1>Shipment Management</h1>
             <p>Track and manage all shipments</p>
@@ -261,7 +264,7 @@ const Shipments: React.FC = () => {
                         <td><strong>{s.shipment_number}</strong></td>
                         <td>
                           {s.sample_name || s.chemical_name || s.lot_number}
-                          {s.is_hazmat && <span className="hazmat-badge">⚠️ HAZMAT</span>}
+                          {s.is_hazmat && <span className="hazmat-badge">Hazmat</span>}
                         </td>
                         <td>{s.amount_shipped} {s.unit}</td>
                         <td>{s.recipient_name}</td>
@@ -284,7 +287,7 @@ const Shipments: React.FC = () => {
                               className="shipments-action-btn"
                               onClick={() => navigate(`/internal/processing/shipment/${s.id}`)}
                             >
-                              Process →
+                              Process
                             </button>
                           )}
                           {s.status === 'shipped' && (
@@ -292,7 +295,7 @@ const Shipments: React.FC = () => {
                               className="shipments-action-btn"
                               onClick={() => navigate(`/internal/tracking/${s.id}`)}
                             >
-                              Track →
+                              Track
                             </button>
                           )}
                         </td>
@@ -315,7 +318,7 @@ const Shipments: React.FC = () => {
               className="shipments-primary-btn"
               onClick={() => navigate('/internal/processing-dashboard')}
             >
-              Go to Processing Dashboard →
+              Go to Processing Dashboard
             </button>
           </div>
           <div className="shipments-section-body">
@@ -346,7 +349,7 @@ const Shipments: React.FC = () => {
                         <td><strong>{s.shipment_number}</strong></td>
                         <td>
                           {s.sample_name || s.chemical_name || s.lot_number}
-                          {s.is_hazmat && <span className="hazmat-badge">⚠️ HAZMAT</span>}
+                          {s.is_hazmat && <span className="hazmat-badge">Hazmat</span>}
                         </td>
                         <td>{s.amount_shipped} {s.unit}</td>
                         <td>{s.recipient_name}</td>
@@ -356,7 +359,7 @@ const Shipments: React.FC = () => {
                             className="shipments-action-btn"
                             onClick={() => navigate(`/internal/processing/shipment/${s.id}`)}
                           >
-                            Process →
+                            Process
                           </button>
                         </td>
                       </tr>
@@ -380,7 +383,7 @@ const Shipments: React.FC = () => {
               <div className="shipments-empty">Loading...</div>
             ) : shipments.filter(s => s.status === 'shipped').length === 0 ? (
               <div className="shipments-empty">
-                <div className="shipments-empty-icon">📮</div>
+                <div className="shipments-empty-icon"></div>
                 <h3>No Shipped Shipments</h3>
                 <p>Process shipments to see them here</p>
               </div>
@@ -419,7 +422,7 @@ const Shipments: React.FC = () => {
                             className="shipments-action-btn"
                             onClick={() => navigate(`/internal/tracking/${s.id}`)}
                           >
-                            Track Package →
+                            Track Package
                           </button>
                         </td>
                       </tr>
@@ -496,7 +499,7 @@ const Shipments: React.FC = () => {
             <div className="shipments-modal-header">
               <h2>Create New Shipment (Ship 1-10 Items per Request)</h2>
               <button className="shipments-modal-close" onClick={() => setShowModal(false)}>
-                ×
+                Close
               </button>
             </div>
             <form onSubmit={handleSubmit}>
@@ -713,7 +716,7 @@ const Shipments: React.FC = () => {
             <div className="shipments-modal-header">
               <h2>Update Supply Stock</h2>
               <button className="shipments-modal-close" onClick={() => setShowSupplyModal(false)}>
-                ×
+                Close
               </button>
             </div>
             <form onSubmit={handleUpdateSupply}>

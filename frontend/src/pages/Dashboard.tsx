@@ -39,12 +39,11 @@ const Dashboard: React.FC = () => {
               className="user-badge" 
               onClick={() => setShowUserMenu(!showUserMenu)}
             >
-              <div className="user-icon">👤</div>
               <div className="user-details">
                 <div className="user-email">{effectiveUser?.email}</div>
                 <div className="user-role">{effectiveUser?.role}</div>
               </div>
-              <span className="dropdown-icon">▼</span>
+              <span className="dropdown-icon">Menu</span>
             </button>
             {showUserMenu && (
               <div className="user-menu">
@@ -58,36 +57,34 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className="dashboard-content">
-        <div className="actions-container">
-          <h2>Platform Modules</h2>
-          <div className="actions-grid">
-            <button className="action-btn test-methods-btn" onClick={() => navigate('/test-methods')}>
-              <span className="btn-icon"></span>
-              <span className="btn-label">Test Methods</span>
-              <span className="btn-desc">Manage testing procedures</span>
-            </button>
+      <div className="dashboard-content" aria-hidden>
+        <div className="logo-spacer" />
+      </div>
 
-            <button className="action-btn inventory-btn" onClick={() => navigate('/inventory')}>
-              <span className="btn-icon"></span>
-              <span className="btn-label">Sample Inventory</span>
-              <span className="btn-desc">Track samples and CoAs</span>
-            </button>
+      <div className="actions-container">
+        <h2>Platform Modules</h2>
+        <div className="actions-grid">
+          <button className="action-btn test-methods-btn" onClick={() => navigate('/test-methods')}>
+            <span className="btn-label">Test Methods</span>
+            <span className="btn-desc">Manage testing procedures</span>
+          </button>
 
-            <button className="action-btn shipments-btn" onClick={() => navigate('/shipments')}>
-              <span className="btn-icon"></span>
-              <span className="btn-label">Shipment Logistics</span>
-              <span className="btn-desc">Manage shipping operations</span>
-            </button>
+          <button className="action-btn inventory-btn" onClick={() => navigate('/inventory')}>
+            <span className="btn-label">Sample Inventory</span>
+            <span className="btn-desc">Track samples and CoAs</span>
+          </button>
 
-            {effectiveUser?.role === 'super_admin' && (
-              <button className="action-btn admin-btn" onClick={() => navigate('/internal/admin')}>
-                <span className="btn-icon"></span>
-                <span className="btn-label">Super Admin Panel</span>
-                <span className="btn-desc">Platform management & control</span>
-              </button>
-            )}
-          </div>
+          <button className="action-btn shipments-btn" onClick={() => navigate('/shipments')}>
+            <span className="btn-label">Shipment Logistics</span>
+            <span className="btn-desc">Manage shipping operations</span>
+          </button>
+
+          {effectiveUser?.role === 'super_admin' && (
+            <button className="action-btn admin-btn" onClick={() => navigate('/internal/admin')}>
+              <span className="btn-label">Super Admin Panel</span>
+              <span className="btn-desc">Platform management and control</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -97,7 +94,7 @@ const Dashboard: React.FC = () => {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Contact Support</h3>
-              <button className="close-btn" onClick={() => setActiveModal(null)}>✕</button>
+              <button className="close-btn" onClick={() => setActiveModal(null)}>Close</button>
             </div>
             <div className="modal-content">
               <p style={{ textAlign: 'center', marginBottom: '24px', color: '#666' }}>
@@ -108,7 +105,6 @@ const Dashboard: React.FC = () => {
                   onClick={() => { setActiveModal(null); navigate('/manufacturer/support?type=tech'); }}
                   className="contact-type-btn tech"
                 >
-                  <div style={{ fontSize: '32px', marginBottom: '8px' }}>🖥️</div>
                   <div style={{ fontWeight: 600, marginBottom: '4px' }}>Technical Support</div>
                   <div style={{ fontSize: '12px', color: '#666' }}>Portal & access issues</div>
                 </button>
@@ -116,7 +112,6 @@ const Dashboard: React.FC = () => {
                   onClick={() => { setActiveModal(null); navigate('/manufacturer/support?type=lab'); }}
                   className="contact-type-btn lab"
                 >
-                  <div style={{ fontSize: '32px', marginBottom: '8px' }}></div>
                   <div style={{ fontWeight: 600, marginBottom: '4px' }}>Lab Support</div>
                   <div style={{ fontSize: '12px', color: '#666' }}>Sample & shipment questions</div>
                 </button>

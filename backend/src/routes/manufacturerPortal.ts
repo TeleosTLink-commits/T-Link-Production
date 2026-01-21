@@ -1,5 +1,4 @@
 import express, { Router, Request, Response } from 'express';
-import { Pool } from 'pg';
 import { authenticate } from '../middleware/auth';
 import {
   sendShipmentCreatedNotification,
@@ -10,17 +9,9 @@ import { extractDatesFromPDF, updateSampleDates } from '../services/pdfExtractio
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs';
+import { pool, query } from '../config/database';
 
 const router: Router = express.Router();
-
-// Database pool
-const pool = new Pool({
-  user: process.env.DB_USER || 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_NAME || 'tlink_db',
-  password: process.env.DB_PASSWORD || 'Ajwa8770',
-  port: parseInt(process.env.DB_PORT || '5432', 10),
-});
 
 /**
  * Middleware: Check if user is manufacturer
@@ -47,7 +38,7 @@ router.get('/coa/search', authenticate, checkManufacturer, async (req: Request, 
     }
 
     // Search for sample with matching lot number
-    const result = await pool.query(
+    const result = await query(
       `SELECT id, chemical_name, lot_number, received_date, certification_date, recertification_date, expiration_date, coa_file_path, created_at
        FROM samples 
        WHERE lot_number = $1
@@ -124,7 +115,7 @@ router.get('/coa/download/:sampleId', authenticate, checkManufacturer, async (re
     const { sampleId } = req.params;
 
     // Get sample file path
-    const result = await pool.query(
+    const result = await query(
       `SELECT sample_name, lot_number, file_path 
        FROM samples 
        WHERE id = $1 AND is_active = true`,
@@ -171,26 +162,37 @@ router.get('/coa/download/:sampleId', authenticate, checkManufacturer, async (re
  */
 router.get('/inventory/search', authenticate, checkManufacturer, async (req: Request, res: Response) => {
   try {
-    const { sample_name } = req.query;
+    const { sample_name, lot_number } = req.query;
 
-    if (!sample_name) {
-      return res.status(400).json({ error: 'sample_name query parameter required' });
+    if (!sample_name && !lot_number) {
+      return res.status(400).json({ error: 'Provide sample_name or lot_number to search' });
     }
 
-    // Search for samples by name (case-insensitive)
-    const result = await pool.query(
-      `SELECT id, chemical_name, lot_number, quantity, status 
-       FROM samples 
-       WHERE LOWER(chemical_name) LIKE LOWER($1)
-       ORDER BY chemical_name ASC
-       LIMIT 20`,
-      [`%${sample_name}%`]
-    );
+    let queryText = `
+      SELECT id, chemical_name, lot_number, quantity, status 
+      FROM samples 
+      WHERE 1=1`;
+
+    const params: any[] = [];
+
+    if (sample_name) {
+      params.push(`%${sample_name}%`);
+      queryText += ` AND chemical_name ILIKE $${params.length}`;
+    }
+
+    if (lot_number) {
+      params.push(`%${lot_number}%`);
+      queryText += ` AND lot_number ILIKE $${params.length}`;
+    }
+
+    queryText += ' ORDER BY chemical_name ASC LIMIT 50';
+
+    const result = await query(queryText, params);
 
     if (result.rows.length === 0) {
       return res.status(404).json({
-        error: 'No samples found matching this name',
-        search_term: sample_name,
+        error: 'No samples found matching the search criteria',
+        search_term: sample_name || lot_number,
       });
     }
 
