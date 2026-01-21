@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import type { StringValue } from 'ms';
 import { query } from '../config/database';

@@ -85,6 +85,9 @@ class FedExService {
       // Set expiration to 1 hour from now (token typically valid for 1 hour)
       this.tokenExpiresAt = Date.now() + response.data.expires_in * 1000;
 
+      if (!this.authToken) {
+        throw new Error('FedEx authentication failed: no token received');
+      }
       return this.authToken;
     } catch (error: any) {
       throw new Error(`FedEx authentication failed: ${error.message}`);

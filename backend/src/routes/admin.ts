@@ -7,7 +7,7 @@ const router = Router();
 
 // Middleware to check super admin role
 const checkSuperAdmin = (req: AuthRequest, res: any, next: any) => {
-  if (req.user.role !== 'super_admin') {
+  if (!req.user || req.user.role !== 'super_admin') {
     return res.status(403).json({ 
       error: 'Access Denied',
       message: 'Super Admin privileges required' 
@@ -22,6 +22,9 @@ router.use(checkSuperAdmin);
 
 // Verify super admin access
 router.get('/verify', (req: AuthRequest, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   res.json({ 
     success: true, 
     isSuperAdmin: req.user.role === 'super_admin',
