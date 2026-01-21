@@ -717,13 +717,8 @@ const AdminPanel: React.FC = () => {
 
       <footer className="dashboard-footer">
         <div className="footer-content">
-          <div className="footer-text">
-            © 2024 T-Link Portal. All rights reserved.
-          </div>
-          <div className="footer-logo">
-            <span>Powered by </span>
-            <strong>AAL Digital Development</strong>
-          </div>
+          <span className="footer-text">Developed and operated by</span>
+          <img src="/images/AAL_Dig_Dev.png" alt="AAL Digital Development" className="footer-logo" />
         </div>
       </footer>
     </div>

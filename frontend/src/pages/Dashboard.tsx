@@ -11,7 +11,6 @@ const Dashboard: React.FC = () => {
   const effectiveUser = user || storedUser;
 
   const [activeModal, setActiveModal] = useState<'contact' | null>(null);
-  const [showUserMenu, setShowUserMenu] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -34,25 +33,12 @@ const Dashboard: React.FC = () => {
           <button className="contact-btn" onClick={() => setActiveModal('contact')}>
             Contact Support
           </button>
-          <div className="user-badge-container">
-            <button 
-              className="user-badge" 
-              onClick={() => setShowUserMenu(!showUserMenu)}
-            >
-              <div className="user-details">
-                <div className="user-email">{effectiveUser?.email}</div>
-                <div className="user-role">{effectiveUser?.role}</div>
-              </div>
-              <span className="dropdown-icon">Menu</span>
-            </button>
-            {showUserMenu && (
-              <div className="user-menu">
-                <button onClick={handleLogout} className="menu-item logout">
-                  Sign Out
-                </button>
-              </div>
-            )}
+          <div className="user-info">
+            <span className="user-name">{effectiveUser?.firstName} {effectiveUser?.lastName}</span>
           </div>
+          <button className="sign-out-btn" onClick={handleLogout}>
+            Sign Out
+          </button>
         </div>
       </div>
 
