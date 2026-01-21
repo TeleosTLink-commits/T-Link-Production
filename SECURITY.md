@@ -2,7 +2,9 @@
 
 ## Reporting Security Vulnerabilities
 
-If you discover a security vulnerability in T-Link, please report it by emailing security@teleos.com. Please do not create public GitHub issues for security vulnerabilities.
+If you discover a security vulnerability in T-Link, please report it by emailing the security team. Please do not create public GitHub issues for security vulnerabilities.
+
+**Note:** Update the security contact email address to your organization's actual monitored security email.
 
 ## Supported Versions
 

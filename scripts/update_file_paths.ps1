@@ -4,6 +4,10 @@
 # $env:DB_HOST='your_database_host'
 # $env:DB_USER='your_database_user'
 # $env:DB_NAME='your_database_name'
+#
+# SECURITY NOTE: This script sets PGPASSWORD in the environment.
+# For production use, consider using a .pgpass file instead:
+# https://www.postgresql.org/docs/current/libpq-pgpass.html
 
 # Check if required environment variables are set
 if (-not $env:DB_PASSWORD) {
@@ -15,6 +19,7 @@ $DB_HOST = if ($env:DB_HOST) { $env:DB_HOST } else { "localhost" }
 $DB_USER = if ($env:DB_USER) { $env:DB_USER } else { "postgres" }
 $DB_NAME = if ($env:DB_NAME) { $env:DB_NAME } else { "tlink_db" }
 
+# Set PGPASSWORD for psql commands (note: visible in process list)
 $env:PGPASSWORD = $env:DB_PASSWORD
 
 # Get test method files

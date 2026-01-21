@@ -13,9 +13,12 @@ export const ALLOWED_FILE_TYPES = {
 };
 
 /**
- * Maximum file size in bytes (10MB default)
+ * Maximum file size in bytes
+ * Default: 10MB (10 * 1024 * 1024 = 10485760 bytes)
+ * Can be configured via MAX_FILE_SIZE environment variable
  */
-const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE || '10485760', 10);
+const DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE || String(DEFAULT_MAX_FILE_SIZE), 10);
 
 /**
  * Validate uploaded file type and size
