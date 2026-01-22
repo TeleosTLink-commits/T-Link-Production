@@ -82,6 +82,7 @@ jobs:
           path: '.'
           format: 'sarif'
           out: 'reports'
+          project: 'T-Link-Production'
           args: >
             --enable-retired
             --exclude '.git'
