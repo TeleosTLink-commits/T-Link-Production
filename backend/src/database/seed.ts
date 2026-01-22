@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import { pool } from '../config/database';
 import logger from '../config/logger';
 

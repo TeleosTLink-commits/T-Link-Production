@@ -368,6 +368,53 @@ npm run db:migrate
 npm run db:seed
 ```
 
+## 🔒 Security Features
+
+T-Link implements multiple layers of security to protect sensitive data:
+
+### Authentication & Authorization
+- **JWT-based authentication** with configurable expiration (default: 24h)
+- **Role-based access control** (Admin, Lab Staff, Logistics, Manufacturer)
+- **Password hashing** using bcrypt with salt rounds
+- **Account lockout** after failed login attempts
+- **Secure session management**
+
+### API Security
+- **Rate limiting** to prevent brute force attacks
+  - Auth endpoints: 5 requests per 15 minutes
+  - General API: 100 requests per 15 minutes
+  - File uploads: 50 requests per hour
+- **CORS whitelist** configuration for allowed origins
+- **Helmet.js** security headers (XSS protection, HSTS, etc.)
+- **Input validation** using Joi schemas
+- **Input sanitization** to prevent XSS attacks
+- **SQL injection prevention** via parameterized queries
+
+### File Upload Security
+- **File type validation** (whitelist of allowed extensions)
+- **MIME type verification** to prevent disguised files
+- **File size limits** (default: 10MB)
+- **Filename sanitization** to prevent directory traversal
+- **Secure file storage** with Cloudinary integration
+
+### Monitoring & Logging
+- **Structured logging** with Winston
+- **Request logging** with Morgan
+- **Error tracking** and centralized error handling
+- **Audit trails** for sensitive operations
+
+### Environment Security
+- **Environment variable validation** on startup
+- **Separate .env files** for development and production
+- **Sensitive data excluded** from version control
+- **Example configurations** provided without credentials
+
+### Best Practices
+- **TypeScript strict mode** enabled for type safety
+- **No hardcoded credentials** in source code
+- **Regular dependency updates** and vulnerability scanning
+- **Secure default configurations**
+
 ## 🤝 Support
 
 For issues or questions:
@@ -389,4 +436,4 @@ Proprietary - Teleos Corporation
 - PostgreSQL
 - Vite
 
-**Version:** 1.0.0
+**Version:** 2.0.0
