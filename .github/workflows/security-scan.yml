@@ -42,12 +42,12 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --file=frontend/package-lock.json --severity-threshold=high --sarif-file-output=snyk-frontend.sarif
+          args: --file=frontend/package-lock.json --severity-threshold=high --sarif-file-output=snyk-frontend.sarif --working-directory=frontend
         continue-on-error: true
 
       - name: Upload Snyk Frontend SARIF
         uses: github/codeql-action/upload-sarif@v4
-        if: always()
+        if: hashFiles('snyk-frontend.sarif') != ''
         with:
           sarif_file: snyk-frontend.sarif
 
@@ -56,12 +56,12 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --file=backend/package-lock.json --severity-threshold=high --sarif-file-output=snyk-backend.sarif
+          args: --file=backend/package-lock.json --severity-threshold=high --sarif-file-output=snyk-backend.sarif --working-directory=backend
         continue-on-error: true
 
       - name: Upload Snyk Backend SARIF
         uses: github/codeql-action/upload-sarif@v4
-        if: always()
+        if: hashFiles('snyk-backend.sarif') != ''
         with:
           sarif_file: snyk-backend.sarif
 
@@ -87,12 +87,13 @@ jobs:
             --exclude '.github'
             --exclude 'node_modules'
             --exclude 'dist'
+          output: 'dependency-check-results'
 
       - name: Upload results to GitHub
         uses: github/codeql-action/upload-sarif@v4
-        if: always()
+        if: hashFiles('dependency-check-results/dependency-check-report.sarif') != ''
         with:
-          sarif_file: 'dependency-check-report.sarif'
+          sarif_file: 'dependency-check-results/dependency-check-report.sarif'
 
   eslint-scan:
     name: ESLint Code Quality
