@@ -25,24 +25,46 @@ import SupplyInventory from './pages/internal/SupplyInventory';
 import HazmatWarning from './pages/internal/HazmatWarning';
 import AdminPanel from './pages/internal/AdminPanel';
 
-function App() {
+const getAuthState = () => {
   const token = localStorage.getItem('auth_token');
   const storedUser = localStorage.getItem('user');
-  const parsedUser = storedUser ? JSON.parse(storedUser) : null;
-  const userRole = parsedUser?.role;
+
+  if (!token) return { token: null, user: null, role: null };
+
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1] || ''));
+    const exp = payload?.exp ? payload.exp * 1000 : 0;
+
+    if (!exp || Date.now() > exp) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user');
+      return { token: null, user: null, role: null };
+    }
+
+    const user = storedUser ? JSON.parse(storedUser) : null;
+    return { token, user, role: user?.role ?? null };
+  } catch (err) {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user');
+    return { token: null, user: null, role: null };
+  }
+};
+
+function App() {
+  const { token, role } = getAuthState();
 
   return (
     <Router>
       <ToastContainer position="top-right" autoClose={3000} />
       <Routes>
         {/* Public Routes */}
-        <Route path="/login" element={!token ? <Login /> : <Navigate to={userRole === 'manufacturer' ? '/manufacturer/dashboard' : '/dashboard'} />} />
-        <Route path="/register" element={!token ? <Register /> : <Navigate to={userRole === 'manufacturer' ? '/manufacturer/dashboard' : '/dashboard'} />} />
+        <Route path="/login" element={!token ? <Login /> : <Navigate to={role === 'manufacturer' ? '/manufacturer/dashboard' : '/dashboard'} />} />
+        <Route path="/register" element={!token ? <Register /> : <Navigate to={role === 'manufacturer' ? '/manufacturer/dashboard' : '/dashboard'} />} />
         <Route path="/manufacturer/signup" element={!token ? <ManufacturerSignUp /> : <Navigate to="/manufacturer/dashboard" />} />
         
         {/* Protected Routes */}
         <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-          <Route index element={<Navigate to={userRole === 'manufacturer' ? '/manufacturer/dashboard' : '/dashboard'} />} />
+          <Route index element={<Navigate to={role === 'manufacturer' ? '/manufacturer/dashboard' : '/dashboard'} />} />
           
           {/* Internal Dashboard & Pages */}
           <Route path="dashboard" element={<Dashboard />} />
@@ -68,7 +90,7 @@ function App() {
         </Route>
 
         {/* Catch-all redirect */}
-        <Route path="*" element={<Navigate to={token ? (userRole === 'manufacturer' ? '/manufacturer/dashboard' : '/dashboard') : '/login'} />} />
+        <Route path="*" element={<Navigate to={token ? (role === 'manufacturer' ? '/manufacturer/dashboard' : '/dashboard') : '/login'} />} />
       </Routes>
     </Router>
   );
