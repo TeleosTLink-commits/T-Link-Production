@@ -84,7 +84,8 @@ jobs:
           out: 'reports'
           project: 'T-Link-Production'
           args: >
-            --enable-retired
+            --enableExperimental
+            --noupdate
             --exclude '.git'
             --exclude '.github'
             --exclude 'node_modules'
