@@ -81,19 +81,19 @@ jobs:
         with:
           path: '.'
           format: 'sarif'
+          out: 'reports'
           args: >
             --enable-retired
             --exclude '.git'
             --exclude '.github'
             --exclude 'node_modules'
             --exclude 'dist'
-          output: 'dependency-check-results'
 
       - name: Upload results to GitHub
         uses: github/codeql-action/upload-sarif@v4
-        if: hashFiles('dependency-check-results/dependency-check-report.sarif') != ''
+        if: hashFiles('reports/dependency-check-report.sarif') != ''
         with:
-          sarif_file: 'dependency-check-results/dependency-check-report.sarif'
+          sarif_file: 'reports/dependency-check-report.sarif'
 
   eslint-scan:
     name: ESLint Code Quality
