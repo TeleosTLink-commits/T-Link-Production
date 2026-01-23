@@ -87,6 +87,7 @@ function App() {
           <Route path="internal/supplies" element={<SupplyInventory />} />
           <Route path="internal/hazmat-processing" element={<HazmatWarning />} />
           <Route path="internal/admin" element={<AdminPanel />} />
+          <Route path="internal/support" element={<SupportForms />} />
         </Route>
 
         {/* Catch-all redirect */}

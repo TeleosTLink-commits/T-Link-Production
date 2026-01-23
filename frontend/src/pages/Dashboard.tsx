@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 import { useAuthStore } from '../store/authStore';
@@ -10,8 +10,6 @@ const Dashboard: React.FC = () => {
   const storedUserStr = localStorage.getItem('user');
   const storedUser = storedUserStr ? JSON.parse(storedUserStr) : null;
   const effectiveUser = user || storedUser;
-
-  const [activeModal, setActiveModal] = useState<'contact' | null>(null);
 
   const handleLogout = () => {
     logout();
@@ -31,12 +29,9 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
         <div className="header-right">
-          <button className="contact-btn" onClick={() => setActiveModal('contact')}>
+          <button className="contact-btn" onClick={() => navigate('/internal/support')}>
             Contact Support
           </button>
-          <div className="user-info">
-            <span className="user-name">{effectiveUser?.firstName} {effectiveUser?.lastName}</span>
-          </div>
           <button className="sign-out-btn" onClick={handleLogout}>
             Sign Out
           </button>
@@ -73,39 +68,6 @@ const Dashboard: React.FC = () => {
           )}
         </div>
       </div>
-
-      {/* Contact Modal */}
-      {activeModal === 'contact' && (
-        <div className="modal-overlay" onClick={() => setActiveModal(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Contact Support</h3>
-              <button className="close-btn" onClick={() => setActiveModal(null)}>Close</button>
-            </div>
-            <div className="modal-content">
-              <p style={{ textAlign: 'center', marginBottom: '24px', color: '#666' }}>
-                Select the type of support you need:
-              </p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-                <button 
-                  onClick={() => { setActiveModal(null); navigate('/manufacturer/support?type=tech'); }}
-                  className="contact-type-btn tech"
-                >
-                  <div style={{ fontWeight: 600, marginBottom: '4px' }}>Technical Support</div>
-                  <div style={{ fontSize: '12px', color: '#666' }}>Portal & access issues</div>
-                </button>
-                <button 
-                  onClick={() => { setActiveModal(null); navigate('/manufacturer/support?type=lab'); }}
-                  className="contact-type-btn lab"
-                >
-                  <div style={{ fontWeight: 600, marginBottom: '4px' }}>Lab Support</div>
-                  <div style={{ fontSize: '12px', color: '#666' }}>Sample & shipment questions</div>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Footer */}
       <footer className="dashboard-footer">

@@ -1,0 +1,492 @@
+/* ==================== SHIPMENT REQUEST PAGE STYLES ==================== */
+
+.shipment-request-portal {
+  background: url('/images/tlink-official-logo.png') center/40% no-repeat fixed;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header Section */
+.shipment-request-header {
+  background: linear-gradient(135deg, #2d5016 0%, #3d6b1f 100%);
+  padding: 24px 32px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.shipment-request-back-button {
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 6px;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 10px 20px;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+  white-space: nowrap;
+}
+
+.shipment-request-back-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: white;
+  transform: translateY(-2px);
+}
+
+.shipment-request-header-text {
+  flex: 1;
+}
+
+.shipment-request-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: white;
+  margin: 0 0 4px 0;
+}
+
+.shipment-request-subtitle {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+}
+
+/* Main Content */
+.shipment-request-content {
+  flex: 1;
+  padding: 40px;
+  max-width: 1000px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Form Section */
+.shipment-request-form-section {
+  background: white;
+  border-radius: 12px;
+  padding: 40px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  margin-bottom: 24px;
+}
+
+.shipment-request-form {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.shipment-request-fieldset {
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 24px;
+  margin: 0;
+}
+
+.shipment-request-legend {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2d5016;
+  padding: 0 12px;
+}
+
+.shipment-request-form-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.shipment-request-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shipment-request-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #333;
+}
+
+.shipment-request-input,
+.shipment-request-textarea,
+.shipment-request-select {
+  width: 100%;
+  padding: 12px;
+  font-size: 14px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+.shipment-request-input:focus,
+.shipment-request-textarea:focus,
+.shipment-request-select:focus {
+  outline: none;
+  border-color: #2d5016;
+}
+
+.shipment-request-input.error,
+.shipment-request-textarea.error,
+.shipment-request-select.error {
+  border-color: #dc3545;
+}
+
+.shipment-request-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.shipment-request-error {
+  font-size: 12px;
+  color: #dc3545;
+  margin-top: 4px;
+}
+
+.shipment-request-hint {
+  font-size: 12px;
+  color: #666;
+  margin: 4px 0 0 0;
+  font-style: italic;
+}
+
+/* Sample Cards */
+.shipment-request-sample-card {
+  background: #f8f9fa;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.shipment-request-sample-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.shipment-request-sample-number {
+  font-size: 16px;
+  font-weight: 700;
+  color: #2d5016;
+}
+
+.shipment-request-remove-sample {
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.shipment-request-remove-sample:hover {
+  background: #c82333;
+  transform: translateY(-2px);
+}
+
+.shipment-request-remove-sample:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.shipment-request-quantity-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 12px;
+}
+
+.shipment-request-add-sample {
+  width: 100%;
+  padding: 12px;
+  background: rgba(45, 80, 22, 0.1);
+  border: 2px dashed #2d5016;
+  border-radius: 8px;
+  color: #2d5016;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 16px;
+}
+
+.shipment-request-add-sample:hover:not(:disabled) {
+  background: rgba(45, 80, 22, 0.2);
+  transform: translateY(-2px);
+}
+
+.shipment-request-add-sample:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Submit Button */
+.shipment-request-submit {
+  width: 100%;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #2d5016 0%, #3d6b1f 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(45, 80, 22, 0.3);
+  margin-top: 24px;
+}
+
+.shipment-request-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(45, 80, 22, 0.4);
+}
+
+.shipment-request-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Success Screen */
+.shipment-request-success {
+  background: white;
+  border-radius: 12px;
+  padding: 48px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  text-align: center;
+}
+
+.shipment-request-success-icon {
+  font-size: 72px;
+  color: #28a745;
+  margin-bottom: 24px;
+}
+
+.shipment-request-success-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #28a745;
+  margin: 0 0 16px 0;
+}
+
+.shipment-request-success-message {
+  font-size: 16px;
+  color: #666;
+  margin: 0 0 32px 0;
+  line-height: 1.6;
+}
+
+.shipment-request-summary-box {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.shipment-request-summary-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 20px 0;
+}
+
+.shipment-request-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.shipment-request-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shipment-request-summary-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.shipment-request-summary-value {
+  font-size: 14px;
+  color: #333;
+  font-weight: 600;
+}
+
+.shipment-request-samples-list {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 2px solid #dee2e6;
+}
+
+.shipment-request-sample-item {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.shipment-request-sample-item h4 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #2d5016;
+  margin: 0 0 8px 0;
+}
+
+.shipment-request-sample-details {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  font-size: 13px;
+  color: #666;
+}
+
+.shipment-request-info-box {
+  background: #e7f3ff;
+  border: 1px solid #b3d9ff;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.shipment-request-info-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #004085;
+  margin: 0 0 16px 0;
+}
+
+.shipment-request-info-list {
+  font-size: 14px;
+  color: #004085;
+  margin: 0;
+  padding-left: 24px;
+  line-height: 1.8;
+}
+
+.shipment-request-button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.shipment-request-create-another {
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #2d5016 0%, #3d6b1f 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(45, 80, 22, 0.3);
+}
+
+.shipment-request-create-another:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(45, 80, 22, 0.4);
+}
+
+.shipment-request-back-dashboard {
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.shipment-request-back-dashboard:hover {
+  background: #5a6268;
+  transform: translateY(-2px);
+}
+
+/* Footer */
+.shipment-request-footer {
+  background: linear-gradient(135deg, rgba(45, 80, 22, 0.95) 0%, rgba(61, 107, 31, 0.95) 100%);
+  padding: 12px 32px;
+  border-top: 2px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  margin-top: auto;
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.footer-text {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.footer-logo {
+  height: 24px;
+  width: auto;
+  filter: brightness(1.1) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  transition: transform 0.2s ease;
+}
+
+.footer-logo:hover {
+  transform: scale(1.05);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .shipment-request-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 20px;
+  }
+
+  .shipment-request-title {
+    font-size: 24px;
+  }
+
+  .shipment-request-content {
+    padding: 20px;
+  }
+
+  .shipment-request-form-section,
+  .shipment-request-success {
+    padding: 24px;
+  }
+
+  .shipment-request-form-row,
+  .shipment-request-quantity-row,
+  .shipment-request-summary-grid,
+  .shipment-request-sample-details {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,3 +1,13 @@
+name: CodeQL Security Analysis
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    - cron: '0 0 * * 0'
+
 jobs:
   analyze:
     name: Analyze Code with CodeQL
@@ -51,7 +61,6 @@ jobs:
         uses: github/codeql-action/analyze@v4
         with:
           category: /language:${{ matrix.language }}
-          npm run build
 
       - name: Build Backend
         if: matrix.language == 'javascript' || matrix.language == 'typescript'

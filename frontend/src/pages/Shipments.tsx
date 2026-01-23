@@ -461,11 +461,11 @@ const Shipments: React.FC = () => {
                     return (
                       <tr key={sup.id}>
                         <td><strong>{sup.un_box_type}</strong></td>
-                        <td>{sup.inner_packing || 'N/A'}</td>
+                        <td>{sup.inner_packing_type || 'N/A'}</td>
                         <td>{sup.dot_sp_number || 'N/A'}</td>
                         <td>{sup.item_number || 'N/A'}</td>
-                        <td>{sup.supplier || 'N/A'}</td>
-                        <td>{sup.price ? `$${parseFloat(sup.price).toFixed(2)}` : 'N/A'}</td>
+                        <td>{sup.purchased_from || 'N/A'}</td>
+                        <td>{sup.price_per_unit ? `$${parseFloat(sup.price_per_unit).toFixed(2)}` : 'N/A'}</td>
                         <td>
                           <span className={`stock-indicator ${stockLevel}`}>
                             {sup.count}

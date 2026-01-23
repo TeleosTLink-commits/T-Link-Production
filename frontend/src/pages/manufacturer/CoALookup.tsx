@@ -146,17 +146,6 @@ const CoALookup: React.FC = () => {
             </div>
           )}
         </div>
-
-        {/* Info Section */}
-        <div className="info-section">
-          <h3 className="info-title">About CoA Lookup</h3>
-          <ul className="info-list">
-            <li>CoA documents are available for all active samples</li>
-            <li>Lot numbers are case-sensitive</li>
-            <li>Downloaded PDFs contain complete analysis results</li>
-            <li>Contact lab support if you cannot find your lot number</li>
-          </ul>
-        </div>
       </div>
 
       <footer className="dashboard-footer">

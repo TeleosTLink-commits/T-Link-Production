@@ -2,6 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api from '../../services/api';
+import './ShipmentRequest.css';
 
 interface Sample {
   sample_name: string;
@@ -140,570 +141,311 @@ const ShipmentRequest: React.FC = () => {
 
   if (submitted && submittedData) {
     return (
-      <div style={styles.container}>
-        <div style={styles.successCard}>
-          <div style={styles.successIcon}>Success</div>
-          <h1 style={styles.successTitle}>Shipment Request Submitted!</h1>
-          <p style={styles.successMessage}>Your shipment request has been created and a confirmation email has been sent.</p>
-
-          <div style={styles.summaryBox}>
-            <h3 style={styles.summaryTitle}>Request Summary</h3>
-            <div style={styles.summaryGrid}>
-              <div style={styles.summaryItem}>
-                <span style={styles.summaryLabel}>Request ID:</span>
-                <span style={styles.summaryValue}>{submittedData.id}</span>
-              </div>
-              <div style={styles.summaryItem}>
-                <span style={styles.summaryLabel}>Status:</span>
-                <span style={{ ...styles.summaryValue, color: '#007bff' }}>
-                  {submittedData.status.charAt(0).toUpperCase() + submittedData.status.slice(1)}
-                </span>
-              </div>
-              <div style={styles.summaryItem}>
-                <span style={styles.summaryLabel}>Samples:</span>
-                <span style={styles.summaryValue}>{submittedData.samples?.length || 1} sample(s)</span>
-              </div>
-              <div style={styles.summaryItem}>
-                <span style={styles.summaryLabel}>Total Quantity:</span>
-                <span style={styles.summaryValue}>{submittedData.total_quantity} {submittedData.unit}</span>
-              </div>
-              <div style={styles.summaryItem}>
-                <span style={styles.summaryLabel}>Delivery Address:</span>
-                <span style={styles.summaryValue}>{submittedData.delivery_address}</span>
-              </div>
-              <div style={styles.summaryItem}>
-                <span style={styles.summaryLabel}>Hazmat:</span>
-                <span style={{ ...styles.summaryValue, color: submittedData.is_hazmat ? '#dc3545' : '#28a745' }}>
-                  {submittedData.is_hazmat ? 'Yes - DG Documentation Required' : 'No'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div style={styles.infoBox}>
-            <h4 style={styles.infoTitle}>What happens next?</h4>
-            <ol style={styles.infoList}>
-              <li>Your request will be reviewed by our lab team</li>
-              <li>We'll prepare your shipment and verify inventory for all samples</li>
-              <li>Once shipped, you'll receive tracking information</li>
-              <li>Monitor progress in "My Shipments" section</li>
-            </ol>
-          </div>
-
-          <div style={styles.buttonGroup}>
-            <button onClick={() => navigate('/manufacturer/my-shipments')} style={styles.viewButton}>
-              View All Shipments
-            </button>
-            <button onClick={handleCreateAnother} style={styles.createAnotherButton}>
-              Create Another Request
-            </button>
-            <button onClick={handleGoBack} style={styles.backDashboardButton}>
-              Back to Dashboard
-            </button>
+      <div className="shipment-request-portal">
+        <div className="shipment-request-header">
+          <div className="shipment-request-header-text">
+            <h1 className="shipment-request-title">Request Submitted Successfully</h1>
+            <p className="shipment-request-subtitle">Your shipment has been created</p>
           </div>
         </div>
+
+        <div className="shipment-request-content">
+          <div className="shipment-request-success">
+            <div className="shipment-request-success-icon">✓</div>
+            <h1 className="shipment-request-success-title">Shipment Request Submitted!</h1>
+            <p className="shipment-request-success-message">Your shipment request has been created and a confirmation email has been sent.</p>
+
+            <div className="shipment-request-summary-box">
+              <h3 className="shipment-request-summary-title">Request Summary</h3>
+              <h3 className="shipment-request-summary-title">Request Summary</h3>
+              <div className="shipment-request-summary-grid">
+                <div className="shipment-request-summary-item">
+                  <span className="shipment-request-summary-label">Request ID:</span>
+                  <span className="shipment-request-summary-value">{submittedData.id}</span>
+                </div>
+                <div className="shipment-request-summary-item">
+                  <span className="shipment-request-summary-label">Status:</span>
+                  <span className="shipment-request-summary-value" style={{ color: '#007bff' }}>
+                    {submittedData.status.charAt(0).toUpperCase() + submittedData.status.slice(1)}
+                  </span>
+                </div>
+                <div className="shipment-request-summary-item">
+                  <span className="shipment-request-summary-label">Samples:</span>
+                  <span className="shipment-request-summary-value">{submittedData.samples?.length || 1} sample(s)</span>
+                </div>
+                <div className="shipment-request-summary-item">
+                  <span className="shipment-request-summary-label">Total Quantity:</span>
+                  <span className="shipment-request-summary-value">{submittedData.total_quantity} {submittedData.unit}</span>
+                </div>
+                <div className="shipment-request-summary-item">
+                  <span className="shipment-request-summary-label">Delivery Address:</span>
+                  <span className="shipment-request-summary-value">{submittedData.delivery_address}</span>
+                </div>
+                <div className="shipment-request-summary-item">
+                  <span className="shipment-request-summary-label">Hazmat:</span>
+                  <span className="shipment-request-summary-value" style={{ color: submittedData.is_hazmat ? '#dc3545' : '#28a745' }}>
+                    {submittedData.is_hazmat ? 'Yes - DG Documentation Required' : 'No'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="shipment-request-info-box">
+              <h4 className="shipment-request-info-title">What happens next?</h4>
+              <ol className="shipment-request-info-list">
+                <li>Your request will be reviewed by our lab team</li>
+                <li>We'll prepare your shipment and verify inventory for all samples</li>
+                <li>Once shipped, you'll receive tracking information</li>
+                <li>Monitor progress in "My Shipments" section</li>
+              </ol>
+            </div>
+
+            <div className="shipment-request-button-group">
+              <button onClick={() => navigate('/manufacturer/my-shipments')} className="shipment-request-create-another">
+                View All Shipments
+              </button>
+              <button onClick={handleCreateAnother} className="shipment-request-create-another">
+                Create Another Request
+              </button>
+              <button onClick={handleGoBack} className="shipment-request-back-dashboard">
+                Back to Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <footer className="shipment-request-footer">
+          <div className="footer-content">
+            <span className="footer-text">© 2026 T-Link Sample Management System</span>
+            <img src="/images/tlink-official-logo.png" alt="T-Link Logo" className="footer-logo" />
+          </div>
+        </footer>
       </div>
     );
   }
 
   return (
-    <div style={styles.container}>
+    <div className="shipment-request-portal">
       {/* Header */}
-      <div style={styles.header}>
-        <button onClick={handleGoBack} style={styles.backButton}>
-          Back to Dashboard
+      <div className="shipment-request-header">
+        <button onClick={handleGoBack} className="shipment-request-back-button">
+          ← Back to Dashboard
         </button>
-        <h1 style={styles.title}>Create Shipment Request</h1>
-        <p style={styles.subtitle}>Add up to 10 samples per shipment</p>
+        <div className="shipment-request-header-text">
+          <h1 className="shipment-request-title">Create Shipment Request</h1>
+          <p className="shipment-request-subtitle">Add up to 10 samples per shipment</p>
+        </div>
       </div>
 
       {/* Form Section */}
-      <div style={styles.formSection}>
-        <form onSubmit={handleSubmit} style={styles.form}>
-          {/* Personal Information */}
-          <fieldset style={styles.fieldset}>
-            <legend style={styles.legend}>Personal Information</legend>
+      <div className="shipment-request-content">
+        <div className="shipment-request-form-section">
+          <form onSubmit={handleSubmit} className="shipment-request-form">
+            {/* Personal Information */}
+            <fieldset className="shipment-request-fieldset">
+              <legend className="shipment-request-legend">Personal Information</legend>
 
-            <div style={styles.formRow}>
-              <div style={styles.formGroup}>
-                <label htmlFor="first_name" style={styles.label}>
-                  First Name *
+              <div className="shipment-request-form-row">
+                <div className="shipment-request-form-group">
+                  <label htmlFor="first_name" className="shipment-request-label">
+                    First Name *
+                  </label>
+                  <input
+                    type="text"
+                    id="first_name"
+                    name="first_name"
+                    value={formData.first_name}
+                    onChange={handleChange}
+                    className={`shipment-request-input ${errors.first_name ? 'error' : ''}`}
+                    placeholder="John"
+                  />
+                  {errors.first_name && <span className="shipment-request-error">{errors.first_name}</span>}
+                </div>
+
+                <div className="shipment-request-form-group">
+                  <label htmlFor="last_name" className="shipment-request-label">
+                    Last Name *
+                  </label>
+                  <input
+                    type="text"
+                    id="last_name"
+                    name="last_name"
+                    value={formData.last_name}
+                    onChange={handleChange}
+                    className={`shipment-request-input ${errors.last_name ? 'error' : ''}`}
+                    placeholder="Doe"
+                  />
+                  {errors.last_name && <span className="shipment-request-error">{errors.last_name}</span>}
+                </div>
+              </div>
+
+              <div className="shipment-request-form-group">
+                <label htmlFor="delivery_address" className="shipment-request-label">
+                  Delivery Address *
+                </label>
+                <textarea
+                  id="delivery_address"
+                  name="delivery_address"
+                  value={formData.delivery_address}
+                  onChange={handleChange}
+                  className={`shipment-request-textarea ${errors.delivery_address ? 'error' : ''}`}
+                  placeholder="123 Business Street, City, State 12345"
+                />
+                {errors.delivery_address && <span className="shipment-request-error">{errors.delivery_address}</span>}
+              </div>
+
+              <div className="shipment-request-form-group">
+                <label htmlFor="scheduled_ship_date" className="shipment-request-label">
+                  Scheduled Ship Date (Optional)
                 </label>
                 <input
-                  type="text"
-                  id="first_name"
-                  name="first_name"
-                  value={formData.first_name}
+                  type="date"
+                  id="scheduled_ship_date"
+                  name="scheduled_ship_date"
+                  value={formData.scheduled_ship_date}
                   onChange={handleChange}
-                  style={{ ...styles.input, borderColor: errors.first_name ? '#dc3545' : '#ccc' }}
-                  placeholder="John"
+                  className="shipment-request-input"
                 />
-                {errors.first_name && <span style={styles.error}>{errors.first_name}</span>}
+                <p className="shipment-request-hint">Leave empty for ASAP processing</p>
               </div>
+            </fieldset>
 
-              <div style={styles.formGroup}>
-                <label htmlFor="last_name" style={styles.label}>
-                  Last Name *
-                </label>
-                <input
-                  type="text"
-                  id="last_name"
-                  name="last_name"
-                  value={formData.last_name}
-                  onChange={handleChange}
-                  style={{ ...styles.input, borderColor: errors.last_name ? '#dc3545' : '#ccc' }}
-                  placeholder="Doe"
-                />
-                {errors.last_name && <span style={styles.error}>{errors.last_name}</span>}
-              </div>
-            </div>
+            {/* Samples Section */}
+            <fieldset className="shipment-request-fieldset">
+              <legend className="shipment-request-legend">
+                Samples ({samples.length} of 10)
+              </legend>
 
-            <div style={styles.formGroup}>
-              <label htmlFor="delivery_address" style={styles.label}>
-                Delivery Address *
-              </label>
-              <textarea
-                id="delivery_address"
-                name="delivery_address"
-                value={formData.delivery_address}
-                onChange={handleChange}
-                style={{ ...styles.input, ...styles.textarea, borderColor: errors.delivery_address ? '#dc3545' : '#ccc' }}
-                placeholder="123 Business Street, City, State 12345"
-              />
-              {errors.delivery_address && <span style={styles.error}>{errors.delivery_address}</span>}
-            </div>
-
-            <div style={styles.formGroup}>
-              <label htmlFor="scheduled_ship_date" style={styles.label}>
-                Scheduled Ship Date (Optional)
-              </label>
-              <input
-                type="date"
-                id="scheduled_ship_date"
-                name="scheduled_ship_date"
-                value={formData.scheduled_ship_date}
-                onChange={handleChange}
-                style={styles.input}
-              />
-              <p style={styles.hint}>Leave empty for ASAP processing</p>
-            </div>
-          </fieldset>
-
-          {/* Samples Section */}
-          <fieldset style={styles.fieldset}>
-            <legend style={styles.legend}>
-              Samples ({samples.length} of 10)
-            </legend>
-
-            {samples.map((sample, index) => (
-              <div key={index} style={styles.sampleCard}>
-                <div style={styles.sampleHeader}>
-                  <h4 style={styles.sampleTitle}>Sample {index + 1}</h4>
-                  {samples.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeSample(index)}
-                      style={styles.removeButton}
-                    >
-                      âœ• Remove
-                    </button>
-                  )}
-                </div>
-
-                <div style={styles.formRow}>
-                  <div style={styles.formGroup}>
-                    <label htmlFor={`sample_name_${index}`} style={styles.label}>
-                      Sample Name *
-                    </label>
-                    <input
-                      type="text"
-                      id={`sample_name_${index}`}
-                      value={sample.sample_name}
-                      onChange={(e) => handleSampleChange(index, 'sample_name', e.target.value)}
-                      style={{ ...styles.input, borderColor: errors[`sample_${index}_sample_name`] ? '#dc3545' : '#ccc' }}
-                      placeholder="Sample XYZ"
-                    />
-                    {errors[`sample_${index}_sample_name`] && (
-                      <span style={styles.error}>{errors[`sample_${index}_sample_name`]}</span>
+              {samples.map((sample, index) => (
+                <div key={index} className="shipment-request-sample-card">
+                  <div className="shipment-request-sample-header">
+                    <h4 className="shipment-request-sample-number">Sample {index + 1}</h4>
+                    {samples.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeSample(index)}
+                        className="shipment-request-remove-sample"
+                      >
+                        ✕ Remove
+                      </button>
                     )}
                   </div>
 
-                  <div style={styles.formGroup}>
-                    <label htmlFor={`lot_number_${index}`} style={styles.label}>
-                      Lot Number *
-                    </label>
-                    <input
-                      type="text"
-                      id={`lot_number_${index}`}
-                      value={sample.lot_number}
-                      onChange={(e) => handleSampleChange(index, 'lot_number', e.target.value)}
-                      style={{ ...styles.input, borderColor: errors[`sample_${index}_lot_number`] ? '#dc3545' : '#ccc' }}
-                      placeholder="LOT-2026-001"
-                    />
-                    {errors[`sample_${index}_lot_number`] && (
-                      <span style={styles.error}>{errors[`sample_${index}_lot_number`]}</span>
-                    )}
+                  <div className="shipment-request-form-row">
+                    <div className="shipment-request-form-group">
+                      <label htmlFor={`sample_name_${index}`} className="shipment-request-label">
+                        Sample Name *
+                      </label>
+                      <input
+                        type="text"
+                        id={`sample_name_${index}`}
+                        value={sample.sample_name}
+                        onChange={(e) => handleSampleChange(index, 'sample_name', e.target.value)}
+                        className={`shipment-request-input ${errors[`sample_${index}_sample_name`] ? 'error' : ''}`}
+                        placeholder="Sample XYZ"
+                      />
+                      {errors[`sample_${index}_sample_name`] && (
+                        <span className="shipment-request-error">{errors[`sample_${index}_sample_name`]}</span>
+                      )}
+                    </div>
+
+                    <div className="shipment-request-form-group">
+                      <label htmlFor={`lot_number_${index}`} className="shipment-request-label">
+                        Lot Number *
+                      </label>
+                      <input
+                        type="text"
+                        id={`lot_number_${index}`}
+                        value={sample.lot_number}
+                        onChange={(e) => handleSampleChange(index, 'lot_number', e.target.value)}
+                        className={`shipment-request-input ${errors[`sample_${index}_lot_number`] ? 'error' : ''}`}
+                        placeholder="LOT-2026-001"
+                      />
+                      {errors[`sample_${index}_lot_number`] && (
+                        <span className="shipment-request-error">{errors[`sample_${index}_lot_number`]}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="shipment-request-quantity-row">
+                    <div className="shipment-request-form-group">
+                      <label htmlFor={`quantity_${index}`} className="shipment-request-label">
+                        Quantity *
+                      </label>
+                      <input
+                        type="number"
+                        id={`quantity_${index}`}
+                        value={sample.quantity_requested}
+                        onChange={(e) => handleSampleChange(index, 'quantity_requested', e.target.value)}
+                        step="0.1"
+                        className={`shipment-request-input ${errors[`sample_${index}_quantity_requested`] ? 'error' : ''}`}
+                        placeholder="50"
+                      />
+                      {errors[`sample_${index}_quantity_requested`] && (
+                        <span className="shipment-request-error">{errors[`sample_${index}_quantity_requested`]}</span>
+                      )}
+                    </div>
+
+                    <div className="shipment-request-form-group">
+                      <label htmlFor={`unit_${index}`} className="shipment-request-label">
+                        Unit
+                      </label>
+                      <select
+                        id={`unit_${index}`}
+                        value={sample.quantity_unit}
+                        onChange={(e) => handleSampleChange(index, 'quantity_unit', e.target.value)}
+                        className="shipment-request-select"
+                      >
+                        <option value="ml">ml (milliliters)</option>
+                        <option value="L">L (liters)</option>
+                        <option value="mg">mg (milligrams)</option>
+                        <option value="g">g (grams)</option>
+                        <option value="oz">oz (ounces)</option>
+                        <option value="lb">lb (pounds)</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
+              ))}
 
-                <div style={styles.formRow}>
-                  <div style={styles.formGroup}>
-                    <label htmlFor={`quantity_${index}`} style={styles.label}>
-                      Quantity *
-                    </label>
-                    <input
-                      type="number"
-                      id={`quantity_${index}`}
-                      value={sample.quantity_requested}
-                      onChange={(e) => handleSampleChange(index, 'quantity_requested', e.target.value)}
-                      step="0.1"
-                      style={{ ...styles.input, borderColor: errors[`sample_${index}_quantity_requested`] ? '#dc3545' : '#ccc' }}
-                      placeholder="50"
-                    />
-                    {errors[`sample_${index}_quantity_requested`] && (
-                      <span style={styles.error}>{errors[`sample_${index}_quantity_requested`]}</span>
-                    )}
-                  </div>
+              {samples.length < 10 && (
+                <button
+                  type="button"
+                  onClick={addSample}
+                  className="shipment-request-add-sample"
+                  disabled={samples.length >= 10}
+                >
+                  + Add Another Sample
+                </button>
+              )}
+            </fieldset>
 
-                  <div style={styles.formGroup}>
-                    <label htmlFor={`unit_${index}`} style={styles.label}>
-                      Unit
-                    </label>
-                    <select
-                      id={`unit_${index}`}
-                      value={sample.quantity_unit}
-                      onChange={(e) => handleSampleChange(index, 'quantity_unit', e.target.value)}
-                      style={styles.input}
-                    >
-                      <option value="ml">ml (milliliters)</option>
-                      <option value="L">L (liters)</option>
-                      <option value="mg">mg (milligrams)</option>
-                      <option value="g">g (grams)</option>
-                      <option value="oz">oz (ounces)</option>
-                      <option value="lb">lb (pounds)</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {samples.length < 10 && (
-              <button
-                type="button"
-                onClick={addSample}
-                style={styles.addSampleButton}
-              >
-                + Add Another Sample
-              </button>
-            )}
-          </fieldset>
-
-          {/* Hazmat Warning */}
-          {isHazmat && (
-            <div style={styles.warningBox}>
-              <span style={styles.warningIcon}>Warning</span>
-              <div>
-                <p style={styles.warningTitle}>Hazmat Notice</p>
-                <p style={styles.warningText}>
+            {/* Hazmat Warning */}
+            {isHazmat && (
+              <div className="shipment-request-info-box" style={{ backgroundColor: '#fff3cd', borderColor: '#ffc107' }}>
+                <h4 className="shipment-request-info-title" style={{ color: '#856404' }}>⚠️ Hazmat Notice</h4>
+                <p className="shipment-request-info-list" style={{ color: '#856404', padding: 0 }}>
                   Total shipment quantity of {totalQuantity} ml or more may require additional dangerous goods (DG) documentation and special handling.
                 </p>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Submit Button */}
-          <button type="submit" style={styles.submitButton} disabled={loading}>
-            {loading ? 'Creating Request...' : `Create Shipment Request (${samples.length} sample${samples.length !== 1 ? 's' : ''})`}
-          </button>
-        </form>
+            {/* Submit Button */}
+            <button type="submit" className="shipment-request-submit" disabled={loading}>
+              {loading ? 'Creating Request...' : `Create Shipment Request (${samples.length} sample${samples.length !== 1 ? 's' : ''})`}
+            </button>
+          </form>
+        </div>
       </div>
+
+      <footer className="shipment-request-footer">
+        <div className="footer-content">
+          <span className="footer-text">© 2026 T-Link Sample Management System</span>
+          <img src="/images/tlink-official-logo.png" alt="T-Link Logo" className="footer-logo" />
+        </div>
+      </footer>
     </div>
   );
-};
-
-const styles: { [key: string]: React.CSSProperties } = {
-  container: {
-    maxWidth: '900px',
-    margin: '0 auto',
-    padding: '20px',
-    minHeight: '100vh',
-  },
-  header: {
-    marginBottom: '30px',
-  },
-  backButton: {
-    background: 'none',
-    border: 'none',
-    color: '#007bff',
-    fontSize: '16px',
-    cursor: 'pointer',
-    padding: '8px 0',
-    marginBottom: '12px',
-    fontWeight: '500',
-  },
-  title: {
-    fontSize: '28px',
-    fontWeight: 'bold',
-    color: '#333',
-    margin: '0 0 4px 0',
-  },
-  subtitle: {
-    fontSize: '14px',
-    color: '#666',
-    margin: '4px 0 0 0',
-    fontStyle: 'italic',
-  },
-  formSection: {
-    backgroundColor: 'white',
-    borderRadius: '8px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-    padding: '30px',
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '24px',
-  },
-  fieldset: {
-    border: '1px solid #e0e0e0',
-    borderRadius: '4px',
-    padding: '20px',
-    margin: 0,
-  },
-  legend: {
-    fontSize: '16px',
-    fontWeight: 'bold',
-    color: '#333',
-    padding: '0 8px',
-  },
-  formRow: {
-    display: 'flex',
-    gap: '16px',
-    marginBottom: '16px',
-  },
-  formGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px',
-    flex: 1,
-  },
-  label: {
-    fontSize: '13px',
-    fontWeight: '500',
-    color: '#333',
-  },
-  input: {
-    padding: '10px 12px',
-    fontSize: '14px',
-    border: '1px solid #ccc',
-    borderRadius: '4px',
-    fontFamily: 'Arial, sans-serif',
-    boxSizing: 'border-box' as const,
-  },
-  textarea: {
-    resize: 'vertical' as const,
-    minHeight: '100px',
-  },
-  error: {
-    fontSize: '12px',
-    color: '#dc3545',
-    marginTop: '2px',
-  },
-  hint: {
-    fontSize: '12px',
-    color: '#666',
-    marginTop: '4px',
-    fontStyle: 'italic',
-    margin: '4px 0 0 0',
-  },
-  sampleCard: {
-    backgroundColor: '#f8f9fa',
-    border: '1px solid #dee2e6',
-    borderRadius: '4px',
-    padding: '16px',
-    marginBottom: '16px',
-  },
-  sampleHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '16px',
-  },
-  sampleTitle: {
-    fontSize: '14px',
-    fontWeight: 'bold',
-    color: '#333',
-    margin: 0,
-  },
-  removeButton: {
-    background: '#dc3545',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    padding: '6px 12px',
-    fontSize: '13px',
-    cursor: 'pointer',
-    fontWeight: 'bold',
-  },
-  addSampleButton: {
-    padding: '10px 16px',
-    fontSize: '14px',
-    fontWeight: 'bold',
-    backgroundColor: '#28a745',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    marginTop: '12px',
-  },
-  warningBox: {
-    backgroundColor: '#fff3cd',
-    border: '1px solid #ffc107',
-    borderRadius: '4px',
-    padding: '16px',
-    display: 'flex',
-    gap: '12px',
-  },
-  warningIcon: {
-    fontSize: '24px',
-  },
-  warningTitle: {
-    fontSize: '14px',
-    fontWeight: 'bold',
-    color: '#856404',
-    margin: '0 0 4px 0',
-  },
-  warningText: {
-    fontSize: '13px',
-    color: '#856404',
-    margin: 0,
-  },
-  submitButton: {
-    padding: '12px',
-    fontSize: '16px',
-    fontWeight: 'bold',
-    backgroundColor: '#007bff',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    marginTop: '16px',
-  },
-  successCard: {
-    backgroundColor: 'white',
-    borderRadius: '8px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-    padding: '40px',
-    textAlign: 'center' as const,
-  },
-  successIcon: {
-    fontSize: '64px',
-    marginBottom: '20px',
-    display: 'block',
-  },
-  successTitle: {
-    fontSize: '28px',
-    fontWeight: 'bold',
-    color: '#28a745',
-    margin: '0 0 12px 0',
-  },
-  successMessage: {
-    fontSize: '16px',
-    color: '#666',
-    margin: '0 0 30px 0',
-    lineHeight: '1.6',
-  },
-  summaryBox: {
-    backgroundColor: '#f8f9fa',
-    border: '1px solid #dee2e6',
-    borderRadius: '4px',
-    padding: '20px',
-    marginBottom: '30px',
-    textAlign: 'left' as const,
-  },
-  summaryTitle: {
-    fontSize: '16px',
-    fontWeight: 'bold',
-    color: '#333',
-    margin: '0 0 16px 0',
-  },
-  summaryGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: '16px',
-  },
-  summaryItem: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px',
-  },
-  summaryLabel: {
-    fontSize: '12px',
-    fontWeight: 'bold',
-    color: '#666',
-    textTransform: 'uppercase' as const,
-  },
-  summaryValue: {
-    fontSize: '14px',
-    color: '#333',
-    fontWeight: '500',
-  },
-  infoBox: {
-    backgroundColor: '#e7f3ff',
-    border: '1px solid #b3d9ff',
-    borderRadius: '4px',
-    padding: '20px',
-    marginBottom: '30px',
-    textAlign: 'left' as const,
-  },
-  infoTitle: {
-    fontSize: '14px',
-    fontWeight: 'bold',
-    color: '#004085',
-    margin: '0 0 12px 0',
-  },
-  infoList: {
-    fontSize: '14px',
-    color: '#004085',
-    margin: 0,
-    paddingLeft: '20px',
-  },
-  buttonGroup: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: '12px',
-    marginTop: '20px',
-  },
-  viewButton: {
-    padding: '12px',
-    fontSize: '16px',
-    fontWeight: 'bold',
-    backgroundColor: '#007bff',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-  },
-  createAnotherButton: {
-    padding: '12px',
-    fontSize: '16px',
-    fontWeight: 'bold',
-    backgroundColor: '#28a745',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-  },
-  backDashboardButton: {
-    padding: '12px',
-    fontSize: '16px',
-    fontWeight: 'bold',
-    backgroundColor: '#6c757d',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-  },
 };
 
 export default ShipmentRequest;
