@@ -29,14 +29,29 @@ export const useAuthStore = create<AuthState>()(
           const response = await api.post('/auth/login', { username, password });
           const { token, user } = response.data;
           set({ user, token });
+          // Also set manual localStorage keys for compatibility
+          localStorage.setItem('auth_token', token);
+          localStorage.setItem('user', JSON.stringify(user));
           return true;
         } catch (error) {
           console.error('Login failed:', error);
           return false;
         }
       },
-      setAuth: (user, token) => set({ user, token }),
-      logout: () => set({ user: null, token: null }),
+      setAuth: (user, token) => {
+        set({ user, token });
+        // Also set manual localStorage keys for compatibility
+        localStorage.setItem('auth_token', token);
+        localStorage.setItem('user', JSON.stringify(user));
+      },
+      logout: () => {
+        // Clear Zustand store
+        set({ user: null, token: null });
+        // Clear manual localStorage keys used by other parts of the app
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+      },
     }),
     {
       name: 'tlink-auth',
