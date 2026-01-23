@@ -92,20 +92,12 @@ const Register: React.FC = () => {
   return (
     <div className="login-container">
       <div className="login-box" style={{ maxWidth: '500px' }}>
-        <div className="collab-band">
-          <div className="collab-title">A partnership between</div>
-          <div className="collab-logos">
-            <img src="/images/teleos-logo.png" alt="Teleos AG Solutions" className="collab-logo" />
-            <span className="collab-separator">-</span>
-            <div className="collab-subblock">
-              <span className="collab-subtext">Built & maintained by</span>
-              <img src="/images/ajwa-logo.png" alt="AJWA Analytical Laboratories" className="collab-logo small" />
-            </div>
-          </div>
+        <div className="login-logo">
+          <img src="/images/tlink-official-logo.png" alt="T-Link" className="login-logo-img" />
         </div>
-        <div className="login-header">
-          <h1>T-Link</h1>
-          <p>Create Your Account</p>
+        <div className="login-header" style={{ display: 'block', textAlign: 'center', padding: '20px 40px 0' }}>
+          <h1 style={{ fontSize: '24px', marginBottom: '5px', color: '#1a4d2e' }}>Create Your Account</h1>
+          <p style={{ fontSize: '14px', color: '#666', margin: 0 }}>Register for T-Link platform access</p>
         </div>
 
         {error && <div className="error-message">{error}</div>}
@@ -211,6 +203,18 @@ const Register: React.FC = () => {
             </Link>
           </p>
         </div>
+
+        <footer style={{ 
+          padding: '15px 20px', 
+          borderTop: '1px solid #f0f0f0', 
+          background: '#f9f9f9',
+          textAlign: 'center'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '12px', color: '#666' }}>
+            <span>Developed and operated by</span>
+            <img src="/images/AAL_Dig_Dev.png" alt="AAL Digital Development" style={{ height: '20px', width: 'auto' }} />
+          </div>
+        </footer>
       </div>
     </div>
   );
