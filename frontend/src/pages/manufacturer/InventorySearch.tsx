@@ -1,8 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
 import api from '../../services/api';
 import './InventorySearch.css';
+
+interface Sample {
+  id: string;
+  chemical_name: string;
+  lot_number: string;
+  cas_number?: string;
+}
 
 interface InventoryResult {
   id: string;
@@ -15,17 +21,39 @@ interface InventoryResult {
 
 const InventorySearch: React.FC = () => {
   const navigate = useNavigate();
-  const [sampleName, setSampleName] = useState('');
-  const [lotNumber, setLotNumber] = useState('');
+  const [samples, setSamples] = useState<Sample[]>([]);
+  const [selectedSampleId, setSelectedSampleId] = useState('');
   const [results, setResults] = useState<InventoryResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingSamples, setLoadingSamples] = useState(true);
   const [searched, setSearched] = useState(false);
+
+  // Fetch samples on mount
+  useEffect(() => {
+    fetchSamples();
+  }, []);
+
+  const fetchSamples = async () => {
+    setLoadingSamples(true);
+    try {
+      const response = await api.get('/manufacturer/inventory/samples');
+      setSamples(response.data.samples || []);
+    } catch (error) {
+      console.error('Error fetching samples:', error);
+    } finally {
+      setLoadingSamples(false);
+    }
+  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!sampleName.trim() && !lotNumber.trim()) {
-      toast.error('Please enter a sample name or lot number');
+    if (!selectedSampleId) {
+      return;
+    }
+
+    const selectedSample = samples.find(s => s.id === selectedSampleId);
+    if (!selectedSample) {
       return;
     }
 
@@ -34,17 +62,13 @@ const InventorySearch: React.FC = () => {
     try {
       const response = await api.get('/manufacturer/inventory/search', {
         params: {
-          sample_name: sampleName || undefined,
-          lot_number: lotNumber || undefined,
+          lot_number: selectedSample.lot_number,
         },
       });
 
       setResults(response.data.samples);
-      toast.success(`Found ${response.data.count} sample(s)`);
     } catch (error: any) {
-      const errorMsg = error.response?.data?.error || 'Samples not found';
       setResults([]);
-      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -95,29 +119,27 @@ const InventorySearch: React.FC = () => {
         <div className="inventory-search-section">
           <form onSubmit={handleSearch} className="inventory-search-form">
             <div className="inventory-search-group">
-              <label htmlFor="sampleName">Sample Name</label>
-              <input
-                type="text"
-                id="sampleName"
-                value={sampleName}
-                onChange={(e) => setSampleName(e.target.value)}
-                placeholder="e.g., Sample XYZ, Product A"
-                className="inventory-search-input"
-              />
+              <label htmlFor="sampleSelect">Select Sample</label>
+              {loadingSamples ? (
+                <div className="loading-samples">Loading samples...</div>
+              ) : (
+                <select
+                  id="sampleSelect"
+                  value={selectedSampleId}
+                  onChange={(e) => setSelectedSampleId(e.target.value)}
+                  className="inventory-sample-select"
+                >
+                  <option value="">-- Select a sample --</option>
+                  {samples.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.chemical_name} - {s.lot_number}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
-            <div className="inventory-search-group">
-              <label htmlFor="lotNumber">Lot Number</label>
-              <input
-                type="text"
-                id="lotNumber"
-                value={lotNumber}
-                onChange={(e) => setLotNumber(e.target.value)}
-                placeholder="e.g., LOT-2026-001"
-                className="inventory-search-input"
-              />
-            </div>
-            <button type="submit" className="inventory-search-btn" disabled={loading}>
-              {loading ? 'Searching...' : 'Search'}
+            <button type="submit" className="inventory-search-btn" disabled={loading || !selectedSampleId}>
+              {loading ? 'Searching...' : 'Check Availability'}
             </button>
           </form>
         </div>

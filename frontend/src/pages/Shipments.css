@@ -17,7 +17,7 @@
 }
 
 .shipments-header-content {
-  max-width: 1400px;
+  max-width: 1800px;
   margin: 0 auto;
   display: flex;
   justify-content: space-between;
@@ -112,7 +112,7 @@
 
 /* Main Content */
 .shipments-content {
-  max-width: 1400px;
+  max-width: 1800px;
   margin: 0 auto;
   padding: 0 3rem 3rem 3rem;
 }
@@ -123,7 +123,6 @@
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   margin-bottom: 2rem;
-  overflow: hidden;
 }
 
 .shipments-section-header {
@@ -145,7 +144,11 @@
 
 /* Table Styling */
 .shipments-table-wrapper {
-  overflow-x: auto;
+  overflow: visible;
+}
+
+.shipments-table-wrapper::-webkit-scrollbar {
+  display: none;
 }
 
 .shipments-table {
@@ -159,21 +162,22 @@
 }
 
 .shipments-table th {
-  padding: 1rem 0.75rem;
+  padding: 0.75rem 0.5rem;
   text-align: left;
   font-weight: 600;
   color: #495057;
   border-bottom: 2px solid #dee2e6;
   white-space: nowrap;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 .shipments-table td {
-  padding: 1rem 0.75rem;
+  padding: 0.75rem 0.5rem;
   border-bottom: 1px solid #e9ecef;
   color: #212529;
+  font-size: 0.85rem;
 }
 
 .shipments-table tbody tr {
@@ -533,6 +537,7 @@
   padding: 12px 32px;
   margin-top: auto;
   border-top: 2px solid rgba(255, 255, 255, 0.15);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
 

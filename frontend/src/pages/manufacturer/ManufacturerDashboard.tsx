@@ -9,6 +9,8 @@ const ManufacturerDashboard: React.FC = () => {
 
   const handleLogout = () => {
     logout();
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user');
     navigate('/login');
   };
 
@@ -37,31 +39,35 @@ const ManufacturerDashboard: React.FC = () => {
         <div className="logo-spacer" />
       </div>
 
-      {/* Quick Actions Bar - 4 buttons at bottom with green styling */}
-      <div className="quick-actions-bar">
-        <div className="quick-actions-container">
-          <h3 className="quick-actions-title">Quick Actions</h3>
-          <div className="quick-actions-grid">
-            <Link to="/manufacturer/coa-lookup" className="quick-action-btn">
-              <span className="quick-btn-label">CoA Lookup</span>
-              <span className="quick-btn-desc">Search & download</span>
-            </Link>
-            <Link to="/manufacturer/inventory-search" className="quick-action-btn">
-              <span className="quick-btn-label">Inventory Search</span>
-              <span className="quick-btn-desc">Check availability</span>
-            </Link>
-            <Link to="/manufacturer/shipment-request" className="quick-action-btn">
-              <span className="quick-btn-label">Request Shipment</span>
-              <span className="quick-btn-desc">Create new request</span>
-            </Link>
-            <Link to="/manufacturer/my-shipments" className="quick-action-btn">
-              <span className="quick-btn-label">My Shipments</span>
-              <span className="quick-btn-desc">View status</span>
-            </Link>
-          </div>
+      {/* Action Buttons - matching T-Link Dashboard style */}
+      <div className="actions-container">
+        <div className="actions-grid">
+          <Link to="/manufacturer/coa-lookup" className="action-btn">
+            <span className="btn-label">CoA Lookup</span>
+            <span className="btn-desc">Search & download</span>
+          </Link>
+          <Link to="/manufacturer/inventory-search" className="action-btn">
+            <span className="btn-label">Inventory Search</span>
+            <span className="btn-desc">Check availability</span>
+          </Link>
+          <Link to="/manufacturer/shipment-request" className="action-btn">
+            <span className="btn-label">Request Shipment</span>
+            <span className="btn-desc">Create new request</span>
+          </Link>
+          <Link to="/manufacturer/my-shipments" className="action-btn">
+            <span className="btn-label">My Shipments</span>
+            <span className="btn-desc">View status</span>
+          </Link>
         </div>
       </div>
 
+      {/* Footer */}
+      <footer className="dashboard-footer">
+        <div className="footer-content">
+          <span className="footer-text">Developed and operated by</span>
+          <img src="/images/AAL_Dig_Dev.png" alt="AAL Digital Development" className="footer-logo" />
+        </div>
+      </footer>
     </div>
   );
 };

@@ -457,6 +457,7 @@ button:disabled {
   padding: 12px 32px;
   margin-top: auto;
   border-top: 2px solid rgba(255, 255, 255, 0.15);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
 
@@ -486,4 +487,241 @@ button:disabled {
 
 .footer-logo:hover {
   transform: scale(1.05);
+}
+
+/* ============ Modal Styling ============ */
+.procview-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.procview-modal {
+  background: white;
+  border-radius: 12px;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.procview-modal.hazmat {
+  border: 3px solid #f59e0b;
+}
+
+.procview-modal-header {
+  background: linear-gradient(135deg, #2d5016 0%, #3d6b1f 100%);
+  color: white;
+  padding: 1.25rem 1.5rem;
+}
+
+.procview-modal-header.success {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+}
+
+.procview-modal-header.warning {
+  background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+}
+
+.procview-modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.procview-modal-body {
+  padding: 1.5rem;
+}
+
+.procview-modal-body p {
+  margin: 0 0 1rem;
+  color: #374151;
+  line-height: 1.6;
+}
+
+.procview-modal-body .sds-checklist {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+}
+
+.procview-modal-body .sds-checklist li {
+  padding: 0.75rem 1rem;
+  background: #f0fdf4;
+  border-left: 4px solid #22c55e;
+  margin-bottom: 0.5rem;
+  border-radius: 0 4px 4px 0;
+}
+
+.procview-modal-body .modal-note {
+  font-size: 0.9rem;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  margin-top: 1rem;
+}
+
+.procview-modal-body .modal-note.warning {
+  background: #fef3c7;
+  color: #92400e;
+  border-left: 4px solid #f59e0b;
+}
+
+.label-success-info {
+  background: #f0fdf4;
+  border: 1px solid #22c55e;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.label-success-info p {
+  margin: 0.25rem 0;
+}
+
+.hazmat-labels-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.hazmat-label-preview,
+.un-label-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #fef3c7;
+  border: 2px solid #f59e0b;
+  border-radius: 6px;
+}
+
+.hazmat-label-preview .label-icon,
+.un-label-preview .label-icon {
+  font-size: 1.5rem;
+}
+
+.procview-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+}
+
+.procview-btn-warning {
+  background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.procview-btn-warning:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+/* ============ HazMat Card Styling ============ */
+.hazmat-card {
+  border: 2px solid #f59e0b;
+}
+
+.hazmat-card .hazmat-header {
+  background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+  color: white;
+}
+
+.hazmat-card .hazmat-header h2 {
+  color: white;
+}
+
+.hazmat-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.hazmat-detail-item {
+  background: #fffbeb;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #fcd34d;
+}
+
+.hazmat-detail-item label {
+  display: block;
+  font-size: 0.8rem;
+  color: #92400e;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+}
+
+.hazmat-value {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #78350f;
+}
+
+.hazard-class-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  margin-right: 0.5rem;
+}
+
+.hazard-class-name {
+  font-size: 0.9rem;
+  color: #78350f;
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.hazmat-requirements {
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+}
+
+.hazmat-requirements h4 {
+  margin: 0 0 0.75rem;
+  color: #92400e;
+  font-size: 1rem;
+}
+
+.hazmat-requirements ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.hazmat-requirements li {
+  padding: 0.4rem 0;
+  color: #78350f;
+  font-size: 0.95rem;
+}
+
+.hazmat-requirements li.warning {
+  color: #dc2626;
+  font-weight: 600;
 }

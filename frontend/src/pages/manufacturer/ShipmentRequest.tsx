@@ -1,23 +1,54 @@
-﻿import React, { useState } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api from '../../services/api';
 import './ShipmentRequest.css';
+
+interface SampleInventory {
+  id: string;
+  chemical_name: string;
+  lot_number: string;
+  quantity: string;
+  un_number: string;
+  hazard_class: string;
+  packing_group: string;
+  proper_shipping_name: string;
+  hazard_description: string;
+}
 
 interface Sample {
   sample_name: string;
   lot_number: string;
   quantity_requested: string;
   quantity_unit: string;
+  // HazMat info from inventory
+  un_number?: string;
+  hazard_class?: string;
+  packing_group?: string;
+  proper_shipping_name?: string;
+  hazard_description?: string;
+  is_hazmat?: boolean;
 }
 
 const ShipmentRequest: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [availableSamples, setAvailableSamples] = useState<SampleInventory[]>([]);
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
-    delivery_address: '',
+    recipient_company: '',
+    recipient_phone: '',
+    // Structured address fields
+    street_address: '',
+    city: '',
+    state: '',
+    zip_code: '',
+    country: 'US',
+    // Shipping options
+    is_international: false,
+    emergency_contact_phone: '',
+    special_instructions: '',
     scheduled_ship_date: '',
   });
   const [samples, setSamples] = useState<Sample[]>([
@@ -27,11 +58,27 @@ const ShipmentRequest: React.FC = () => {
   const [submitted, setSubmitted] = useState(false);
   const [submittedData, setSubmittedData] = useState<any>(null);
 
+  // Fetch available samples on mount
+  useEffect(() => {
+    fetchAvailableSamples();
+  }, []);
+
+  const fetchAvailableSamples = async () => {
+    try {
+      const response = await api.get('/sample-inventory?status=active&limit=500');
+      const data = response.data.data || response.data.samples || response.data || [];
+      setAvailableSamples(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Failed to fetch samples:', error);
+    }
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
+    const newValue = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: newValue,
     }));
     if (errors[name]) {
       setErrors((prev) => ({
@@ -43,7 +90,27 @@ const ShipmentRequest: React.FC = () => {
 
   const handleSampleChange = (index: number, field: keyof Sample, value: string) => {
     const newSamples = [...samples];
-    newSamples[index][field] = value;
+    // Use spread to update the specific field
+    newSamples[index] = { ...newSamples[index], [field]: value };
+    
+    // Auto-populate hazmat info when lot number is entered
+    if (field === 'lot_number' && value) {
+      const matchingSample = availableSamples.find(
+        s => s.lot_number.toLowerCase() === value.toLowerCase()
+      );
+      if (matchingSample) {
+        newSamples[index] = {
+          ...newSamples[index],
+          sample_name: matchingSample.chemical_name,
+          un_number: matchingSample.un_number || '',
+          hazard_class: matchingSample.hazard_class || '',
+          packing_group: matchingSample.packing_group || '',
+          proper_shipping_name: matchingSample.proper_shipping_name || '',
+          hazard_description: matchingSample.hazard_description || '',
+        };
+      }
+    }
+    
     setSamples(newSamples);
     
     // Clear error for this sample
@@ -55,10 +122,41 @@ const ShipmentRequest: React.FC = () => {
       }));
     }
   };
+  
+  // Handle sample selection from dropdown
+  const handleSampleSelect = (index: number, sampleId: string) => {
+    if (!sampleId) return;
+    
+    const selectedSample = availableSamples.find(s => s.id.toString() === sampleId);
+    if (selectedSample) {
+      const newSamples = [...samples];
+      newSamples[index] = {
+        ...newSamples[index],
+        sample_name: selectedSample.chemical_name,
+        lot_number: selectedSample.lot_number,
+        un_number: selectedSample.un_number || '',
+        hazard_class: selectedSample.hazard_class || '',
+        packing_group: selectedSample.packing_group || '',
+        proper_shipping_name: selectedSample.proper_shipping_name || '',
+        hazard_description: selectedSample.hazard_description || '',
+      };
+      setSamples(newSamples);
+    }
+  };
 
   const addSample = () => {
     if (samples.length < 10) {
-      setSamples([...samples, { sample_name: '', lot_number: '', quantity_requested: '', quantity_unit: 'ml' }]);
+      setSamples([...samples, { 
+        sample_name: '', 
+        lot_number: '', 
+        quantity_requested: '', 
+        quantity_unit: 'ml',
+        un_number: '',
+        hazard_class: '',
+        packing_group: '',
+        proper_shipping_name: '',
+        hazard_description: '',
+      }]);
     }
   };
 
@@ -73,7 +171,12 @@ const ShipmentRequest: React.FC = () => {
 
     if (!formData.first_name) newErrors.first_name = 'First name is required';
     if (!formData.last_name) newErrors.last_name = 'Last name is required';
-    if (!formData.delivery_address) newErrors.delivery_address = 'Delivery address is required';
+    if (!formData.street_address) newErrors.street_address = 'Street address is required';
+    if (!formData.city) newErrors.city = 'City is required';
+    if (!formData.state) newErrors.state = 'State/Province is required';
+    if (!formData.zip_code) newErrors.zip_code = 'ZIP/Postal code is required';
+    if (!formData.recipient_phone) newErrors.recipient_phone = 'Phone number is required';
+    if (!formData.emergency_contact_phone) newErrors.emergency_contact_phone = 'Emergency contact phone is required for hazmat shipments';
 
     // Validate samples
     samples.forEach((sample, index) => {
@@ -94,16 +197,44 @@ const ShipmentRequest: React.FC = () => {
 
     setLoading(true);
     try {
+      // Build full delivery address for backward compatibility
+      const fullAddress = [
+        formData.street_address,
+        formData.city,
+        formData.state,
+        formData.zip_code,
+        formData.country || 'USA'
+      ].filter(Boolean).join(', ');
+      
       const response = await api.post('/manufacturer/shipments/request-multiple', {
         first_name: formData.first_name,
         last_name: formData.last_name,
-        delivery_address: formData.delivery_address,
+        recipient_company: formData.recipient_company || undefined,
+        recipient_phone: formData.recipient_phone,
+        // Structured address fields
+        street_address: formData.street_address,
+        city: formData.city,
+        state: formData.state,
+        zip_code: formData.zip_code,
+        country: formData.country || 'USA',
+        // Legacy field for backward compatibility
+        delivery_address: fullAddress,
+        // Shipping details
+        is_international: formData.is_international || false,
+        emergency_contact_phone: formData.emergency_contact_phone,
+        special_instructions: formData.special_instructions || undefined,
         scheduled_ship_date: formData.scheduled_ship_date || undefined,
         samples: samples.map(s => ({
           sample_name: s.sample_name,
           lot_number: s.lot_number,
           quantity_requested: parseFloat(s.quantity_requested),
           quantity_unit: s.quantity_unit,
+          // HazMat fields
+          un_number: s.un_number || undefined,
+          hazard_class: s.hazard_class || undefined,
+          packing_group: s.packing_group || undefined,
+          proper_shipping_name: s.proper_shipping_name || undefined,
+          hazard_description: s.hazard_description || undefined,
         })),
       });
 
@@ -128,10 +259,29 @@ const ShipmentRequest: React.FC = () => {
     setFormData({
       first_name: '',
       last_name: '',
-      delivery_address: '',
+      recipient_company: '',
+      recipient_phone: '',
+      street_address: '',
+      city: '',
+      state: '',
+      zip_code: '',
+      country: 'USA',
+      is_international: false,
+      emergency_contact_phone: '',
+      special_instructions: '',
       scheduled_ship_date: '',
     });
-    setSamples([{ sample_name: '', lot_number: '', quantity_requested: '', quantity_unit: 'ml' }]);
+    setSamples([{ 
+      sample_name: '', 
+      lot_number: '', 
+      quantity_requested: '', 
+      quantity_unit: 'ml',
+      un_number: '',
+      hazard_class: '',
+      packing_group: '',
+      proper_shipping_name: '',
+      hazard_description: '',
+    }]);
     setErrors({});
   };
 
@@ -165,7 +315,7 @@ const ShipmentRequest: React.FC = () => {
                 </div>
                 <div className="shipment-request-summary-item">
                   <span className="shipment-request-summary-label">Status:</span>
-                  <span className="shipment-request-summary-value" style={{ color: '#007bff' }}>
+                  <span className="shipment-request-summary-value status-blue">
                     {submittedData.status.charAt(0).toUpperCase() + submittedData.status.slice(1)}
                   </span>
                 </div>
@@ -183,7 +333,7 @@ const ShipmentRequest: React.FC = () => {
                 </div>
                 <div className="shipment-request-summary-item">
                   <span className="shipment-request-summary-label">Hazmat:</span>
-                  <span className="shipment-request-summary-value" style={{ color: submittedData.is_hazmat ? '#dc3545' : '#28a745' }}>
+                  <span className={`shipment-request-summary-value ${submittedData.is_hazmat ? 'status-danger' : 'status-success'}`}>
                     {submittedData.is_hazmat ? 'Yes - DG Documentation Required' : 'No'}
                   </span>
                 </div>
@@ -243,7 +393,7 @@ const ShipmentRequest: React.FC = () => {
           <form onSubmit={handleSubmit} className="shipment-request-form">
             {/* Personal Information */}
             <fieldset className="shipment-request-fieldset">
-              <legend className="shipment-request-legend">Personal Information</legend>
+              <legend className="shipment-request-legend">Recipient Information</legend>
 
               <div className="shipment-request-form-row">
                 <div className="shipment-request-form-group">
@@ -279,34 +429,194 @@ const ShipmentRequest: React.FC = () => {
                 </div>
               </div>
 
+              <div className="shipment-request-form-row">
+                <div className="shipment-request-form-group">
+                  <label htmlFor="recipient_company" className="shipment-request-label">
+                    Company Name
+                  </label>
+                  <input
+                    type="text"
+                    id="recipient_company"
+                    name="recipient_company"
+                    value={formData.recipient_company}
+                    onChange={handleChange}
+                    className="shipment-request-input"
+                    placeholder="Acme Corporation"
+                  />
+                </div>
+
+                <div className="shipment-request-form-group">
+                  <label htmlFor="recipient_phone" className="shipment-request-label">
+                    Phone Number *
+                  </label>
+                  <input
+                    type="tel"
+                    id="recipient_phone"
+                    name="recipient_phone"
+                    value={formData.recipient_phone}
+                    onChange={handleChange}
+                    className={`shipment-request-input ${errors.recipient_phone ? 'error' : ''}`}
+                    placeholder="(555) 123-4567"
+                  />
+                  {errors.recipient_phone && <span className="shipment-request-error">{errors.recipient_phone}</span>}
+                </div>
+              </div>
+            </fieldset>
+
+            {/* Delivery Address */}
+            <fieldset className="shipment-request-fieldset">
+              <legend className="shipment-request-legend">Delivery Address</legend>
+
               <div className="shipment-request-form-group">
-                <label htmlFor="delivery_address" className="shipment-request-label">
-                  Delivery Address *
+                <label htmlFor="street_address" className="shipment-request-label">
+                  Street Address *
                 </label>
-                <textarea
-                  id="delivery_address"
-                  name="delivery_address"
-                  value={formData.delivery_address}
+                <input
+                  type="text"
+                  id="street_address"
+                  name="street_address"
+                  value={formData.street_address}
                   onChange={handleChange}
-                  className={`shipment-request-textarea ${errors.delivery_address ? 'error' : ''}`}
-                  placeholder="123 Business Street, City, State 12345"
+                  className={`shipment-request-input ${errors.street_address ? 'error' : ''}`}
+                  placeholder="123 Business Street, Suite 100"
                 />
-                {errors.delivery_address && <span className="shipment-request-error">{errors.delivery_address}</span>}
+                {errors.street_address && <span className="shipment-request-error">{errors.street_address}</span>}
+              </div>
+
+              <div className="shipment-request-form-row">
+                <div className="shipment-request-form-group">
+                  <label htmlFor="city" className="shipment-request-label">
+                    City *
+                  </label>
+                  <input
+                    type="text"
+                    id="city"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleChange}
+                    className={`shipment-request-input ${errors.city ? 'error' : ''}`}
+                    placeholder="Indianapolis"
+                  />
+                  {errors.city && <span className="shipment-request-error">{errors.city}</span>}
+                </div>
+
+                <div className="shipment-request-form-group">
+                  <label htmlFor="state" className="shipment-request-label">
+                    State/Province *
+                  </label>
+                  <input
+                    type="text"
+                    id="state"
+                    name="state"
+                    value={formData.state}
+                    onChange={handleChange}
+                    className={`shipment-request-input ${errors.state ? 'error' : ''}`}
+                    placeholder="IN"
+                  />
+                  {errors.state && <span className="shipment-request-error">{errors.state}</span>}
+                </div>
+              </div>
+
+              <div className="shipment-request-form-row">
+                <div className="shipment-request-form-group">
+                  <label htmlFor="zip_code" className="shipment-request-label">
+                    ZIP/Postal Code *
+                  </label>
+                  <input
+                    type="text"
+                    id="zip_code"
+                    name="zip_code"
+                    value={formData.zip_code}
+                    onChange={handleChange}
+                    className={`shipment-request-input ${errors.zip_code ? 'error' : ''}`}
+                    placeholder="46240"
+                  />
+                  {errors.zip_code && <span className="shipment-request-error">{errors.zip_code}</span>}
+                </div>
+
+                <div className="shipment-request-form-group">
+                  <label htmlFor="country" className="shipment-request-label">
+                    Country
+                  </label>
+                  <select
+                    id="country"
+                    name="country"
+                    value={formData.country}
+                    onChange={handleChange}
+                    className="shipment-request-select"
+                  >
+                    <option value="USA">United States</option>
+                    <option value="CAN">Canada</option>
+                    <option value="MEX">Mexico</option>
+                  </select>
+                </div>
               </div>
 
               <div className="shipment-request-form-group">
-                <label htmlFor="scheduled_ship_date" className="shipment-request-label">
-                  Scheduled Ship Date (Optional)
+                <label className="shipment-request-checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="is_international"
+                    checked={formData.is_international}
+                    onChange={handleChange}
+                    className="shipment-request-checkbox"
+                  />
+                  This is an international shipment (outside USA)
                 </label>
-                <input
-                  type="date"
-                  id="scheduled_ship_date"
-                  name="scheduled_ship_date"
-                  value={formData.scheduled_ship_date}
+              </div>
+            </fieldset>
+
+            {/* Shipping Details */}
+            <fieldset className="shipment-request-fieldset">
+              <legend className="shipment-request-legend">Shipping Details</legend>
+
+              <div className="shipment-request-form-row">
+                <div className="shipment-request-form-group">
+                  <label htmlFor="emergency_contact_phone" className="shipment-request-label">
+                    Emergency Contact Phone * (24-hour)
+                  </label>
+                  <input
+                    type="tel"
+                    id="emergency_contact_phone"
+                    name="emergency_contact_phone"
+                    value={formData.emergency_contact_phone}
+                    onChange={handleChange}
+                    className={`shipment-request-input ${errors.emergency_contact_phone ? 'error' : ''}`}
+                    placeholder="(800) 555-1234"
+                  />
+                  {errors.emergency_contact_phone && <span className="shipment-request-error">{errors.emergency_contact_phone}</span>}
+                  <p className="shipment-request-hint">Required for hazmat shipments - must be 24/7 available</p>
+                </div>
+
+                <div className="shipment-request-form-group">
+                  <label htmlFor="scheduled_ship_date" className="shipment-request-label">
+                    Scheduled Ship Date (Optional)
+                  </label>
+                  <input
+                    type="date"
+                    id="scheduled_ship_date"
+                    name="scheduled_ship_date"
+                    value={formData.scheduled_ship_date}
+                    onChange={handleChange}
+                    className="shipment-request-input"
+                  />
+                  <p className="shipment-request-hint">Leave empty for ASAP processing</p>
+                </div>
+              </div>
+
+              <div className="shipment-request-form-group">
+                <label htmlFor="special_instructions" className="shipment-request-label">
+                  Special Instructions
+                </label>
+                <textarea
+                  id="special_instructions"
+                  name="special_instructions"
+                  value={formData.special_instructions}
                   onChange={handleChange}
-                  className="shipment-request-input"
+                  className="shipment-request-textarea"
+                  placeholder="Any special handling instructions, delivery requirements, etc."
+                  rows={3}
                 />
-                <p className="shipment-request-hint">Leave empty for ASAP processing</p>
               </div>
             </fieldset>
 
@@ -315,6 +625,14 @@ const ShipmentRequest: React.FC = () => {
               <legend className="shipment-request-legend">
                 Samples ({samples.length} of 10)
               </legend>
+
+              {availableSamples.length > 0 && (
+                <div className="shipment-request-info-box shipment-request-sample-tip">
+                  <p>
+                    💡 Tip: Select from available samples below to auto-populate hazmat information
+                  </p>
+                </div>
+              )}
 
               {samples.map((sample, index) => (
                 <div key={index} className="shipment-request-sample-card">
@@ -330,6 +648,29 @@ const ShipmentRequest: React.FC = () => {
                       </button>
                     )}
                   </div>
+
+                  {/* Quick Select from Available Samples */}
+                  {availableSamples.length > 0 && (
+                    <div className="shipment-request-form-group">
+                      <label htmlFor={`sample_select_${index}`} className="shipment-request-label">
+                        Quick Select Sample
+                      </label>
+                      <select
+                        id={`sample_select_${index}`}
+                        onChange={(e) => handleSampleSelect(index, e.target.value)}
+                        className="shipment-request-select"
+                        value=""
+                        aria-label={`Select sample ${index + 1} from inventory`}
+                      >
+                        <option value="">-- Select from available samples --</option>
+                        {availableSamples.map((s) => (
+                          <option key={s.id} value={s.id.toString()}>
+                            {s.chemical_name} - Lot: {s.lot_number} {s.un_number ? `(${s.un_number})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   <div className="shipment-request-form-row">
                     <div className="shipment-request-form-group">
@@ -405,6 +746,28 @@ const ShipmentRequest: React.FC = () => {
                       </select>
                     </div>
                   </div>
+
+                  {/* Hazmat Information Display */}
+                  {sample.un_number && (
+                    <div className="shipment-request-hazmat-info">
+                      <h5>
+                        ⚠️ Hazmat Information (Auto-populated)
+                      </h5>
+                      <div className="shipment-request-hazmat-grid">
+                        <div><strong>UN Number:</strong> {sample.un_number}</div>
+                        <div><strong>Hazard Class:</strong> {sample.hazard_class || 'N/A'}</div>
+                        <div><strong>Packing Group:</strong> {sample.packing_group || 'N/A'}</div>
+                        <div className="full-width">
+                          <strong>Proper Shipping Name:</strong> {sample.proper_shipping_name || 'N/A'}
+                        </div>
+                        {sample.hazard_description && (
+                          <div className="full-width">
+                            <strong>Description:</strong> {sample.hazard_description}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
 
@@ -422,9 +785,9 @@ const ShipmentRequest: React.FC = () => {
 
             {/* Hazmat Warning */}
             {isHazmat && (
-              <div className="shipment-request-info-box" style={{ backgroundColor: '#fff3cd', borderColor: '#ffc107' }}>
-                <h4 className="shipment-request-info-title" style={{ color: '#856404' }}>⚠️ Hazmat Notice</h4>
-                <p className="shipment-request-info-list" style={{ color: '#856404', padding: 0 }}>
+              <div className="shipment-request-info-box shipment-request-hazmat-warning">
+                <h4 className="shipment-request-info-title">⚠️ Hazmat Notice</h4>
+                <p className="shipment-request-info-list">
                   Total shipment quantity of {totalQuantity} ml or more may require additional dangerous goods (DG) documentation and special handling.
                 </p>
               </div>

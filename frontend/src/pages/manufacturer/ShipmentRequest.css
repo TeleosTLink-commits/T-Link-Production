@@ -28,6 +28,7 @@
   cursor: pointer;
   padding: 10px 20px;
   transition: all 0.2s ease;
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   white-space: nowrap;
 }
@@ -430,6 +431,7 @@
   background: linear-gradient(135deg, rgba(45, 80, 22, 0.95) 0%, rgba(61, 107, 31, 0.95) 100%);
   padding: 12px 32px;
   border-top: 2px solid rgba(255, 255, 255, 0.15);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   margin-top: auto;
 }
@@ -489,4 +491,88 @@
   .shipment-request-sample-details {
     grid-template-columns: 1fr;
   }
+}
+
+/* Hazmat Info Box Styles */
+.shipment-request-hazmat-info {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background-color: #fff3cd;
+  border-radius: 4px;
+  border: 1px solid #ffc107;
+}
+
+.shipment-request-hazmat-info h5 {
+  margin: 0 0 0.5rem 0;
+  color: #856404;
+  font-size: 0.9rem;
+}
+
+.shipment-request-hazmat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.shipment-request-hazmat-grid .full-width {
+  grid-column: 1 / -1;
+}
+
+/* Sample Selection Tip Box */
+.shipment-request-sample-tip {
+  margin-bottom: 1rem;
+  background-color: #d4edda;
+  border-color: #28a745;
+}
+
+.shipment-request-sample-tip p {
+  color: #155724;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* Hazmat Warning Box */
+.shipment-request-hazmat-warning {
+  background-color: #fff3cd !important;
+  border-color: #ffc107 !important;
+}
+
+.shipment-request-hazmat-warning h4,
+.shipment-request-hazmat-warning p {
+  color: #856404 !important;
+}
+
+.shipment-request-hazmat-warning p {
+  padding: 0;
+}
+
+/* Checkbox Styles */
+.shipment-request-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+}
+
+.shipment-request-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #2d5016;
+}
+
+/* Status Colors */
+.status-blue {
+  color: #007bff;
+}
+
+.status-danger {
+  color: #dc3545;
+}
+
+.status-success {
+  color: #28a745;
 }

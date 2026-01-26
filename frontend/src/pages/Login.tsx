@@ -82,8 +82,8 @@ const Login: React.FC = () => {
         </form>
 
         <div className="login-footer">
-          <p>Don't have an account? <Link to="/register" style={{ color: '#007bff', textDecoration: 'none' }}>Create Account</Link></p>
-          <p style={{ marginTop: '10px', fontSize: '13px', color: '#666' }}>
+          <p>Don't have an account? <Link to="/register" className="login-link">Create Account</Link></p>
+          <p className="login-note">
             Note: Only authorized email addresses can register
           </p>
 

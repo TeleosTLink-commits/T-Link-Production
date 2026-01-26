@@ -11,11 +11,20 @@ interface Sample {
   quantity: string;
   hazard_class: string;
   un_number: string;
+  packing_group?: string;
+  proper_shipping_name?: string;
+  hazard_description?: string;
 }
 
 interface ShipmentItem {
   sample_id: string;
   amount_shipped: string;
+  // Hazmat fields (auto-populated from sample)
+  un_number?: string;
+  hazard_class?: string;
+  packing_group?: string;
+  proper_shipping_name?: string;
+  hazard_description?: string;
 }
 
 const Shipments: React.FC = () => {
@@ -31,14 +40,18 @@ const Shipments: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'all' | 'processing' | 'shipped'>('all');
   
   const [formData, setFormData] = useState({
-    shipment_items: [{ sample_id: '', amount_shipped: '' }],
+    shipment_items: [{ sample_id: '', amount_shipped: '', un_number: '', hazard_class: '', packing_group: '', proper_shipping_name: '', hazard_description: '' }] as ShipmentItem[],
     unit: 'g',
     recipient_name: '',
+    recipient_company: '',
+    recipient_phone: '',
     recipient_address: '',
     recipient_city: '',
     recipient_state: '',
     recipient_zip: '',
     recipient_country: 'USA',
+    is_international: false,
+    emergency_contact_phone: '',
     notes: ''
   });
 
@@ -82,7 +95,15 @@ const Shipments: React.FC = () => {
     if (formData.shipment_items.length < 10) {
       setFormData({
         ...formData,
-        shipment_items: [...formData.shipment_items, { sample_id: '', amount_shipped: '' }]
+        shipment_items: [...formData.shipment_items, { 
+          sample_id: '', 
+          amount_shipped: '',
+          un_number: '',
+          hazard_class: '',
+          packing_group: '',
+          proper_shipping_name: '',
+          hazard_description: ''
+        }]
       });
     }
   };
@@ -98,7 +119,23 @@ const Shipments: React.FC = () => {
 
   const handleShipmentItemChange = (index: number, field: keyof ShipmentItem, value: string) => {
     const newItems = [...formData.shipment_items];
-    newItems[index][field] = value;
+    newItems[index] = { ...newItems[index], [field]: value };
+    
+    // Auto-populate hazmat info when sample is selected
+    if (field === 'sample_id' && value) {
+      const selectedSample = samples.find(s => s.id === value);
+      if (selectedSample) {
+        newItems[index] = {
+          ...newItems[index],
+          un_number: selectedSample.un_number || '',
+          hazard_class: selectedSample.hazard_class || '',
+          packing_group: selectedSample.packing_group || '',
+          proper_shipping_name: selectedSample.proper_shipping_name || '',
+          hazard_description: selectedSample.hazard_description || '',
+        };
+      }
+    }
+    
     setFormData({ ...formData, shipment_items: newItems });
   };
 
@@ -117,8 +154,15 @@ const Shipments: React.FC = () => {
     
     // Validate all items are filled
     const hasValidItems = formData.shipment_items.every(item => item.sample_id && item.amount_shipped);
-    if (!hasValidItems || !formData.recipient_name) {
-      alert('Please fill in all required fields');
+    if (!hasValidItems || !formData.recipient_name || !formData.recipient_phone) {
+      alert('Please fill in all required fields including recipient phone number');
+      return;
+    }
+
+    // Check if emergency contact is required (any hazmat samples)
+    const hasHazmat = formData.shipment_items.some(item => item.un_number);
+    if (hasHazmat && !formData.emergency_contact_phone) {
+      alert('Emergency contact phone is required for hazmat shipments');
       return;
     }
 
@@ -131,8 +175,12 @@ const Shipments: React.FC = () => {
           amount_shipped: parseFloat(item.amount_shipped),
           lot_number: sample?.lot_number,
           chemical_name: sample?.chemical_name,
-          hazard_class: sample?.hazard_class,
-          un_number: sample?.un_number
+          // Include hazmat fields
+          hazard_class: item.hazard_class || sample?.hazard_class,
+          un_number: item.un_number || sample?.un_number,
+          packing_group: item.packing_group || sample?.packing_group,
+          proper_shipping_name: item.proper_shipping_name || sample?.proper_shipping_name,
+          hazard_description: item.hazard_description || sample?.hazard_description,
         };
       });
 
@@ -140,11 +188,15 @@ const Shipments: React.FC = () => {
         shipment_items: shipmentItems,
         unit: formData.unit,
         recipient_name: formData.recipient_name,
+        recipient_company: formData.recipient_company || undefined,
+        recipient_phone: formData.recipient_phone,
         recipient_address: formData.recipient_address,
         recipient_city: formData.recipient_city,
         recipient_state: formData.recipient_state,
         recipient_zip: formData.recipient_zip,
         recipient_country: formData.recipient_country,
+        is_international: formData.is_international,
+        emergency_contact_phone: formData.emergency_contact_phone || undefined,
         notes: formData.notes
       });
       
@@ -153,14 +205,18 @@ const Shipments: React.FC = () => {
       
       setShowModal(false);
       setFormData({
-        shipment_items: [{ sample_id: '', amount_shipped: '' }],
+        shipment_items: [{ sample_id: '', amount_shipped: '', un_number: '', hazard_class: '', packing_group: '', proper_shipping_name: '', hazard_description: '' }],
         unit: 'g',
         recipient_name: '',
+        recipient_company: '',
+        recipient_phone: '',
         recipient_address: '',
         recipient_city: '',
         recipient_state: '',
         recipient_zip: '',
         recipient_country: 'USA',
+        is_international: false,
+        emergency_contact_phone: '',
         notes: ''
       });
       fetchShipments();
@@ -465,7 +521,14 @@ const Shipments: React.FC = () => {
                         <td>{sup.dot_sp_number || 'N/A'}</td>
                         <td>{sup.item_number || 'N/A'}</td>
                         <td>{sup.purchased_from || 'N/A'}</td>
-                        <td>{sup.price_per_unit ? `$${parseFloat(sup.price_per_unit).toFixed(2)}` : 'N/A'}</td>
+                        <td>{(() => {
+                          if (!sup.price_per_unit || sup.price_per_unit === 'NA' || sup.price_per_unit === 'N/A') return 'N/A';
+                          // If already has $, return as-is (handles "$61 for 15" type values)
+                          if (sup.price_per_unit.includes('$')) return sup.price_per_unit.trim();
+                          // Otherwise try to parse as number
+                          const parsed = parseFloat(sup.price_per_unit);
+                          return !isNaN(parsed) ? `$${parsed.toFixed(2)}` : sup.price_per_unit;
+                        })()}</td>
                         <td>
                           <span className={`stock-indicator ${stockLevel}`}>
                             {sup.count}
@@ -529,75 +592,103 @@ const Shipments: React.FC = () => {
                   backgroundColor: '#f8f9fa',
                   padding: '1rem',
                   borderRadius: '4px',
-                  maxHeight: '300px',
+                  maxHeight: '400px',
                   overflowY: 'auto'
                 }}>
                   {formData.shipment_items.map((item, index) => (
                     <div key={index} style={{
-                      display: 'grid',
-                      gridTemplateColumns: '1fr 150px 30px',
-                      gap: '0.5rem',
                       marginBottom: index < formData.shipment_items.length - 1 ? '1rem' : 0,
                       paddingBottom: index < formData.shipment_items.length - 1 ? '1rem' : 0,
                       borderBottom: index < formData.shipment_items.length - 1 ? '1px solid #ddd' : 'none'
                     }}>
-                      <div>
-                        <label style={{ fontSize: '0.85rem' }}>Sample #{index + 1} *</label>
-                        <select
-                          required
-                          value={item.sample_id}
-                          onChange={(e) => handleShipmentItemChange(index, 'sample_id', e.target.value)}
-                          style={{ width: '100%', padding: '0.5rem' }}
-                        >
-                          <option value="">-- Select sample --</option>
-                          {samples.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.chemical_name} - {s.lot_number}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label style={{ fontSize: '0.85rem' }}>Amount *</label>
-                        <input
-                          type="number"
-                          step="0.001"
-                          required
-                          value={item.amount_shipped}
-                          onChange={(e) => handleShipmentItemChange(index, 'amount_shipped', e.target.value)}
-                          placeholder="Qty"
-                          style={{ width: '100%', padding: '0.5rem' }}
-                        />
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                        {formData.shipment_items.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeShipmentItem(index)}
-                            style={{
-                              padding: '0.5rem',
-                              backgroundColor: '#dc3545',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              width: '100%'
-                            }}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 150px 30px',
+                        gap: '0.5rem',
+                      }}>
+                        <div>
+                          <label style={{ fontSize: '0.85rem' }}>Sample #{index + 1} *</label>
+                          <select
+                            required
+                            value={item.sample_id}
+                            onChange={(e) => handleShipmentItemChange(index, 'sample_id', e.target.value)}
+                            style={{ width: '100%', padding: '0.5rem' }}
+                            aria-label={`Sample ${index + 1}`}
                           >
-                            Remove
-                          </button>
-                        )}
+                            <option value="">-- Select sample --</option>
+                            {samples.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.chemical_name} - {s.lot_number} {s.un_number ? `(${s.un_number})` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: '0.85rem' }}>Amount *</label>
+                          <input
+                            type="number"
+                            step="0.001"
+                            required
+                            value={item.amount_shipped}
+                            onChange={(e) => handleShipmentItemChange(index, 'amount_shipped', e.target.value)}
+                            placeholder="Qty"
+                            style={{ width: '100%', padding: '0.5rem' }}
+                            aria-label={`Amount for sample ${index + 1}`}
+                          />
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                          {formData.shipment_items.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeShipmentItem(index)}
+                              style={{
+                                padding: '0.5rem',
+                                backgroundColor: '#dc3545',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                width: '100%'
+                              }}
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
                       </div>
+                      
+                      {/* Hazmat Info Display */}
+                      {item.un_number && (
+                        <div style={{
+                          marginTop: '0.5rem',
+                          padding: '0.5rem',
+                          backgroundColor: '#fff3cd',
+                          borderRadius: '4px',
+                          border: '1px solid #ffc107',
+                          fontSize: '0.8rem'
+                        }}>
+                          <strong style={{ color: '#856404' }}>⚠️ Hazmat:</strong>
+                          <span style={{ marginLeft: '0.5rem' }}>
+                            {item.un_number} | Class {item.hazard_class} | PG {item.packing_group || 'N/A'}
+                          </span>
+                          {item.proper_shipping_name && (
+                            <div style={{ color: '#856404', marginTop: '0.25rem' }}>
+                              {item.proper_shipping_name}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               </div>
 
               <div className="shipments-form-group">
-                <label>Unit *</label>
+                <label htmlFor="unit-select">Unit *</label>
                 <select 
+                  id="unit-select"
                   required
                   value={formData.unit}
                   onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
@@ -617,6 +708,27 @@ const Shipments: React.FC = () => {
                   value={formData.recipient_name}
                   onChange={(e) => setFormData({ ...formData, recipient_name: e.target.value })}
                   placeholder="Full name"
+                />
+              </div>
+
+              <div className="shipments-form-group">
+                <label>Company Name</label>
+                <input
+                  type="text"
+                  value={formData.recipient_company}
+                  onChange={(e) => setFormData({ ...formData, recipient_company: e.target.value })}
+                  placeholder="Company (optional)"
+                />
+              </div>
+
+              <div className="shipments-form-group">
+                <label>Recipient Phone * (Required for FedEx)</label>
+                <input
+                  type="tel"
+                  required
+                  value={formData.recipient_phone}
+                  onChange={(e) => setFormData({ ...formData, recipient_phone: e.target.value })}
+                  placeholder="(555) 123-4567"
                 />
               </div>
 
@@ -665,14 +777,39 @@ const Shipments: React.FC = () => {
               </div>
 
               <div className="shipments-form-group">
-                <label>Country *</label>
-                <input
-                  type="text"
+                <label htmlFor="country-select">Country *</label>
+                <select
+                  id="country-select"
                   required
                   value={formData.recipient_country}
                   onChange={(e) => setFormData({ ...formData, recipient_country: e.target.value })}
-                  placeholder="Country"
+                >
+                  <option value="USA">United States</option>
+                  <option value="CAN">Canada</option>
+                  <option value="MEX">Mexico</option>
+                </select>
+              </div>
+
+              <div className="shipments-form-group">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={formData.is_international}
+                    onChange={(e) => setFormData({ ...formData, is_international: e.target.checked })}
+                  />
+                  International Shipment (outside USA)
+                </label>
+              </div>
+
+              <div className="shipments-form-group">
+                <label>Emergency Contact Phone (24-hour) *</label>
+                <input
+                  type="tel"
+                  value={formData.emergency_contact_phone}
+                  onChange={(e) => setFormData({ ...formData, emergency_contact_phone: e.target.value })}
+                  placeholder="Required for hazmat shipments"
                 />
+                <small style={{ color: '#666' }}>Required for hazmat materials - must be available 24/7</small>
               </div>
 
               <div className="shipments-form-group">
@@ -721,13 +858,14 @@ const Shipments: React.FC = () => {
             </div>
             <form onSubmit={handleUpdateSupply}>
               <div className="shipments-form-group">
-                <label>Current Stock</label>
-                <input type="text" value={selectedSupply.count} disabled />
+                <label htmlFor="current-stock">Current Stock</label>
+                <input id="current-stock" type="text" value={selectedSupply.count} disabled />
               </div>
 
               <div className="shipments-form-group">
-                <label>Add Stock *</label>
+                <label htmlFor="add-stock">Add Stock *</label>
                 <input
+                  id="add-stock"
                   type="number"
                   required
                   value={restockAmount}
@@ -737,8 +875,9 @@ const Shipments: React.FC = () => {
               </div>
 
               <div className="shipments-form-group">
-                <label>New Total</label>
+                <label htmlFor="new-total">New Total</label>
                 <input 
+                  id="new-total"
                   type="text" 
                   value={selectedSupply.count + parseInt(restockAmount || '0')} 
                   disabled 

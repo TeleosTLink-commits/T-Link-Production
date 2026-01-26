@@ -19,11 +19,11 @@ const pool = new Pool({
 });
 
 /**
- * Middleware: Check if user is lab staff
+ * Middleware: Check if user is lab staff or admin
  */
 const checkLabStaff = (req: Request, res: Response, next: any) => {
   const user = (req as any).user;
-  if (user.role !== 'lab_staff' && user.role !== 'admin') {
+  if (user.role !== 'lab_staff' && user.role !== 'admin' && user.role !== 'super_admin') {
     return res.status(403).json({ error: 'Access denied. Lab staff or admin role required.' });
   }
   next();
@@ -40,42 +40,60 @@ router.get('/shipments', authenticate, checkLabStaff, async (req: Request, res: 
     const result = await pool.query(
       `SELECT s.id, s.shipment_number, s.status, s.lot_number, s.amount_shipped, s.unit,
               s.recipient_name, s.destination_address, s.is_hazmat, s.requires_dg_declaration,
-              s.scheduled_ship_date, s.created_at,
-              u.first_name, u.last_name, u.email,
-              mc.company_name,
-              sam.chemical_name
+              s.scheduled_ship_date, s.created_at, s.first_name, s.last_name,
+              u.email,
+              mc.company_name
        FROM shipments s
-       JOIN users u ON s.manufacturer_user_id = u.id
+       LEFT JOIN users u ON s.manufacturer_user_id = u.id
        LEFT JOIN manufacturer_companies mc ON s.company_id = mc.id
-       LEFT JOIN samples sam ON s.sample_id = sam.id
        WHERE s.status = 'initiated'
        ORDER BY s.created_at ASC
        LIMIT $1 OFFSET $2`,
       [parseInt(limit as string) || 50, parseInt(offset as string) || 0]
     );
 
+    // Get chemical names from shipment_samples for each shipment
+    const shipmentsWithSamples = await Promise.all(
+      result.rows.map(async (row: any) => {
+        // Try to get chemical name from shipment_samples
+        const samplesResult = await pool.query(
+          `SELECT sam.chemical_name 
+           FROM shipment_samples ss 
+           JOIN samples sam ON ss.sample_id = sam.id 
+           WHERE ss.shipment_id = $1 
+           LIMIT 1`,
+          [row.id]
+        );
+        const chemical_name = samplesResult.rows.length > 0 
+          ? samplesResult.rows[0].chemical_name 
+          : null;
+        
+        return {
+          id: row.id,
+          shipment_number: row.shipment_number,
+          lot_number: row.lot_number,
+          chemical_name: chemical_name,
+          company_name: row.company_name,
+          quantity_requested: row.amount_shipped,
+          amount_shipped: row.amount_shipped,
+          unit: row.unit,
+          first_name: row.first_name,
+          last_name: row.last_name,
+          recipient_name: row.recipient_name,
+          scheduled_ship_date: row.scheduled_ship_date,
+          is_hazmat: row.is_hazmat,
+          requires_dg_declaration: row.requires_dg_declaration,
+          created_at: row.created_at,
+          status: row.status
+        };
+      })
+    );
+
     res.json({
       success: true,
-      count: result.rows.length,
-      data: result.rows,
-      shipments: result.rows.map((row: any) => ({
-        id: row.id,
-        shipment_number: row.shipment_number,
-        lot_number: row.lot_number,
-        chemical_name: row.chemical_name,
-        company_name: row.company_name,
-        quantity_requested: row.amount_shipped,
-        amount_shipped: row.amount_shipped,
-        unit: row.unit,
-        first_name: row.first_name,
-        last_name: row.last_name,
-        recipient_name: row.recipient_name,
-        scheduled_ship_date: row.scheduled_ship_date,
-        is_hazmat: row.is_hazmat,
-        requires_dg_declaration: row.requires_dg_declaration,
-        created_at: row.created_at,
-        status: row.status
-      }))
+      count: shipmentsWithSamples.length,
+      data: shipmentsWithSamples,
+      shipments: shipmentsWithSamples
     });
   } catch (error: any) {
     console.error('Error fetching processing shipments:', error);
@@ -127,15 +145,11 @@ router.get('/:id', authenticate, checkLabStaff, async (req: Request, res: Respon
     // Get shipment details with all necessary information
     const shipmentResult = await pool.query(
       `SELECT s.*, 
-              u.first_name, u.last_name, u.email,
-              mc.company_name,
-              sam.chemical_name, sam.cas_number, sam.lot_number, 
-              sam.quantity as available_quantity,
-              s.amount_shipped
+              u.first_name as user_first_name, u.last_name as user_last_name, u.email,
+              mc.company_name
        FROM shipments s
-       JOIN users u ON s.manufacturer_user_id = u.id
+       LEFT JOIN users u ON s.manufacturer_user_id = u.id
        LEFT JOIN manufacturer_companies mc ON s.company_id = mc.id
-       LEFT JOIN samples sam ON s.sample_id = sam.id
        WHERE s.id = $1`,
       [id]
     );
@@ -146,24 +160,79 @@ router.get('/:id', authenticate, checkLabStaff, async (req: Request, res: Respon
 
     const shipment = shipmentResult.rows[0];
 
-    // Get SDS documents for this sample
+    // Get samples from shipment_samples junction table with hazmat info
+    const samplesResult = await pool.query(
+      `SELECT ss.quantity_requested, ss.unit,
+              sam.id as sample_id, sam.chemical_name, sam.cas_number, sam.lot_number, 
+              sam.quantity as available_quantity,
+              sam.un_number, sam.hazard_class, sam.packing_group, sam.proper_shipping_name,
+              sam.sds_file_path, sam.sds_file_name, sam.coa_file_path, sam.coa_file_name
+       FROM shipment_samples ss
+       JOIN samples sam ON ss.sample_id = sam.id
+       WHERE ss.shipment_id = $1`,
+      [id]
+    );
+
+    // If no shipment_samples, try the legacy sample_id field
+    let samples = samplesResult.rows;
+    let primarySample = samples.length > 0 ? samples[0] : null;
+
+    if (samples.length === 0 && shipment.sample_id) {
+      const legacySampleResult = await pool.query(
+        `SELECT id as sample_id, chemical_name, cas_number, lot_number, quantity as available_quantity,
+                un_number, hazard_class, packing_group, proper_shipping_name,
+                sds_file_path, sds_file_name, coa_file_path, coa_file_name
+         FROM samples WHERE id = $1`,
+        [shipment.sample_id]
+      );
+      if (legacySampleResult.rows.length > 0) {
+        primarySample = legacySampleResult.rows[0];
+        samples = [{ ...primarySample, quantity_requested: shipment.amount_shipped, unit: shipment.unit }];
+      }
+    }
+
+    // Get SDS documents for the primary sample
     let sdsDocuments = [];
-    if (shipment.sample_id) {
+    if (primarySample?.sample_id) {
       const sdsResult = await pool.query(
-        `SELECT id, sds_file_name, sds_file_path, revision_date, created_at
+        `SELECT id, sds_file_name as file_name, sds_file_path as file_path, revision_date, created_at
          FROM sample_sds_documents
          WHERE sample_id = $1
          ORDER BY revision_date DESC, created_at DESC`,
-        [shipment.sample_id]
+        [primarySample.sample_id]
       );
       sdsDocuments = sdsResult.rows;
+    }
+
+    // Also include SDS from the sample directly if available and not in sdsDocuments
+    if (primarySample?.sds_file_path && sdsDocuments.length === 0) {
+      sdsDocuments.push({
+        id: 'direct-sds',
+        file_name: primarySample.sds_file_name || 'Safety Data Sheet',
+        file_path: primarySample.sds_file_path,
+        revision_date: null,
+      });
     }
 
     res.json({
       success: true,
       data: {
         ...shipment,
-        manufacturer_name: `${shipment.first_name} ${shipment.last_name}`,
+        // Include primary sample data at top level for backwards compatibility
+        chemical_name: primarySample?.chemical_name || null,
+        cas_number: primarySample?.cas_number || null,
+        sample_lot_number: primarySample?.lot_number || shipment.lot_number,
+        available_quantity: primarySample?.available_quantity || null,
+        sample_id: primarySample?.sample_id || shipment.sample_id,
+        // Hazmat info from primary sample
+        un_number: primarySample?.un_number || null,
+        hazard_class: primarySample?.hazard_class || null,
+        packing_group: primarySample?.packing_group || null,
+        proper_shipping_name: primarySample?.proper_shipping_name || null,
+        sds_file_path: primarySample?.sds_file_path || null,
+        // Multi-sample support
+        samples: samples,
+        manufacturer_name: `${shipment.user_first_name || shipment.first_name || ''} ${shipment.user_last_name || shipment.last_name || ''}`.trim(),
         manufacturer_email: shipment.email,
         sds_documents: sdsDocuments
       }
@@ -652,15 +721,21 @@ router.post('/get-rate', authenticate, checkLabStaff, async (req: Request, res: 
  */
 router.post('/generate-label', authenticate, checkLabStaff, async (req: Request, res: Response) => {
   try {
-    const { shipmentId, weight, weightUnit, service, packageValue, isHazmat, suppliesUsed } = req.body;
+    const { shipmentId, weight, weightUnit, service, packageValue, isHazmat, suppliesUsed, hazmatDetails } = req.body;
 
     if (!shipmentId || !weight || !weightUnit || !service) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Get shipment details
+    // Get shipment details with hazmat info from samples
     const shipmentResult = await pool.query(
-      `SELECT s.*, sam.chemical_name, sam.lot_number
+      `SELECT s.*, 
+              sam.chemical_name, 
+              sam.lot_number,
+              sam.un_number,
+              sam.hazard_class,
+              sam.packing_group,
+              sam.proper_shipping_name
        FROM shipments s
        LEFT JOIN samples sam ON s.sample_id = sam.id
        WHERE s.id = $1`,
@@ -672,6 +747,30 @@ router.post('/generate-label', authenticate, checkLabStaff, async (req: Request,
     }
 
     const shipment = shipmentResult.rows[0];
+
+    // Also get hazmat info from shipment_samples for multi-sample shipments
+    const samplesResult = await pool.query(
+      `SELECT sam.un_number, sam.hazard_class, sam.packing_group, sam.proper_shipping_name, sam.chemical_name
+       FROM shipment_samples ss
+       JOIN samples sam ON ss.sample_id = sam.id
+       WHERE ss.shipment_id = $1`,
+      [shipmentId]
+    );
+
+    // Determine hazmat details from request or from samples
+    let effectiveHazmatDetails = hazmatDetails;
+    if (isHazmat && !effectiveHazmatDetails) {
+      // Try to get hazmat details from the shipment's samples
+      const sampleWithHazmat = samplesResult.rows.find((s: any) => s.un_number || s.hazard_class) || shipment;
+      if (sampleWithHazmat.un_number || sampleWithHazmat.hazard_class) {
+        effectiveHazmatDetails = {
+          unNumber: sampleWithHazmat.un_number,
+          properShippingName: sampleWithHazmat.proper_shipping_name || sampleWithHazmat.chemical_name,
+          hazardClass: sampleWithHazmat.hazard_class,
+          packingGroup: sampleWithHazmat.packing_group,
+        };
+      }
+    }
 
     // Get lab address
     const fromAddress = {
@@ -699,6 +798,7 @@ router.post('/generate-label', authenticate, checkLabStaff, async (req: Request,
       service: service as any,
       packageValue: parseFloat(packageValue) || 100,
       isHazmat: isHazmat || false,
+      hazmatDetails: effectiveHazmatDetails,
     });
 
     if (labelResult.error) {

@@ -118,6 +118,7 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
         hazard_class,
         packing_group,
         packing_instruction,
+        proper_shipping_name,
         status,
         notes,
         coa_file_path,

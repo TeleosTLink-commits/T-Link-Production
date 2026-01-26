@@ -226,6 +226,178 @@ router.post('/', authenticate, authorize('admin', 'lab_staff', 'logistics'), asy
   }
 });
 
+// Create multi-sample shipment (internal use)
+router.post('/multi', authenticate, authorize('admin', 'lab_staff', 'logistics', 'super_admin'), async (req: AuthRequest, res, next) => {
+  try {
+    const {
+      shipment_items,
+      unit,
+      recipient_name,
+      recipient_company,
+      recipient_phone,
+      recipient_address,
+      recipient_city,
+      recipient_state,
+      recipient_zip,
+      recipient_country,
+      is_international,
+      emergency_contact_phone,
+      notes,
+    } = req.body;
+
+    // Validation
+    if (!shipment_items || !Array.isArray(shipment_items) || shipment_items.length === 0) {
+      throw new AppError('shipment_items array is required', 400);
+    }
+
+    if (shipment_items.length > 10) {
+      throw new AppError('Maximum 10 samples per shipment', 400);
+    }
+
+    if (!recipient_name || !recipient_address || !recipient_city || !recipient_state || !recipient_zip) {
+      throw new AppError('Missing required recipient address fields', 400);
+    }
+
+    if (!recipient_phone) {
+      throw new AppError('Recipient phone is required for shipping', 400);
+    }
+
+    // Validate each item
+    for (let i = 0; i < shipment_items.length; i++) {
+      const item = shipment_items[i];
+      if (!item.sample_id || !item.amount_shipped) {
+        throw new AppError(`Item ${i + 1} missing sample_id or amount_shipped`, 400);
+      }
+    }
+
+    // Calculate totals and check hazmat
+    let totalAmount = 0;
+    let hasHazmat = false;
+    const sampleData: any[] = [];
+
+    for (const item of shipment_items) {
+      // Get sample info from database
+      const sampleResult = await query(
+        `SELECT id, chemical_name, lot_number, quantity, un_number, hazard_class, packing_group, proper_shipping_name
+         FROM samples WHERE id = $1 AND status = 'active'`,
+        [item.sample_id]
+      );
+
+      if (sampleResult.rows.length === 0) {
+        throw new AppError(`Sample ${item.sample_id} not found or not active`, 404);
+      }
+
+      const sample = sampleResult.rows[0];
+      const amountToShip = parseFloat(item.amount_shipped);
+
+      // Parse current quantity
+      const quantityMatch = sample.quantity.match(/[\\d.]+/g);
+      const currentQty = quantityMatch ? quantityMatch.reduce((sum: number, val: string) => sum + parseFloat(val), 0) : 0;
+
+      if (amountToShip > currentQty) {
+        throw new AppError(`Insufficient quantity for ${sample.chemical_name}. Available: ${currentQty}, Requested: ${amountToShip}`, 400);
+      }
+
+      totalAmount += amountToShip;
+
+      // Check for hazmat
+      if (sample.un_number || item.un_number) {
+        hasHazmat = true;
+      }
+
+      sampleData.push({
+        ...item,
+        sample,
+        amountToShip,
+        currentQty,
+        remainingQty: currentQty - amountToShip,
+      });
+    }
+
+    // Generate shipment number
+    const shipmentNumber = `SHIP-${Date.now()}`;
+    const fullAddress = `${recipient_address}, ${recipient_city}, ${recipient_state} ${recipient_zip}`;
+    const isHazmat = hasHazmat || totalAmount >= 30;
+
+    // Create shipment record
+    const result = await query(
+      `INSERT INTO shipments
+       (shipment_number, lot_number, amount_shipped, unit,
+        recipient_name, recipient_company, destination_address,
+        destination_city, destination_state, destination_zip, destination_country,
+        special_instructions, is_hazmat, requires_dg_declaration,
+        requested_by, status, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'initiated', NOW())
+       RETURNING *`,
+      [
+        shipmentNumber,
+        sampleData.map(s => s.sample.lot_number).join(', '),
+        totalAmount,
+        unit,
+        recipient_name,
+        recipient_company || null,
+        fullAddress,
+        recipient_city,
+        recipient_state,
+        recipient_zip,
+        recipient_country || 'USA',
+        notes || null,
+        isHazmat,
+        isHazmat,
+        req.user?.id,
+      ]
+    );
+
+    const shipmentId = result.rows[0].id;
+
+    // Insert shipment_samples records and update inventory
+    for (const item of sampleData) {
+      // Insert shipment_samples junction record
+      await query(
+        `INSERT INTO shipment_samples (shipment_id, sample_id, quantity_requested, unit)
+         VALUES ($1, $2, $3, $4)`,
+        [shipmentId, item.sample.id, item.amountToShip, unit]
+      );
+
+      // Update sample quantity
+      const newQuantityString = item.remainingQty > 0 ? `${item.remainingQty}${unit}` : '0';
+      await query(
+        `UPDATE samples SET quantity = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+        [newQuantityString, item.sample.id]
+      );
+
+      // Mark as depleted if quantity is now 0
+      if (item.remainingQty <= 0) {
+        await query(
+          `UPDATE samples SET status = 'depleted', updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+          [item.sample.id]
+        );
+      }
+    }
+
+    // Create chain of custody entry
+    await query(
+      `INSERT INTO shipment_chain_of_custody (shipment_id, event_type, performed_by, notes)
+       VALUES ($1, 'created', $2, $3)`,
+      [shipmentId, req.user?.id, `Multi-sample shipment created with ${sampleData.length} item(s). Total: ${totalAmount}${unit}`]
+    );
+
+    res.status(201).json({
+      success: true,
+      data: result.rows[0],
+      message: `Shipment created with ${sampleData.length} sample(s). Inventory quantities updated.`,
+      samples_shipped: sampleData.map(s => ({
+        chemical_name: s.sample.chemical_name,
+        lot_number: s.sample.lot_number,
+        amount_shipped: s.amountToShip,
+        remaining: s.remainingQty,
+      })),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Update shipment status
 router.patch('/:id/status', authenticate, authorize('admin', 'logistics'), async (req: AuthRequest, res, next) => {
   try {

@@ -106,6 +106,36 @@
   box-shadow: 0 0 0 2px rgba(45, 80, 22, 0.1);
 }
 
+/* Sample Select Dropdown */
+.inventory-sample-select {
+  padding: 12px 14px;
+  font-size: 14px;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease;
+  background-color: white;
+  cursor: pointer;
+  min-width: 300px;
+}
+
+.inventory-sample-select:focus {
+  outline: none;
+  border-color: #2d5016;
+  box-shadow: 0 0 0 2px rgba(45, 80, 22, 0.1);
+}
+
+.inventory-sample-select option {
+  padding: 8px;
+}
+
+.loading-samples {
+  padding: 12px 14px;
+  font-size: 14px;
+  color: #666;
+  font-style: italic;
+}
+
 .inventory-search-btn {
   padding: 12px 28px;
   background-color: #2d5016;
@@ -417,6 +447,7 @@
   padding: 12px 32px;
   margin-top: auto;
   border-top: 2px solid rgba(255, 255, 255, 0.15);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
 

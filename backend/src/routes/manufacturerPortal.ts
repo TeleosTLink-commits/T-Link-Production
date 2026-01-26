@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs';
 import { pool, query } from '../config/database';
+import logger from '../config/logger';
 
 const router: Router = express.Router();
 
@@ -116,9 +117,9 @@ router.get('/coa/download/:sampleId', authenticate, checkManufacturer, async (re
 
     // Get sample file path
     const result = await query(
-      `SELECT sample_name, lot_number, file_path 
+      `SELECT chemical_name, lot_number, coa_file_path, coa_file_name 
        FROM samples 
-       WHERE id = $1 AND is_active = true`,
+       WHERE id = $1 AND status = 'active'`,
       [sampleId]
     );
 
@@ -127,7 +128,7 @@ router.get('/coa/download/:sampleId', authenticate, checkManufacturer, async (re
     }
 
     const sample = result.rows[0];
-    const filePath = sample.file_path;
+    const filePath = sample.coa_file_path;
 
     // Check if file exists locally
     if (filePath && filePath.startsWith('C:\\')) {
@@ -151,6 +152,44 @@ router.get('/coa/download/:sampleId', authenticate, checkManufacturer, async (re
     console.error('Error downloading CoA:', error);
     res.status(500).json({
       error: 'Failed to download CoA',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * GET /api/manufacturer/inventory/samples
+ * List all available samples for dropdown selection
+ */
+router.get('/inventory/samples', authenticate, checkManufacturer, async (req: Request, res: Response) => {
+  try {
+    const result = await query(`
+      SELECT id, chemical_name, lot_number, cas_number, quantity, status 
+      FROM samples 
+      WHERE status = 'active' 
+        AND quantity IS NOT NULL 
+        AND quantity != '' 
+        AND quantity != '0'
+      ORDER BY chemical_name ASC, lot_number ASC
+      LIMIT 500
+    `);
+
+    res.json({
+      success: true,
+      count: result.rows.length,
+      samples: result.rows.map((row: any) => ({
+        id: row.id,
+        chemical_name: row.chemical_name,
+        lot_number: row.lot_number,
+        cas_number: row.cas_number,
+        available_quantity: row.quantity,
+        status: row.status,
+      })),
+    });
+  } catch (error: any) {
+    console.error('Error fetching samples list:', error);
+    res.status(500).json({
+      error: 'Failed to fetch samples',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
@@ -353,15 +392,36 @@ router.post('/shipments/request-multiple', authenticate, checkManufacturer, asyn
     const {
       first_name,
       last_name,
+      recipient_company,
+      recipient_phone,
+      // Structured address fields
+      street_address,
+      city,
+      state,
+      zip_code,
+      country,
+      // Legacy field (can be auto-constructed if not provided)
       delivery_address,
+      // Shipping details
+      is_international,
+      emergency_contact_phone,
+      special_instructions,
       scheduled_ship_date,
       samples,
     } = req.body;
 
-    // Validation
-    if (!first_name || !last_name || !delivery_address || !samples || !Array.isArray(samples)) {
+    // Validation - require structured address OR legacy delivery_address
+    const hasStructuredAddress = street_address && city && state && zip_code;
+    if (!first_name || !last_name || (!hasStructuredAddress && !delivery_address) || !samples || !Array.isArray(samples)) {
       return res.status(400).json({
-        error: 'Missing required fields: first_name, last_name, delivery_address, samples (array)',
+        error: 'Missing required fields: first_name, last_name, address fields (street_address, city, state, zip_code OR delivery_address), samples (array)',
+      });
+    }
+
+    // Phone is required for FedEx shipments
+    if (!recipient_phone) {
+      return res.status(400).json({
+        error: 'Recipient phone number is required for shipping',
       });
     }
 
@@ -393,8 +453,10 @@ router.post('/shipments/request-multiple', authenticate, checkManufacturer, asyn
     let totalQuantity = 0;
 
     for (const sample of samples) {
+      // Query samples table and include hazmat fields
       const sampleResult = await client.query(
-        'SELECT id, quantity, chemical_name FROM samples WHERE lot_number = $1',
+        `SELECT id, quantity, chemical_name, un_number, hazard_class, packing_group, proper_shipping_name, hazard_description
+         FROM samples WHERE lot_number = $1`,
         [sample.lot_number]
       );
 
@@ -422,6 +484,12 @@ router.post('/shipments/request-multiple', authenticate, checkManufacturer, asyn
         ...sample,
         sample_id: dbSample.id,
         quantity_requested: requestedQty,
+        // Use hazmat info from request if provided, otherwise from database
+        un_number: sample.un_number || dbSample.un_number,
+        hazard_class: sample.hazard_class || dbSample.hazard_class,
+        packing_group: sample.packing_group || dbSample.packing_group,
+        proper_shipping_name: sample.proper_shipping_name || dbSample.proper_shipping_name,
+        hazard_description: sample.hazard_description || dbSample.hazard_description,
       });
 
       totalQuantity += requestedQty;
@@ -431,17 +499,25 @@ router.post('/shipments/request-multiple', authenticate, checkManufacturer, asyn
     const shipmentId = uuidv4();
     const shipmentNumber = `SHIP-${Date.now()}`;
 
-    // Check if total quantity >= 30ml (hazmat rule)
-    const isHazmat = totalQuantity >= 30;
+    // Check if any sample has hazmat info OR total quantity >= 30ml
+    const hasHazmatSample = sampleData.some(s => s.un_number);
+    const isHazmat = hasHazmatSample || totalQuantity >= 30;
 
-    // Insert main shipment record
+    // Build full address from structured fields or use legacy
+    const fullAddress = hasStructuredAddress
+      ? `${street_address}, ${city}, ${state} ${zip_code}${country && country !== 'USA' ? `, ${country}` : ''}`
+      : delivery_address;
+
+    // Insert main shipment record with structured address fields
     await client.query(
       `INSERT INTO shipments (
         id, shipment_number, status, lot_number, amount_shipped, unit,
-        recipient_name, destination_address, manufacturer_user_id,
-        first_name, last_name, scheduled_ship_date, is_hazmat, requires_dg_declaration,
+        recipient_name, recipient_company, destination_address,
+        destination_city, destination_state, destination_zip, destination_country,
+        manufacturer_user_id, first_name, last_name, scheduled_ship_date,
+        is_hazmat, requires_dg_declaration, special_instructions,
         requested_by, created_at
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())`,
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, NOW())`,
       [
         shipmentId,
         shipmentNumber,
@@ -450,13 +526,19 @@ router.post('/shipments/request-multiple', authenticate, checkManufacturer, asyn
         totalQuantity,
         'ml', // Default unit for multi-sample shipments
         `${first_name} ${last_name}`,
-        delivery_address,
+        recipient_company || null,
+        fullAddress,
+        city || null,
+        state || null,
+        zip_code || null,
+        country || 'USA',
         userId,
         first_name,
         last_name,
         scheduled_ship_date || null,
         isHazmat,
         isHazmat,
+        special_instructions || null,
         userId,
       ]
     );
@@ -511,7 +593,11 @@ router.post('/shipments/request-multiple', authenticate, checkManufacturer, asyn
   } catch (error: any) {
     await client.query('ROLLBACK').catch(() => {});
 
-    console.error('Error creating multi-sample shipment request:', error);
+    logger.error('Error creating multi-sample shipment request', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+    });
     res.status(500).json({
       error: 'Failed to create shipment request',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined,
