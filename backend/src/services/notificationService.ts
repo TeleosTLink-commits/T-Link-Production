@@ -38,25 +38,30 @@ export const checkExpiringCoAs = async () => {
     const warningDays = process.env.EXPIRATION_WARNING_DAYS?.split(',').map(d => parseInt(d)) || [30, 60, 90];
 
     for (const days of warningDays) {
+      // Validate days is a safe integer (1-365)
+      const safeDays = Math.min(Math.max(Math.floor(days), 1), 365);
+      const notificationType = `${safeDays}_days`;
+      
       const result = await query(
         `SELECT coa.*, mc.company_name, mc.contact_email
          FROM certificates_of_analysis coa
          LEFT JOIN manufacturer_companies mc ON coa.manufacturer_id = mc.id
-         WHERE coa.expiration_date = CURRENT_DATE + INTERVAL '${days} days'
+         WHERE coa.expiration_date = CURRENT_DATE + INTERVAL '1 day' * $1
            AND coa.status != 'expired'
            AND NOT EXISTS (
              SELECT 1 FROM coa_expiration_notifications
              WHERE coa_id = coa.id 
-             AND notification_type = '${days}_days'
+             AND notification_type = $2
              AND sent_at > CURRENT_DATE - INTERVAL '7 days'
-           )`
+           )`,
+        [safeDays, notificationType]
       );
 
       for (const coa of result.rows) {
-        const subject = `CoA Expiration Alert: ${coa.lot_number} - ${days} Days`;
+        const subject = `CoA Expiration Alert: ${coa.lot_number} - ${safeDays} Days`;
         const html = `
           <h2>Certificate of Analysis Expiration Warning</h2>
-          <p>The following Certificate of Analysis will expire in <strong>${days} days</strong>:</p>
+          <p>The following Certificate of Analysis will expire in <strong>${safeDays} days</strong>:</p>
           <ul>
             <li><strong>Lot Number:</strong> ${coa.lot_number}</li>
             <li><strong>Product:</strong> ${coa.product_name}</li>
@@ -78,7 +83,7 @@ export const checkExpiringCoAs = async () => {
         await query(
           `INSERT INTO coa_expiration_notifications (coa_id, notification_type, sent_to, status)
            VALUES ($1, $2, $3, 'sent')`,
-          [coa.id, `${days}_days`, coa.contact_email || process.env.SMTP_USER]
+          [coa.id, notificationType, coa.contact_email || process.env.SMTP_USER]
         );
 
         // Create in-app notification
@@ -89,7 +94,7 @@ export const checkExpiringCoAs = async () => {
         );
       }
 
-      logger.info(`Sent ${result.rows.length} CoA expiration notifications for ${days} days`);
+      logger.info(`Sent ${result.rows.length} CoA expiration notifications for ${safeDays} days`);
     }
   } catch (error) {
     logger.error('Error checking expiring CoAs:', error);

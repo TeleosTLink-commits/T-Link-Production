@@ -27,8 +27,6 @@ const manufacturerLoginValidator = [
   handleValidationErrors
 ];
 
-const router: Router = express.Router();
-
 // Database pool - creates own connection
 const pool = new Pool({
   user: process.env.DB_USER || 'postgres',

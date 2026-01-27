@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import type { StringValue } from 'ms';
@@ -13,7 +13,7 @@ const JWT_EXPIRES_IN: StringValue | number = (process.env.JWT_EXPIRES_IN || '7d'
 const SALT_ROUNDS = 10;
 
 // Login with validation
-router.post('/login', loginValidator, async (req, res, next) => {
+router.post('/login', loginValidator, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password } = req.body;
 
@@ -105,7 +105,7 @@ router.post('/login', loginValidator, async (req, res, next) => {
 });
 
 // Register (only if email is authorized) - with validation
-router.post('/register', registerValidator, async (req, res, next) => {
+router.post('/register', registerValidator, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password, first_name, last_name } = req.body;
 

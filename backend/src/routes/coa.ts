@@ -255,7 +255,8 @@ router.post('/', authenticate, authorize('admin', 'lab_staff'), upload.single('f
 router.get('/alerts/expiring', authenticate, async (req: AuthRequest, res, next) => {
   try {
     const { days } = req.query;
-    const daysAhead = parseInt(days as string) || 90;
+    // Sanitize and validate daysAhead to prevent SQL injection
+    const daysAhead = Math.min(Math.max(parseInt(days as string) || 90, 1), 365);
 
     const result = await query(
       `SELECT coa.*, 
@@ -263,10 +264,11 @@ router.get('/alerts/expiring', authenticate, async (req: AuthRequest, res, next)
               (coa.expiration_date - CURRENT_DATE) as days_until_expiration
        FROM certificates_of_analysis coa
        LEFT JOIN manufacturer_companies mc ON coa.manufacturer_id = mc.id
-       WHERE coa.expiration_date <= CURRENT_DATE + INTERVAL '${daysAhead} days'
+       WHERE coa.expiration_date <= CURRENT_DATE + INTERVAL '1 day' * $1
          AND coa.expiration_date > CURRENT_DATE
          AND coa.status != 'expired'
-       ORDER BY coa.expiration_date ASC`
+       ORDER BY coa.expiration_date ASC`,
+      [daysAhead]
     );
 
     res.json(result.rows);
