@@ -1,0 +1,7 @@
+{
+  "extends": ["development"],
+  "hints": {
+    "css-inline-styles": "off",
+    "compat-api/css": "off"
+  }
+}
