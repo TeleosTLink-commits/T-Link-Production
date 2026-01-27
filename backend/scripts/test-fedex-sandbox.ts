@@ -40,8 +40,8 @@ console.log(cyan('========================================\n'));
 
 console.log('Configuration:');
 console.log(`  API Base URL: ${FEDEX_API_BASE_URL}`);
-console.log(`  Account Number: ${FEDEX_ACCOUNT_NUMBER ? '****' + String(FEDEX_ACCOUNT_NUMBER).slice(-4) : 'not set'}`);
-console.log(`  API Key: ${FEDEX_API_KEY ? '****' + FEDEX_API_KEY.slice(-4) : 'not set'}`);
+console.log(`  Account Number: ${FEDEX_ACCOUNT_NUMBER ? '[configured]' : '[not set]'}`);
+console.log(`  API Key: ${FEDEX_API_KEY ? '[configured]' : '[not set]'}`);
 console.log('\n');
 
 /**

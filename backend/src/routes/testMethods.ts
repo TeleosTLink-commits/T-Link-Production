@@ -29,14 +29,16 @@ const safeUnlink = (filePath: string): void => {
   }
 };
 
-// Configure multer for file uploads
+// Configure multer for file uploads - use validated directory
+const UPLOAD_DIR = ALLOWED_UPLOAD_DIRS[0]; // Use first allowed directory
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = path.join('C:', 'T_Link', 'storage', 'test-methods');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    // Use pre-validated directory constant
+    if (!fs.existsSync(UPLOAD_DIR)) {
+      fs.mkdirSync(UPLOAD_DIR, { recursive: true });
     }
-    cb(null, uploadDir);
+    cb(null, UPLOAD_DIR);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);

@@ -13,10 +13,10 @@ const router: Router = express.Router();
 const manufacturerSignupValidator = [
   body('email').trim().isEmail().normalizeEmail().withMessage('Valid email is required'),
   body('password').isLength({ min: 8, max: 128 }).withMessage('Password must be 8-128 characters'),
-  body('first_name').trim().isLength({ min: 1, max: 50 }).matches(/^[a-zA-Z\s'-]+$/).withMessage('Valid first name required'),
-  body('last_name').trim().isLength({ min: 1, max: 50 }).matches(/^[a-zA-Z\s'-]+$/).withMessage('Valid last name required'),
+  body('first_name').trim().isLength({ min: 1, max: 50 }).isAlpha('en-US', { ignore: " '-" }).withMessage('Valid first name required'),
+  body('last_name').trim().isLength({ min: 1, max: 50 }).isAlpha('en-US', { ignore: " '-" }).withMessage('Valid last name required'),
   body('company_name').trim().isLength({ min: 1, max: 100 }).withMessage('Company name is required'),
-  body('contact_phone').optional().trim().matches(/^[\d\s\-\(\)\.+]*$/).withMessage('Invalid phone format'),
+  body('contact_phone').optional().trim().isMobilePhone('any', { strictMode: false }).withMessage('Invalid phone format'),
   handleValidationErrors
 ];
 

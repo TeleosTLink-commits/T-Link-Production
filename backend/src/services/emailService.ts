@@ -38,13 +38,30 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+/**
+ * Escape HTML entities to prevent XSS in email content
+ */
+const escapeHtml = (str: string): string => {
+  if (!str || typeof str !== 'string') return '';
+  const htmlEntities: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#x27;'
+  };
+  return str.replace(/[&<>"']/g, char => htmlEntities[char] || char);
+};
+
 export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
   try {
+    // Note: HTML is expected to be sanitized by the caller for templates
+    // This ensures any dynamic user content within templates is safe
     await transporter.sendMail({
       from: process.env.EMAIL_FROM || 'noreply@teleos.com',
       to: options.to,
-      subject: options.subject,
-      html: options.html,
+      subject: escapeHtml(options.subject),
+      html: options.html, // Templates are trusted; user data within should be escaped
       text: options.text || stripHtmlTags(options.html),
     });
 

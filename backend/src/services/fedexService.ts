@@ -361,12 +361,13 @@ class FedExService {
         };
       }
 
-      // Debug logging - only log non-sensitive metadata in production
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('FedEx shipment request:', JSON.stringify(shipmentPayload, null, 2));
-      } else {
-        console.log('FedEx shipment request initiated for:', request.fromAddress?.city || 'shipment');
-      }
+      // Log only non-sensitive metadata (no PII or full payloads)
+      console.log('FedEx shipment request initiated:', {
+        service: request.service,
+        isHazmat: request.isHazmat || false,
+        weight: request.weight,
+        weightUnit: request.weightUnit
+      });
 
       const response = await axios.post(
         `${FEDEX_API_BASE_URL}/ship/v1/shipments`,
