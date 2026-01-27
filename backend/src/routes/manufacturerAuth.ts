@@ -4,6 +4,28 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { authenticate } from '../middleware/auth';
 import { v4 as uuidv4 } from 'uuid';
+import { body } from 'express-validator';
+import { handleValidationErrors } from '../middleware/validators';
+
+const router: Router = express.Router();
+
+// Manufacturer signup validation
+const manufacturerSignupValidator = [
+  body('email').trim().isEmail().normalizeEmail().withMessage('Valid email is required'),
+  body('password').isLength({ min: 8, max: 128 }).withMessage('Password must be 8-128 characters'),
+  body('first_name').trim().isLength({ min: 1, max: 50 }).matches(/^[a-zA-Z\s'-]+$/).withMessage('Valid first name required'),
+  body('last_name').trim().isLength({ min: 1, max: 50 }).matches(/^[a-zA-Z\s'-]+$/).withMessage('Valid last name required'),
+  body('company_name').trim().isLength({ min: 1, max: 100 }).withMessage('Company name is required'),
+  body('contact_phone').optional().trim().matches(/^[\d\s\-\(\)\.+]*$/).withMessage('Invalid phone format'),
+  handleValidationErrors
+];
+
+// Manufacturer login validation
+const manufacturerLoginValidator = [
+  body('email').trim().isEmail().normalizeEmail().withMessage('Valid email is required'),
+  body('password').isLength({ min: 1, max: 128 }).withMessage('Password is required'),
+  handleValidationErrors
+];
 
 const router: Router = express.Router();
 
@@ -20,28 +42,10 @@ const pool = new Pool({
  * POST /api/auth/manufacturer/signup
  * Register a new manufacturer user
  */
-router.post('/signup', async (req: Request, res: Response) => {
+router.post('/signup', manufacturerSignupValidator, async (req: Request, res: Response) => {
   const client = await pool.connect();
   try {
     const { email, password, first_name, last_name, company_name, contact_phone, address } = req.body;
-
-    // Validation
-    if (!email || !password || !first_name || !last_name || !company_name) {
-      return res.status(400).json({
-        error: 'Missing required fields: email, password, first_name, last_name, company_name',
-      });
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ error: 'Invalid email format' });
-    }
-
-    // Validate password strength
-    if (password.length < 8) {
-      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
-    }
 
     // Check if email is in authorized list
     const authorizedCheck = await client.query(
@@ -153,13 +157,9 @@ router.post('/signup', async (req: Request, res: Response) => {
  * Login a manufacturer user (uses existing auth endpoint)
  * Included here for completeness - manufacturer login uses standard /api/auth/login
  */
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', manufacturerLoginValidator, async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password required' });
-    }
 
     // Query user
     const result = await pool.query('SELECT * FROM users WHERE email = $1 AND role = $2', [email, 'manufacturer']);

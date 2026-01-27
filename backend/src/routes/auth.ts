@@ -5,14 +5,15 @@ import type { StringValue } from 'ms';
 import { query } from '../config/database';
 import { AuthRequest, authenticate } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
+import { loginValidator, registerValidator } from '../middleware/validators';
 
 const router = Router();
 const JWT_SECRET: string = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const JWT_EXPIRES_IN: StringValue | number = (process.env.JWT_EXPIRES_IN || '7d') as StringValue | number;
 const SALT_ROUNDS = 10;
 
-// Login
-router.post('/login', async (req, res, next) => {
+// Login with validation
+router.post('/login', loginValidator, async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
@@ -103,18 +104,10 @@ router.post('/login', async (req, res, next) => {
   }
 });
 
-// Register (only if email is authorized)
-router.post('/register', async (req, res, next) => {
+// Register (only if email is authorized) - with validation
+router.post('/register', registerValidator, async (req, res, next) => {
   try {
     const { email, password, first_name, last_name } = req.body;
-
-    if (!email || !password || !first_name || !last_name) {
-      throw new AppError('All fields are required', 400);
-    }
-
-    if (password.length < 8) {
-      throw new AppError('Password must be at least 8 characters', 400);
-    }
 
     // Check if email is authorized
     const authCheck = await query(
