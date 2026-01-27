@@ -80,6 +80,15 @@ app.use(apiLimiter); // Apply rate limiting to all routes
 
 logger.info(`CORS origins configured: ${corsOrigins.join(', ')}`);
 logger.info(`Build version: ${BUILD_VERSION}`);
+
+// Handle preflight OPTIONS requests explicitly
+app.options('*', cors({
+  origin: corsOrigins,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Authorization', 'Content-Type'],
+}));
+
 app.use(cors({
   origin: corsOrigins,
   credentials: true,

@@ -1,11 +1,11 @@
 import express, { Router, Request, Response } from 'express';
-import { Pool } from 'pg';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { authenticate } from '../middleware/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { body } from 'express-validator';
 import { handleValidationErrors } from '../middleware/validators';
+import pool from '../config/database';
 
 const router: Router = express.Router();
 
@@ -26,15 +26,6 @@ const manufacturerLoginValidator = [
   body('password').isLength({ min: 1, max: 128 }).withMessage('Password is required'),
   handleValidationErrors
 ];
-
-// Database pool - creates own connection
-const pool = new Pool({
-  user: process.env.DB_USER || 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_NAME || 'tlink_db',
-  password: process.env.DB_PASSWORD || 'Ajwa8770',
-  port: parseInt(process.env.DB_PORT || '5432', 10),
-});
 
 /**
  * POST /api/auth/manufacturer/signup
