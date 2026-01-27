@@ -173,7 +173,9 @@ router.get('/stats', authenticate, async (req: AuthRequest, res: Response) => {
         COUNT(*) FILTER (WHERE expiration_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '60 days') as expiring_60_days,
         COUNT(*) FILTER (WHERE expiration_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '90 days') as expiring_90_days,
         COUNT(*) FILTER (WHERE coa_file_path IS NOT NULL) as with_coa,
-        COUNT(*) FILTER (WHERE sds_file_path IS NOT NULL) as with_sds
+        COUNT(*) FILTER (WHERE sds_file_path IS NOT NULL) as with_sds,
+        COUNT(*) FILTER (WHERE status = 'active' AND coa_file_path IS NULL) as samples_missing_coa,
+        COUNT(*) FILTER (WHERE status = 'active' AND sds_file_path IS NULL) as samples_missing_sds
       FROM samples
     `);
 
@@ -184,6 +186,26 @@ router.get('/stats', authenticate, async (req: AuthRequest, res: Response) => {
   } catch (error: any) {
     console.error('Error fetching stats:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch stats', error: error.message });
+  }
+});
+
+// GET /api/sample-inventory/supply-stats - Get shipping supply statistics for notifications
+router.get('/supply-stats', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        COUNT(*) FILTER (WHERE current_stock <= reorder_level) as reorder_needed,
+        COUNT(*) FILTER (WHERE current_stock > reorder_level AND current_stock < reorder_level * 1.5) as low_stock
+      FROM shipping_supplies
+    `);
+
+    res.json({
+      success: true,
+      data: result.rows[0]
+    });
+  } catch (error: any) {
+    console.error('Error fetching supply stats:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch supply stats', error: error.message });
   }
 });
 

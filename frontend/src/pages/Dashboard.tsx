@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 import { useAuthStore } from '../store/authStore';
+import NotificationBell from '../components/NotificationBell';
 
 // Dashboard component - main internal user dashboard
 const Dashboard: React.FC = () => {
@@ -29,6 +30,7 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
         <div className="header-right">
+          <NotificationBell />
           <button className="contact-btn" onClick={() => navigate('/internal/support')}>
             Contact Support
           </button>
