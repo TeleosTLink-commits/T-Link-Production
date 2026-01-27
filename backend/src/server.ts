@@ -28,9 +28,7 @@ const app = express();
 const PORT = parseInt(process.env.PORT || '5000', 10);
 const BUILD_VERSION = '2.0.0'; // Updated with schema fixes
 
-// Middleware
-app.use(helmet());
-app.use(apiLimiter); // Apply rate limiting to all routes
+// Allowed origins for CORS and CSP
 const corsOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:3000',
   'https://t-link-production.vercel.app', // Production Vercel
@@ -39,6 +37,47 @@ const corsOrigins = [
   'http://localhost:3000',
   'http://10.0.0.41:3000',             // Network access
 ];
+
+// Security middleware with enhanced CSP
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for React
+      imgSrc: ["'self'", "data:", "https://res.cloudinary.com", "blob:"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+      connectSrc: [
+        "'self'",
+        ...corsOrigins,
+        "https://apis.fedex.com",
+        "https://apis-sandbox.fedex.com",
+        "https://res.cloudinary.com",
+      ],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      workerSrc: ["'self'", "blob:"],
+      formAction: ["'self'"],
+      frameAncestors: ["'none'"],
+      baseUri: ["'self'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Disable for Cloudinary images
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow cross-origin resources
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true,
+  },
+  noSniff: true,
+  xssFilter: true,
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+}));
+
+app.use(apiLimiter); // Apply rate limiting to all routes
+
 logger.info(`CORS origins configured: ${corsOrigins.join(', ')}`);
 logger.info(`Build version: ${BUILD_VERSION}`);
 app.use(cors({
