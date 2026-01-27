@@ -69,8 +69,8 @@ const ManufacturerSignUp: React.FC = () => {
         address: formData.address || undefined,
       });
 
-      // Store token
-      localStorage.setItem('token', response.data.token);
+      // Store token (use same key as main login)
+      localStorage.setItem('auth_token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
 
       toast.success('Account created successfully!');
@@ -86,8 +86,31 @@ const ManufacturerSignUp: React.FC = () => {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
+        {/* Logo */}
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+          <img 
+            src="/images/tlink-official-logo.png" 
+            alt="T-Link" 
+            style={{ maxWidth: '200px', height: 'auto' }}
+          />
+        </div>
+        
         <h1 style={styles.title}>Manufacturer Portal</h1>
         <p style={styles.subtitle}>Create Your Account</p>
+
+        {/* Authorization Notice */}
+        <div style={{
+          backgroundColor: '#e7f3ff',
+          border: '1px solid #b3d9ff',
+          borderRadius: '4px',
+          padding: '12px',
+          marginBottom: '20px',
+          fontSize: '13px',
+          color: '#0056b3'
+        }}>
+          <strong>Note:</strong> Only pre-authorized email addresses can register. 
+          Contact your Ajwa Labs representative if you haven't been set up.
+        </div>
 
         <form onSubmit={handleSubmit} style={styles.form}>
           {/* Name Fields */}
@@ -239,6 +262,30 @@ const ManufacturerSignUp: React.FC = () => {
             </Link>
           </p>
         </div>
+
+        {/* Branding Footer */}
+        <div style={{
+          marginTop: '20px',
+          paddingTop: '15px',
+          borderTop: '1px solid #f0f0f0',
+          textAlign: 'center' as const
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            gap: '8px', 
+            fontSize: '12px', 
+            color: '#666' 
+          }}>
+            <span>Developed and operated by</span>
+            <img 
+              src="/images/AAL_Dig_Dev.png" 
+              alt="AAL Digital Development" 
+              style={{ height: '20px', width: 'auto' }} 
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -309,7 +356,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     padding: '12px',
     fontSize: '16px',
     fontWeight: 'bold',
-    backgroundColor: '#007bff',
+    backgroundColor: '#1a4d2e',
     color: 'white',
     border: 'none',
     borderRadius: '4px',

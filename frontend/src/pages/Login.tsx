@@ -82,11 +82,19 @@ const Login: React.FC = () => {
         </form>
 
         <div className="login-footer">
-          <p>Don't have an account? <Link to="/register" className="login-link">Create Account</Link></p>
+          <div style={{ marginBottom: '15px' }}>
+            <p style={{ marginBottom: '8px' }}>
+              <strong>Manufacturer?</strong>{' '}
+              <Link to="/manufacturer/signup" className="login-link">Create Manufacturer Account</Link>
+            </p>
+            <p style={{ marginBottom: '0' }}>
+              <strong>Ajwa Labs Staff?</strong>{' '}
+              <Link to="/register" className="login-link">Staff Registration</Link>
+            </p>
+          </div>
           <p className="login-note">
-            Note: Only authorized email addresses can register
+            Note: Only pre-authorized email addresses can register
           </p>
-
         </div>
       </div>
     </div>
