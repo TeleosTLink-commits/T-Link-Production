@@ -326,7 +326,7 @@
   .dashboard-header {
     flex-direction: column;
     padding: 20px;
-    min-height: auto;
+    min-height: 0; /* Changed from 'auto' for Firefox compatibility */
   }
 
   .header-left {
