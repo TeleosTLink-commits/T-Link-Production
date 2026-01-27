@@ -6,6 +6,7 @@ import { query } from '../config/database';
 import { AuthRequest, authenticate } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { loginValidator, registerValidator } from '../middleware/validators';
+import { logLoginSuccess, logLoginFailure, logAccountLockout } from '../middleware/securityLogger';
 
 const router = Router();
 const JWT_SECRET: string = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
@@ -31,6 +32,7 @@ router.post('/login', loginValidator, async (req: Request, res: Response, next: 
     );
 
     if (result.rows.length === 0) {
+      await logLoginFailure(req, email, 'User not found');
       throw new AppError('Invalid email or password', 401);
     }
 
@@ -39,11 +41,13 @@ router.post('/login', loginValidator, async (req: Request, res: Response, next: 
     // Check if account is locked
     if (user.locked_until && new Date(user.locked_until) > new Date()) {
       const minutesLeft = Math.ceil((new Date(user.locked_until).getTime() - Date.now()) / 60000);
+      await logLoginFailure(req, email, 'Account locked');
       throw new AppError(`Account is locked. Try again in ${minutesLeft} minutes.`, 423);
     }
 
     // Check if account is active
     if (!user.is_active) {
+      await logLoginFailure(req, email, 'Account disabled');
       throw new AppError('Account is disabled. Contact your administrator.', 403);
     }
 
@@ -63,9 +67,11 @@ router.post('/login', loginValidator, async (req: Request, res: Response, next: 
       );
 
       if (failedAttempts >= 5) {
+        await logAccountLockout(req, email);
         throw new AppError('Too many failed attempts. Account locked for 15 minutes.', 423);
       }
 
+      await logLoginFailure(req, email, `Invalid password (attempt ${failedAttempts})`);
       throw new AppError('Invalid email or password', 401);
     }
 
@@ -76,6 +82,9 @@ router.post('/login', loginValidator, async (req: Request, res: Response, next: 
        WHERE id = $1`,
       [user.id]
     );
+
+    // Log successful login
+    await logLoginSuccess(req, user.id, user.email);
 
     // Generate JWT token
     const signOptions: SignOptions = { expiresIn: JWT_EXPIRES_IN };
