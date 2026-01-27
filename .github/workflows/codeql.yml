@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'javascript' ]
+        language: [ 'javascript-typescript' ]
 
     steps:
       - name: Checkout repository
@@ -61,20 +61,3 @@ jobs:
         uses: github/codeql-action/analyze@v4
         with:
           category: /language:${{ matrix.language }}
-
-      - name: Build Backend
-        if: matrix.language == 'javascript' || matrix.language == 'typescript'
-        run: |
-          cd backend
-          npm run build
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-        with:
-          category: /language:${{ matrix.language }}
-
-      - name: Upload results to GitHub
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: 'results/codeql-results.sarif'
