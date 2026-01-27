@@ -210,6 +210,7 @@ const SupplyInventory: React.FC = () => {
                           min="0"
                           max={supply.current_stock}
                           style={styles.quantityInput}
+                          aria-label={`Quantity used for ${supply.name}`}
                         />
                         <button
                           onClick={() => handleQuantityChange(supply.id, selectedQty + 1)}

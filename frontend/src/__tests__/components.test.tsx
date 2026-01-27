@@ -537,11 +537,11 @@ describe('Lab Staff Components', () => {
         <form>
           <input placeholder="UN Number" type="text" />
           <input placeholder="Proper Shipping Name" type="text" />
-          <select>
+          <select aria-label="Hazard Class">
             <option>Class 2.2</option>
             <option>Class 3</option>
           </select>
-          <select>
+          <select aria-label="Packing Group">
             <option>I</option>
             <option>II</option>
             <option>III</option>
