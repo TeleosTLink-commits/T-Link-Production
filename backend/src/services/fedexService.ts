@@ -365,7 +365,7 @@ class FedExService {
       if (process.env.NODE_ENV !== 'production') {
         console.log('FedEx shipment request:', JSON.stringify(shipmentPayload, null, 2));
       } else {
-        console.log('FedEx shipment request initiated for:', request.shipper?.company || 'unknown');
+        console.log('FedEx shipment request initiated for:', request.fromAddress?.company || 'shipment');
       }
 
       const response = await axios.post(
