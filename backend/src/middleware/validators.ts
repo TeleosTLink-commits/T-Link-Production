@@ -186,14 +186,27 @@ export const updateUserValidator = [
 // ============ SANITIZER HELPERS ============
 
 /**
- * Sanitize a string to prevent XSS
+ * HTML entity encoding map for XSS prevention
+ */
+const htmlEntities: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#x27;',
+  '/': '&#x2F;',
+  '`': '&#x60;',
+  '=': '&#x3D;'
+};
+
+/**
+ * Sanitize a string to prevent XSS using HTML entity encoding
+ * This is a secure approach that encodes dangerous characters rather than removing them
  */
 export const sanitizeString = (input: string): string => {
-  if (!input) return '';
+  if (!input || typeof input !== 'string') return '';
   return input
-    .replace(/[<>]/g, '') // Remove angle brackets
-    .replace(/javascript:/gi, '') // Remove javascript: protocol
-    .replace(/on\w+=/gi, '') // Remove event handlers
+    .replace(/[&<>"'`=/]/g, (char) => htmlEntities[char] || char)
     .trim();
 };
 
