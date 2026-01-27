@@ -40,13 +40,21 @@ const transporter = nodemailer.createTransport({
 
 export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
   try {
-    // Note: HTML is expected to be sanitized by the caller for templates
-    // This ensures any dynamic user content within templates is safe
+    // Sanitize HTML content - remove script tags and event handlers
+    const sanitizeHtml = (html: string): string => {
+      if (!html || typeof html !== 'string') return '';
+      return html
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+        .replace(/javascript:/gi, '');
+    };
+    
+    const safeHtml = sanitizeHtml(options.html);
     await transporter.sendMail({
       from: process.env.EMAIL_FROM || 'noreply@teleos.com',
       to: options.to,
       subject: escapeHtml(options.subject),
-      html: options.html, // Templates are trusted; user data within should be escaped
+      html: safeHtml,
       text: options.text || stripHtmlTags(options.html),
     });
 

@@ -24,8 +24,11 @@ const isPathSafe = (filePath: string): boolean => {
  * Safely delete a file only if it's in an allowed directory
  */
 const safeUnlink = (filePath: string): void => {
-  if (isPathSafe(filePath) && fs.existsSync(filePath)) {
-    fs.unlinkSync(filePath);
+  // Validate path before any filesystem operation
+  const resolvedPath = path.resolve(filePath);
+  const isAllowed = ALLOWED_UPLOAD_DIRS.some(dir => resolvedPath.startsWith(dir));
+  if (isAllowed && fs.existsSync(resolvedPath)) {
+    fs.unlinkSync(resolvedPath);
   }
 };
 
