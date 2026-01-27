@@ -16,10 +16,20 @@ frontend/build/
 # Logs
 *.log
 logs/
+backend/logs/*.log
 
 # Uploads
 uploads/
 backend/uploads/
+
+# Database backups
+*.bak
+database/backups/
+
+# Temporary output files
+errors.txt
+upload-results.txt
+*-results.txt
 
 # IDE
 .vscode/
