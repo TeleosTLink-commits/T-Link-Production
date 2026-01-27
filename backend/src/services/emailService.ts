@@ -38,21 +38,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-/**
- * Escape HTML entities to prevent XSS in email content
- */
-const escapeHtml = (str: string): string => {
-  if (!str || typeof str !== 'string') return '';
-  const htmlEntities: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#x27;'
-  };
-  return str.replace(/[&<>"']/g, char => htmlEntities[char] || char);
-};
-
 export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
   try {
     // Note: HTML is expected to be sanitized by the caller for templates
