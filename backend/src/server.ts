@@ -76,12 +76,10 @@ app.use(helmet({
   referrerPolicy: { policy: "strict-origin-when-cross-origin" },
 }));
 
-app.use(apiLimiter); // Apply rate limiting to all routes
-
 logger.info(`CORS origins configured: ${corsOrigins.join(', ')}`);
 logger.info(`Build version: ${BUILD_VERSION}`);
 
-// Handle preflight OPTIONS requests explicitly
+// Handle preflight OPTIONS requests explicitly - MUST be before rate limiter
 app.options('*', cors({
   origin: corsOrigins,
   credentials: true,
@@ -89,12 +87,17 @@ app.options('*', cors({
   allowedHeaders: ['Authorization', 'Content-Type'],
 }));
 
+// CORS middleware - MUST be before rate limiter
 app.use(cors({
   origin: corsOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Authorization', 'Content-Type'],
 }));
+
+// Rate limiting - after CORS
+app.use(apiLimiter);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('combined', {
@@ -110,8 +113,9 @@ app.get('/health', (req, res) => {
 });
 
 // API Routes
-app.use('/api/auth', authLimiter, authRoutes); // Apply stricter rate limiting to auth
-app.use('/api/auth/manufacturer', authLimiter, manufacturerAuthRoutes);
+// NOTE: More specific routes must come before less specific ones
+app.use('/api/auth/manufacturer', authLimiter, manufacturerAuthRoutes); // Must be before /api/auth
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/test-methods', testMethodsRoutes);
 // CoA routes removed — functionality handled via sample-inventory
 app.use('/api/inventory', inventoryRoutes);
