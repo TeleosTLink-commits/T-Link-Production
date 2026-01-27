@@ -2,11 +2,15 @@
 import { query } from '../config/database';
 import { AuthRequest, authenticate, authorize } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
+import { apiLimiter } from '../middleware/rateLimiter';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
 const router = Router();
+
+// Apply rate limiting to all CoA routes
+router.use(apiLimiter);
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {

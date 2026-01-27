@@ -9,6 +9,17 @@ import logger from '../config/logger';
 
 const router: Router = express.Router();
 
+// Allowed directories for file operations (prevent path traversal)
+const ALLOWED_LABEL_DIR = path.resolve(__dirname, '../../uploads/shipping-labels');
+
+/**
+ * Validate that a file path is within the allowed shipping labels directory
+ */
+const isLabelPathSafe = (filePath: string): boolean => {
+  const resolvedPath = path.resolve(filePath);
+  return resolvedPath.startsWith(ALLOWED_LABEL_DIR);
+};
+
 // Database pool
 const pool = new Pool({
   user: process.env.DB_USER || 'postgres',
@@ -805,12 +816,19 @@ router.post('/generate-label', authenticate, checkLabStaff, async (req: Request,
       return res.status(500).json({ error: `FedEx label generation failed: ${labelResult.error}` });
     }
 
-    // Save label PDF to file system
-    const labelDir = path.join(__dirname, '../../uploads/shipping-labels');
+    // Save label PDF to file system (use pre-validated directory)
+    const labelDir = ALLOWED_LABEL_DIR;
     await fs.mkdir(labelDir, { recursive: true });
 
-    const labelFileName = `label_${shipmentId}_${Date.now()}.pdf`;
+    // Sanitize shipmentId to prevent path traversal in filename
+    const safeShipmentId = String(shipmentId).replace(/[^a-zA-Z0-9-]/g, '');
+    const labelFileName = `label_${safeShipmentId}_${Date.now()}.pdf`;
     const labelPath = path.join(labelDir, labelFileName);
+
+    // Validate path before writing
+    if (!isLabelPathSafe(labelPath)) {
+      return res.status(400).json({ error: 'Invalid file path' });
+    }
 
     // Decode base64 and save
     if (labelResult.label) {

@@ -487,7 +487,9 @@ class FedExService {
 
       return null;
     } catch (error: any) {
-      console.error(`FedEx tracking error for ${trackingNumber}:`, error.message);
+      // Sanitize tracking number to prevent log injection
+      const safeTrackingNumber = String(trackingNumber).replace(/[^a-zA-Z0-9-]/g, '');
+      console.error(`FedEx tracking error for ${safeTrackingNumber}:`, error.message);
       return null;
     }
   }

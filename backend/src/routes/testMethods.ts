@@ -5,6 +5,29 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
+// Allowed upload directories for path validation
+const ALLOWED_UPLOAD_DIRS = [
+  path.resolve('C:', 'T_Link', 'storage', 'test-methods'),
+  path.resolve(process.cwd(), 'uploads'),
+  path.resolve(process.cwd(), 'storage', 'test-methods'),
+];
+
+/**
+ * Validate that a file path is within allowed directories (prevent path traversal)
+ */
+const isPathSafe = (filePath: string): boolean => {
+  const resolvedPath = path.resolve(filePath);
+  return ALLOWED_UPLOAD_DIRS.some(dir => resolvedPath.startsWith(dir));
+};
+
+/**
+ * Safely delete a file only if it's in an allowed directory
+ */
+const safeUnlink = (filePath: string): void => {
+  if (isPathSafe(filePath) && fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
+  }
+};
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -333,10 +356,12 @@ router.post('/:id/upload', authenticate, authorize('admin', 'lab_user'), upload.
         if (!filePath) {
           return res.status(500).json({ success: false, message: 'Failed to upload file to cloud' });
         }
-        // Delete the temporary file after uploading to Cloudinary
-        fs.unlink(req.file.path, (err) => {
-          if (err) console.error('Error deleting temp file:', err);
-        });
+        // Delete the temporary file after uploading to Cloudinary (safe delete)
+        if (isPathSafe(req.file.path)) {
+          fs.unlink(req.file.path, (err) => {
+            if (err) console.error('Error deleting temp file:', err);
+          });
+        }
       } catch (cloudError: any) {
         console.error('Cloudinary upload error:', cloudError);
         return res.status(500).json({ success: false, message: 'Failed to upload to cloud storage', error: cloudError.message });
@@ -349,15 +374,15 @@ router.post('/:id/upload', authenticate, authorize('admin', 'lab_user'), upload.
     );
 
     if (result.rows.length === 0) {
-      // Delete uploaded file if test method not found
-      fs.unlinkSync(req.file.path);
+      // Delete uploaded file if test method not found (safe delete)
+      safeUnlink(req.file.path);
       return res.status(404).json({ success: false, message: 'Test method not found' });
     }
 
     res.json({ success: true, data: result.rows[0], message: 'File uploaded successfully' });
   } catch (error: any) {
     if (req.file) {
-      fs.unlinkSync(req.file.path); // Clean up file on error
+      safeUnlink(req.file.path); // Clean up file on error (safe delete)
     }
     console.error('Error uploading file:', error);
     res.status(500).json({ success: false, message: error.message || 'Failed to upload file' });

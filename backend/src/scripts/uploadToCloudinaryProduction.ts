@@ -117,8 +117,19 @@ async function processFileType(config: FileConfig): Promise<void> {
 
       const currentPath = record[fileField];
 
-      // Skip if already has valid Cloudinary URL
-      if (!forceReupload && currentPath && currentPath.startsWith('https://res.cloudinary.com')) {
+      // Skip if already has valid Cloudinary URL (strict validation to prevent spoofing)
+      const isValidCloudinaryUrl = (url: string): boolean => {
+        try {
+          const parsed = new URL(url);
+          return parsed.protocol === 'https:' && 
+                 parsed.hostname === 'res.cloudinary.com' &&
+                 parsed.pathname.length > 1;
+        } catch {
+          return false;
+        }
+      };
+
+      if (!forceReupload && currentPath && isValidCloudinaryUrl(currentPath)) {
         console.log(`  ⊘ Skipped (already Cloudinary URL): ${record.id}`);
         skipped++;
         continue;

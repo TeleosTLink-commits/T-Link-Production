@@ -8,6 +8,26 @@ interface EmailOptions {
   text?: string;
 }
 
+/**
+ * Safely strip HTML tags without ReDoS vulnerability
+ * Uses iterative approach instead of regex with unbounded quantifiers
+ */
+const stripHtmlTags = (html: string): string => {
+  if (!html || typeof html !== 'string') return '';
+  let result = '';
+  let inTag = false;
+  for (let i = 0; i < html.length; i++) {
+    if (html[i] === '<') {
+      inTag = true;
+    } else if (html[i] === '>') {
+      inTag = false;
+    } else if (!inTag) {
+      result += html[i];
+    }
+  }
+  return result.replace(/\s+/g, ' ').trim();
+};
+
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: parseInt(process.env.SMTP_PORT || '587'),
@@ -25,7 +45,7 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
       to: options.to,
       subject: options.subject,
       html: options.html,
-      text: options.text || options.html.replace(/<[^>]*>/g, ''),
+      text: options.text || stripHtmlTags(options.html),
     });
 
     logger.info(`Email sent successfully to ${options.to}`);

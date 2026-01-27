@@ -76,7 +76,9 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
         lot_number ILIKE $${paramCount} OR 
         cas_number ILIKE $${paramCount}
       )`);
-      params.push(`%${search}%`);
+      // Escape LIKE special characters to prevent SQL injection
+      const escapedSearch = String(search).replace(/[%_\\]/g, '\\$&');
+      params.push(`%${escapedSearch}%`);
       paramCount++;
     }
 
