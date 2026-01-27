@@ -21,14 +21,17 @@ const isPathSafe = (filePath: string): boolean => {
 };
 
 /**
- * Safely delete a file only if it's in an allowed directory
+ * Safely delete a file - only deletes files within UPLOAD_DIR
+ * Constructs path from basename to prevent path traversal
  */
-const safeUnlink = (filePath: string): void => {
-  // Validate path before any filesystem operation
-  const resolvedPath = path.resolve(filePath);
-  const isAllowed = ALLOWED_UPLOAD_DIRS.some(dir => resolvedPath.startsWith(dir));
-  if (isAllowed && fs.existsSync(resolvedPath)) {
-    fs.unlinkSync(resolvedPath);
+const safeDeleteUploadedFile = (filename: string): void => {
+  // Only use the basename to prevent path traversal attacks
+  const safeName = path.basename(filename);
+  const safePath = path.join(UPLOAD_DIR, safeName);
+  
+  // Double-check the path is within our upload directory
+  if (safePath.startsWith(UPLOAD_DIR) && fs.existsSync(safePath)) {
+    fs.unlinkSync(safePath);
   }
 };
 
@@ -362,11 +365,7 @@ router.post('/:id/upload', authenticate, authorize('admin', 'lab_user'), upload.
           return res.status(500).json({ success: false, message: 'Failed to upload file to cloud' });
         }
         // Delete the temporary file after uploading to Cloudinary (safe delete)
-        if (isPathSafe(req.file.path)) {
-          fs.unlink(req.file.path, (err) => {
-            if (err) console.error('Error deleting temp file:', err);
-          });
-        }
+        safeDeleteUploadedFile(req.file.filename);
       } catch (cloudError: any) {
         console.error('Cloudinary upload error:', cloudError);
         return res.status(500).json({ success: false, message: 'Failed to upload to cloud storage', error: cloudError.message });
@@ -380,14 +379,14 @@ router.post('/:id/upload', authenticate, authorize('admin', 'lab_user'), upload.
 
     if (result.rows.length === 0) {
       // Delete uploaded file if test method not found (safe delete)
-      safeUnlink(req.file.path);
+      safeDeleteUploadedFile(req.file.filename);
       return res.status(404).json({ success: false, message: 'Test method not found' });
     }
 
     res.json({ success: true, data: result.rows[0], message: 'File uploaded successfully' });
   } catch (error: any) {
     if (req.file) {
-      safeUnlink(req.file.path); // Clean up file on error (safe delete)
+      safeDeleteUploadedFile(req.file.filename); // Clean up file on error (safe delete)
     }
     console.error('Error uploading file:', error);
     res.status(500).json({ success: false, message: error.message || 'Failed to upload file' });

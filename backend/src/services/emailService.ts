@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import sanitizeHtmlLib from 'sanitize-html';
 import logger from '../config/logger';
 
 interface EmailOptions {
@@ -40,16 +41,18 @@ const transporter = nodemailer.createTransport({
 
 export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
   try {
-    // Sanitize HTML content - remove script tags and event handlers
-    const sanitizeHtml = (html: string): string => {
-      if (!html || typeof html !== 'string') return '';
-      return html
-        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-        .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
-        .replace(/javascript:/gi, '');
-    };
+    // Use sanitize-html library for proper XSS protection
+    const safeHtml = sanitizeHtmlLib(options.html, {
+      allowedTags: sanitizeHtmlLib.defaults.allowedTags.concat(['img', 'style']),
+      allowedAttributes: {
+        ...sanitizeHtmlLib.defaults.allowedAttributes,
+        '*': ['style', 'class'],
+        'img': ['src', 'alt', 'width', 'height'],
+        'a': ['href', 'target', 'rel']
+      },
+      allowedSchemes: ['http', 'https', 'mailto']
+    });
     
-    const safeHtml = sanitizeHtml(options.html);
     await transporter.sendMail({
       from: process.env.EMAIL_FROM || 'noreply@teleos.com',
       to: options.to,
