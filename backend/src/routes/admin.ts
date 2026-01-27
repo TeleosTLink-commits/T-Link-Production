@@ -88,7 +88,7 @@ router.post('/users', async (req, res) => {
       });
     }
 
-    // Check if email already exists
+    // Check if email already exists in users table
     const existingUser = await pool.query(
       'SELECT id FROM users WHERE email = $1',
       [email]
@@ -96,33 +96,47 @@ router.post('/users', async (req, res) => {
 
     if (existingUser.rows.length > 0) {
       return res.status(400).json({ 
-        error: 'Email already exists' 
+        error: 'Email already exists as a registered user' 
       });
     }
 
-    // Generate temporary password (user will need to register)
-    // Use a random string that user cannot use - forces them to go through registration
-    const tempPassword = await bcrypt.hash(`temp_${Date.now()}_${Math.random()}`, 10);
+    // Check if email already in authorized_emails
+    const existingAuthorized = await pool.query(
+      'SELECT id FROM authorized_emails WHERE email = $1',
+      [email]
+    );
 
-    // Create user with placeholder names (will be updated during registration)
-    const result = await pool.query(`
-      INSERT INTO users (email, username, first_name, last_name, password_hash, role, is_active, email_verified)
-      VALUES ($1, $1, 'Pending', 'Registration', $2, $3, false, false)
-      RETURNING id, email, role, is_active, created_at
-    `, [email, tempPassword, role]);
+    if (existingAuthorized.rows.length > 0) {
+      // Update existing authorized email with new role
+      await pool.query(
+        'UPDATE authorized_emails SET role = $1 WHERE email = $2',
+        [role, email]
+      );
+      return res.json({ 
+        success: true, 
+        message: 'User authorization updated. They can now register with this role.',
+        data: { email, role } 
+      });
+    }
+
+    // Add to authorized_emails table - user will complete registration themselves
+    await pool.query(`
+      INSERT INTO authorized_emails (email, role)
+      VALUES ($1, $2)
+    `, [email, role]);
 
     // TODO: Send email invitation with registration link
     // await emailService.sendUserInvitation(email, role);
 
     res.json({ 
       success: true, 
-      message: 'User invitation created. User must complete registration.',
-      data: result.rows[0] 
+      message: 'User authorized successfully. They can now register at the portal.',
+      data: { email, role }
     });
   } catch (error: any) {
-    console.error('Error creating user:', error);
+    console.error('Error authorizing user:', error);
     res.status(500).json({ 
-      error: 'Failed to create user',
+      error: 'Failed to authorize user',
       details: error.message 
     });
   }
