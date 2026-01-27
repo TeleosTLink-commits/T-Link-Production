@@ -1,7 +1,15 @@
 import jwt, { SignOptions } from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+// Fail-safe: Require JWT_SECRET in production
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('FATAL: JWT_SECRET must be set and at least 32 characters in production');
+  }
+  console.warn('⚠️ WARNING: Using insecure default JWT_SECRET. Set JWT_SECRET environment variable.');
+}
+const SECRET = JWT_SECRET || 'dev-only-insecure-secret-key-32chars';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -18,14 +26,14 @@ export interface AuthRequest extends Request {
 }
 
 export const generateToken = (payload: any): string => {
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload, SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || '24h',
   } as SignOptions);
 };
 
 export const verifyToken = (token: string): any => {
   try {
-    return jwt.verify(token, JWT_SECRET);
+    return jwt.verify(token, SECRET);
   } catch (error) {
     return null;
   }
