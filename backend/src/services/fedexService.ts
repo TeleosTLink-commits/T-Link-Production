@@ -153,7 +153,10 @@ class FedExService {
         }
       );
 
-      console.log('FedEx address validation response:', JSON.stringify(response.data, null, 2));
+      // Debug logging - only log non-sensitive data in production
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('FedEx address validation response:', JSON.stringify(response.data, null, 2));
+      }
 
       if (response.data.output?.resolvedAddresses && response.data.output.resolvedAddresses.length > 0) {
         const resolved = response.data.output.resolvedAddresses[0];
@@ -358,7 +361,12 @@ class FedExService {
         };
       }
 
-      console.log('FedEx shipment request:', JSON.stringify(shipmentPayload, null, 2));
+      // Debug logging - only log non-sensitive metadata in production
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('FedEx shipment request:', JSON.stringify(shipmentPayload, null, 2));
+      } else {
+        console.log('FedEx shipment request initiated for:', request.shipper?.company || 'unknown');
+      }
 
       const response = await axios.post(
         `${FEDEX_API_BASE_URL}/ship/v1/shipments`,
