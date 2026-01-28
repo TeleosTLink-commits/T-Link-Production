@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
+import { useAuthStore } from '../../store/authStore';
 import './AdminPanel.css';
 
 interface User {
@@ -56,6 +57,7 @@ interface ActivityData {
 
 const AdminPanel: React.FC = () => {
   const navigate = useNavigate();
+  const { user: currentUser } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'users' | 'activity' | 'shipments' | 'samples' | 'testmethods' | 'system'>('users');
   const [loading, setLoading] = useState(false);
   
@@ -226,6 +228,18 @@ const AdminPanel: React.FC = () => {
     }
   };
 
+  const handleDeleteUser = async (userId: string, email: string) => {
+    if (!confirm(`⚠️ PERMANENTLY DELETE user ${email}?\n\nThis will:\n- Remove the user account\n- Remove their authorization\n- They will NOT be able to log in or re-register\n\nThis action CANNOT be undone!`)) return;
+    
+    try {
+      await api.delete(`/admin/users/${userId}`);
+      alert(`User ${email} has been permanently deleted`);
+      fetchUsers();
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to delete user');
+    }
+  };
+
   const handleDeleteShipment = async (id: string, shipmentNumber: string) => {
     if (!confirm(`Delete shipment ${shipmentNumber}? This action cannot be undone.`)) return;
     
@@ -373,6 +387,14 @@ const AdminPanel: React.FC = () => {
                             >
                               {user.is_active ? 'Deactivate' : 'Activate'}
                             </button>
+                            {currentUser?.role === 'super_admin' && user.role !== 'super_admin' && (
+                              <button 
+                                className="action-btn small danger"
+                                onClick={() => handleDeleteUser(user.id, user.email)}
+                              >
+                                Delete
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

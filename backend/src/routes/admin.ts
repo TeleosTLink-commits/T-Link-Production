@@ -246,6 +246,47 @@ router.post('/users/:id/toggle-status', async (req, res) => {
   }
 });
 
+// Permanently delete user (super_admin only)
+router.delete('/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // First check if user exists
+    const userCheck = await pool.query('SELECT email, role FROM users WHERE id = $1', [id]);
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const userToDelete = userCheck.rows[0];
+    
+    // Prevent deleting super_admin users as safety measure
+    if (userToDelete.role === 'super_admin') {
+      return res.status(403).json({ error: 'Cannot delete super admin users' });
+    }
+    
+    // Delete related records first (foreign key constraints)
+    // Delete from manufacturer_users if exists
+    await pool.query('DELETE FROM manufacturer_users WHERE user_id = $1', [id]);
+    
+    // Delete the user
+    await pool.query('DELETE FROM users WHERE id = $1', [id]);
+    
+    // Optionally remove from authorized_emails so they can't re-register
+    await pool.query('DELETE FROM authorized_emails WHERE LOWER(email) = LOWER($1)', [userToDelete.email]);
+    
+    res.json({ 
+      success: true, 
+      message: `User ${userToDelete.email} permanently deleted`
+    });
+  } catch (error: any) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ 
+      error: 'Failed to delete user',
+      details: error.message 
+    });
+  }
+});
+
 // Delete shipment
 router.delete('/shipments/:id', async (req, res) => {
   const client = await pool.connect();
