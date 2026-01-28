@@ -8,7 +8,6 @@ T-Link is a comprehensive database solution designed for Teleos, integrating lab
 
 ### Module 1: Digital Quality Library
 - **Test Methods (TM)** with smart version control and audit trails
-- **Standard Operating Procedures (SOPs)** document management
 - **Certificates of Analysis (CoA)** with lot number tracking
 - **Automated expiration alerts** (30, 60, 90 days)
 - Complete document audit logging
@@ -149,7 +148,6 @@ cd backend
 mkdir uploads
 mkdir uploads\test_methods
 mkdir uploads\coa
-mkdir uploads\sops
 mkdir logs
 ```
 
