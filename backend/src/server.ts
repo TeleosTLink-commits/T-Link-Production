@@ -25,6 +25,10 @@ import internalSupportRoutes from './routes/internalSupport';
 dotenv.config();
 
 const app = express();
+
+// Trust proxy for rate limiting behind reverse proxies (Render, Vercel, etc.)
+app.set('trust proxy', 1);
+
 const PORT = parseInt(process.env.PORT || '5000', 10);
 const BUILD_VERSION = '2.0.0'; // Updated with schema fixes
 
