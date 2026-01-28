@@ -387,10 +387,11 @@ const AdminPanel: React.FC = () => {
                             >
                               {user.is_active ? 'Deactivate' : 'Activate'}
                             </button>
-                            {currentUser?.role === 'super_admin' && user.role !== 'super_admin' && (
+                            {currentUser?.role === 'super_admin' && (
                               <button 
                                 className="action-btn small danger"
                                 onClick={() => handleDeleteUser(user.id, user.email)}
+                                title={user.role === 'super_admin' ? 'Cannot delete super admins' : 'Permanently delete user'}
                               >
                                 Delete
                               </button>
