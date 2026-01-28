@@ -500,6 +500,188 @@ export const sendRegistrationInvitation = async (
   }
 };
 
+interface FileShareEmailOptions {
+  to: string;
+  recipientName: string;
+  subject: string;
+  message: string;
+  attachment: {
+    filename: string;
+    content: Buffer;
+  };
+  senderName: string;
+}
+
+export const sendFileShareEmail = async (options: FileShareEmailOptions): Promise<{ success: boolean; error?: string }> => {
+  const { to, recipientName, subject, message, attachment, senderName } = options;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">T-Link</h1>
+        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0;">Sample Management System</p>
+      </div>
+      
+      <div style="padding: 30px; background: #f9fafb;">
+        <p style="color: #374151; margin-top: 0;">Hello ${escapeHtml(recipientName)},</p>
+        
+        <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; margin: 20px 0;">
+          <p style="color: #374151; white-space: pre-wrap; margin: 0;">${escapeHtml(message)}</p>
+        </div>
+        
+        <div style="background: #f0fdf4; padding: 16px; border-radius: 8px; border: 1px solid #bbf7d0;">
+          <p style="color: #166534; margin: 0; font-size: 14px;">
+            📎 <strong>Attached File:</strong> ${escapeHtml(attachment.filename)}
+          </p>
+        </div>
+        
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;" />
+        
+        <p style="color: #6b7280; font-size: 13px; margin: 0;">
+          This email was sent by ${escapeHtml(senderName)} via T-Link Sample Management System.
+        </p>
+      </div>
+      
+      <div style="background: #1e40af; padding: 20px; text-align: center; border-radius: 0 0 8px 8px;">
+        <p style="color: white; margin: 0; font-size: 14px;">© 2026 Ajwa Labs</p>
+      </div>
+    </div>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM || 'noreply@ajwalabs.com',
+      to,
+      subject: `[T-Link] ${escapeHtml(subject)}`,
+      html,
+      text: `Hello ${recipientName},\n\n${message}\n\nAttached: ${attachment.filename}\n\nSent via T-Link Sample Management System`,
+      attachments: [
+        {
+          filename: attachment.filename,
+          content: attachment.content
+        }
+      ]
+    });
+
+    logger.info(`File share email sent to ${to} with attachment: ${attachment.filename}`);
+    return { success: true };
+  } catch (error: any) {
+    logger.error(`Failed to send file share email to ${to}:`, error);
+    return { success: false, error: error.message };
+  }
+};
+
+interface ReviewSubmissionEmailOptions {
+  to: string;
+  subject: string;
+  reviewerName: string;
+  reviewerEmail: string;
+  reviewData: {
+    reviewDate?: string;
+    browserUsed?: string;
+    tasks?: Record<string, string>;
+    ratings?: Record<string, string>;
+    bugsFound?: string;
+    suggestions?: string;
+  };
+  formattedBody: string;
+  summary: {
+    passCount: number;
+    failCount: number;
+    avgRating: string;
+  };
+}
+
+export const sendReviewSubmissionEmail = async (options: ReviewSubmissionEmailOptions): Promise<{ success: boolean; error?: string }> => {
+  const { to, subject, reviewerName, reviewerEmail, reviewData, formattedBody, summary } = options;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="color: white; margin: 0;">T-Link Quick Review</h1>
+        <p style="color: rgba(255,255,255,0.9); margin-top: 10px;">Submitted on ${escapeHtml(reviewData.reviewDate || new Date().toLocaleDateString())}</p>
+      </div>
+      
+      <div style="padding: 30px; background: #f9fafb;">
+        <!-- Reviewer Info -->
+        <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e5e7eb;">
+          <h2 style="color: #1e40af; margin-top: 0; font-size: 18px;">Reviewer Information</h2>
+          <p><strong>Name:</strong> ${escapeHtml(reviewerName)}</p>
+          <p><strong>Email:</strong> <a href="mailto:${escapeHtml(reviewerEmail)}">${escapeHtml(reviewerEmail)}</a></p>
+          <p><strong>Browser:</strong> ${escapeHtml(reviewData.browserUsed || 'Not specified')}</p>
+        </div>
+
+        <!-- Summary -->
+        <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e5e7eb;">
+          <h2 style="color: #1e40af; margin-top: 0; font-size: 18px;">Summary</h2>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="text-align: center; padding: 15px; background: #d1fae5; border-radius: 8px; width: 33%;">
+                <div style="font-size: 32px; font-weight: bold; color: #059669;">${summary.passCount}</div>
+                <div style="color: #065f46;">Passed</div>
+              </td>
+              <td style="width: 10px;"></td>
+              <td style="text-align: center; padding: 15px; background: #fee2e2; border-radius: 8px; width: 33%;">
+                <div style="font-size: 32px; font-weight: bold; color: #dc2626;">${summary.failCount}</div>
+                <div style="color: #991b1b;">Failed</div>
+              </td>
+              <td style="width: 10px;"></td>
+              <td style="text-align: center; padding: 15px; background: #fef3c7; border-radius: 8px; width: 33%;">
+                <div style="font-size: 32px; font-weight: bold; color: #d97706;">⭐ ${escapeHtml(summary.avgRating)}</div>
+                <div style="color: #92400e;">Avg Rating</div>
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Detailed Results -->
+        <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e5e7eb;">
+          <h2 style="color: #1e40af; margin-top: 0; font-size: 18px;">Detailed Results</h2>
+          <pre style="white-space: pre-wrap; font-family: monospace; font-size: 13px; background: #f3f4f6; padding: 15px; border-radius: 6px; overflow-x: auto;">${escapeHtml(formattedBody)}</pre>
+        </div>
+
+        ${reviewData.bugsFound ? `
+        <!-- Bugs Found -->
+        <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #fecaca;">
+          <h2 style="color: #dc2626; margin-top: 0; font-size: 18px;">🐛 Bugs/Issues Reported</h2>
+          <p style="white-space: pre-wrap;">${escapeHtml(reviewData.bugsFound)}</p>
+        </div>
+        ` : ''}
+
+        ${reviewData.suggestions ? `
+        <!-- Suggestions -->
+        <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #bfdbfe;">
+          <h2 style="color: #1e40af; margin-top: 0; font-size: 18px;">💡 Suggestions</h2>
+          <p style="white-space: pre-wrap;">${escapeHtml(reviewData.suggestions)}</p>
+        </div>
+        ` : ''}
+      </div>
+
+      <div style="text-align: center; padding: 20px; background: #1e40af; color: white; border-radius: 0 0 8px 8px;">
+        <p style="margin: 0; font-size: 14px;">T-Link Sample Management System</p>
+        <p style="margin: 5px 0 0; font-size: 12px; opacity: 0.8;">© 2026 Ajwa Labs</p>
+      </div>
+    </div>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM || 'noreply@ajwalabs.com',
+      to,
+      replyTo: reviewerEmail,
+      subject: escapeHtml(subject),
+      html,
+      text: formattedBody
+    });
+
+    logger.info(`Review submission email sent to ${to} from ${reviewerEmail}`);
+    return { success: true };
+  } catch (error: any) {
+    logger.error(`Failed to send review submission email:`, error);
+    return { success: false, error: error.message };
+  }
+};
+
 function escapeHtml(text: string): string {
   const map: { [key: string]: string } = {
     '&': '&amp;',

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
+import ShareWithUserModal from '../../components/ShareWithUserModal';
 import './AdminPanel.css';
 
 interface User {
@@ -75,6 +76,7 @@ const AdminPanel: React.FC = () => {
   // Users
   const [users, setUsers] = useState<User[]>([]);
   const [showAddUser, setShowAddUser] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [newUser, setNewUser] = useState({ email: '', role: 'manufacturer' });
   
   // Shipments
@@ -346,9 +348,14 @@ const AdminPanel: React.FC = () => {
           <div className="admin-section">
             <div className="admin-section-header">
               <h2>User Management</h2>
-              <button className="admin-primary-btn" onClick={() => setShowAddUser(true)}>
-                + Add New User
-              </button>
+              <div className="admin-header-actions">
+                <button className="admin-share-btn" onClick={() => setShowShareModal(true)}>
+                  📤 Share with User
+                </button>
+                <button className="admin-primary-btn" onClick={() => setShowAddUser(true)}>
+                  + Add New User
+                </button>
+              </div>
             </div>
             
             {loading ? (
@@ -748,6 +755,19 @@ const AdminPanel: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Share with User Modal */}
+      <ShareWithUserModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        users={users.map(u => ({
+          id: parseInt(u.id) || 0,
+          email: u.email,
+          name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || undefined,
+          company_name: undefined,
+          role: u.role
+        }))}
+      />
 
       <footer className="dashboard-footer">
         <div className="footer-content">

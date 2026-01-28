@@ -1,25 +1,27 @@
 # T-Link: Teleos Logistics & Information Network
 
-**Centralized Quality, Inventory, & Logistics Management**
+## Centralized Quality, Inventory, & Logistics Management
 
 T-Link is a comprehensive database solution designed for Teleos, integrating laboratory quality data, real-time inventory tracking, and specialized shipping logistics into one secure, accessible platform.
 
 ## 🎯 Features
 
 ### Module 1: Digital Quality Library
+
 - **Test Methods (TM)** with smart version control and audit trails
 - **Certificates of Analysis (CoA)** with lot number tracking
 - **Automated expiration alerts** (30, 60, 90 days)
 - Complete document audit logging
 
-### Module 2: Precision Inventory & Freezer Management
+### Module 2: Precision Inventory
+
 - **Dynamic volume tracking** with real-time subtraction
 - **Low-inventory alerts** with customizable thresholds
-- **Precise location tracking** (freezer/shelf level)
 - Sample integrity monitoring
 - Complete transaction history
 
 ### Module 3: Logistics & Shipment Command Center
+
 - **Shipping supply inventory** management
 - **Automated compliance labeling** for hazardous materials
 - **Shipment request workflow** with notifications
@@ -27,9 +29,11 @@ T-Link is a comprehensive database solution designed for Teleos, integrating lab
 - Hazard classification and handling instructions
 
 ### Module 4: Manufacturer Access Portal
+
 - **Secure external portal** for manufacturers
 - **Read-only CoA access** by lot number
-- **Reference standard lookup**
+- **Sample Inventory** - check available quantity of a sample
+- **Request Shipment** - Enter receiver details and add up to 10 samples with inventory check
 - **Shipment tracking** for incoming deliveries
 
 ## 📋 Prerequisites
@@ -78,6 +82,7 @@ createdb tlink_db
 ```
 
 Or via PostgreSQL CLI:
+
 ```sql
 CREATE DATABASE tlink_db;
 ```
@@ -100,7 +105,8 @@ DB_USER=postgres
 DB_PASSWORD=your_password_here
 
 # JWT Authentication
-JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
+# Use a securely generated random 256-bit key (do NOT use a simple phrase)
+JWT_SECRET=REPLACE_WITH_RANDOM_256BIT_KEY
 JWT_EXPIRES_IN=24h
 
 # Email Configuration (for notifications)
@@ -137,6 +143,7 @@ npm run db:seed
 ```
 
 This creates default users:
+
 - **Admin**: `admin` / `admin123`
 - **Lab Staff**: `lab_user` / `admin123`
 - **Logistics**: `logistics_user` / `admin123`
@@ -161,18 +168,21 @@ npm run dev
 ```
 
 This runs:
+
 - Backend API on `http://localhost:5000`
 - Frontend on `http://localhost:3000`
 
 ### Run Separately
 
 **Backend only:**
+
 ```powershell
 cd backend
 npm run dev
 ```
 
 **Frontend only:**
+
 ```powershell
 cd frontend
 npm run dev
@@ -183,7 +193,7 @@ npm run dev
 After seeding the database:
 
 | Role | Username | Password |
-|------|----------|----------|
+| ------ | ---------- | ---------- |
 | Admin | `admin` | `admin123` |
 | Lab Staff | `lab_user` | `admin123` |
 | Logistics | `logistics_user` | `admin123` |
@@ -192,7 +202,6 @@ After seeding the database:
 
 ## 📁 Project Structure
 
-```
 T_Link/
 ├── backend/
 │   ├── src/
@@ -223,16 +232,17 @@ T_Link/
 │   ├── schema.sql           # Complete database schema
 │   └── seed.sql             # Sample data
 └── package.json
-```
 
 ## 🔌 API Endpoints
 
 ### Authentication
+
 - `POST /api/auth/login` - User login
 - `POST /api/auth/register` - Register new user (admin only)
 - `GET /api/auth/me` - Get current user
 
 ### Test Methods
+
 - `GET /api/test-methods` - List all test methods
 - `GET /api/test-methods/:id` - Get specific test method
 - `POST /api/test-methods` - Create new test method (with file upload)
@@ -240,12 +250,14 @@ T_Link/
 - `PATCH /api/test-methods/:id/set-current` - Set current version
 
 ### Certificates of Analysis
+
 - `GET /api/coa` - List all CoAs
 - `GET /api/coa/lot/:lotNumber` - Get CoA by lot number
 - `POST /api/coa` - Create new CoA (with file upload)
 - `GET /api/coa/alerts/expiring` - Get expiring CoAs
 
 ### Inventory
+
 - `GET /api/inventory` - List all samples
 - `GET /api/inventory/:id` - Get specific sample
 - `POST /api/inventory` - Add new sample
@@ -255,6 +267,7 @@ T_Link/
 - `GET /api/inventory/freezers/all` - List all freezers
 
 ### Shipments
+
 - `GET /api/shipments` - List all shipments
 - `GET /api/shipments/:id` - Get specific shipment
 - `POST /api/shipments` - Create shipment request
@@ -264,6 +277,7 @@ T_Link/
 - `GET /api/shipments/hazards/all` - List hazard classifications
 
 ### Manufacturer Portal
+
 - `GET /api/manufacturer/company/info` - Get company info
 - `GET /api/manufacturer/reference-standards` - List CoAs for manufacturer
 - `GET /api/manufacturer/coa/:lotNumber` - Get specific CoA
@@ -293,6 +307,7 @@ Configure email settings in `.env` to enable notifications.
 ## 🏗️ Database Schema Highlights
 
 ### Key Tables
+
 - **users** - User authentication and roles
 - **manufacturer_companies** - External manufacturer data
 - **test_methods** - TM documents with version control
@@ -305,6 +320,7 @@ Configure email settings in `.env` to enable notifications.
 - **notifications** - System alerts
 
 ### Automated Triggers
+
 - Auto-update CoA status based on expiration
 - Auto-update sample status based on volume
 - Auto-update supply status based on quantity
@@ -336,6 +352,7 @@ npm start
 ### Environment Variables for Production
 
 Update `.env` with production values:
+
 - Set `NODE_ENV=production`
 - Use strong `JWT_SECRET`
 - Configure production database
@@ -371,6 +388,7 @@ npm run db:seed
 T-Link implements multiple layers of security to protect sensitive data:
 
 ### Authentication & Authorization
+
 - **JWT-based authentication** with configurable expiration (default: 24h)
 - **Role-based access control** (Admin, Lab Staff, Logistics, Manufacturer)
 - **Password hashing** using bcrypt with salt rounds
@@ -378,6 +396,7 @@ T-Link implements multiple layers of security to protect sensitive data:
 - **Secure session management**
 
 ### API Security
+
 - **Rate limiting** to prevent brute force attacks
   - Auth endpoints: 5 requests per 15 minutes
   - General API: 100 requests per 15 minutes
@@ -389,6 +408,7 @@ T-Link implements multiple layers of security to protect sensitive data:
 - **SQL injection prevention** via parameterized queries
 
 ### File Upload Security
+
 - **File type validation** (whitelist of allowed extensions)
 - **MIME type verification** to prevent disguised files
 - **File size limits** (default: 10MB)
@@ -396,18 +416,21 @@ T-Link implements multiple layers of security to protect sensitive data:
 - **Secure file storage** with Cloudinary integration
 
 ### Monitoring & Logging
+
 - **Structured logging** with Winston
 - **Request logging** with Morgan
 - **Error tracking** and centralized error handling
 - **Audit trails** for sensitive operations
 
 ### Environment Security
+
 - **Environment variable validation** on startup
 - **Separate .env files** for development and production
 - **Sensitive data excluded** from version control
 - **Example configurations** provided without credentials
 
 ### Best Practices
+
 - **TypeScript strict mode** enabled for type safety
 - **No hardcoded credentials** in source code
 - **Regular dependency updates** and vulnerability scanning
@@ -416,6 +439,7 @@ T-Link implements multiple layers of security to protect sensitive data:
 ## 🤝 Support
 
 For issues or questions:
+
 1. Check the logs in `backend/logs/`
 2. Verify database connection
 3. Ensure all environment variables are set
@@ -428,6 +452,7 @@ Proprietary - Teleos Corporation
 ---
 
 **Built with:**
+
 - TypeScript
 - Node.js / Express
 - React

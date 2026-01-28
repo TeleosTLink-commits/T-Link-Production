@@ -1,10 +1,41 @@
 import { Router } from 'express';
 import { pool } from '../config/database';
 import bcrypt from 'bcrypt';
+import multer from 'multer';
 import { authenticate, AuthRequest } from '../middleware/auth';
-import { sendRegistrationInvitation } from '../services/emailService';
+import { sendRegistrationInvitation, sendFileShareEmail, sendReviewSubmissionEmail } from '../services/emailService';
 
 const router = Router();
+
+// Configure multer for file uploads (memory storage for email attachments)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow common document types
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain',
+      'text/markdown',
+      'text/csv',
+      'image/png',
+      'image/jpeg',
+      'image/jpg'
+    ];
+    
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type'));
+    }
+  }
+});
 
 // Middleware to check super admin role
 const checkSuperAdmin = (req: AuthRequest, res: any, next: any) => {
@@ -492,6 +523,125 @@ router.get('/user-activity', async (req, res) => {
     res.status(500).json({ 
       error: 'Failed to fetch user activity',
       details: error.message 
+    });
+  }
+});
+
+// Share file with user via email
+router.post('/share-file', upload.single('file'), async (req: AuthRequest, res) => {
+  try {
+    const { recipientEmail, recipientName, subject, message } = req.body;
+    const file = req.file;
+
+    if (!recipientEmail || !subject || !message) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        required: ['recipientEmail', 'subject', 'message']
+      });
+    }
+
+    if (!file) {
+      return res.status(400).json({
+        error: 'No file uploaded'
+      });
+    }
+
+    // Send email with attachment
+    const emailResult = await sendFileShareEmail({
+      to: recipientEmail,
+      recipientName: recipientName || recipientEmail,
+      subject,
+      message,
+      attachment: {
+        filename: file.originalname,
+        content: file.buffer
+      },
+      senderName: req.user?.email || 'T-Link Admin'
+    });
+
+    if (!emailResult.success) {
+      throw new Error(emailResult.error || 'Failed to send email');
+    }
+
+    // Log the activity
+    await pool.query(`
+      INSERT INTO admin_activity_log (user_id, action, details, created_at)
+      VALUES ($1, 'share_file', $2, NOW())
+    `, [
+      req.user?.id,
+      JSON.stringify({
+        recipient_email: recipientEmail,
+        file_name: file.originalname,
+        subject: subject
+      })
+    ]).catch(() => {
+      // Ignore if table doesn't exist
+    });
+
+    res.json({
+      success: true,
+      message: 'File shared successfully',
+      recipient: recipientEmail
+    });
+  } catch (error: any) {
+    console.error('Error sharing file:', error);
+    res.status(500).json({
+      error: 'Failed to share file',
+      details: error.message
+    });
+  }
+});
+
+// Submit quick review questionnaire
+router.post('/submit-review', async (req: AuthRequest, res) => {
+  try {
+    const { to, subject, reviewerName, reviewerEmail, reviewData, formattedBody } = req.body;
+
+    if (!to || !subject || !reviewerName || !reviewerEmail || !reviewData) {
+      return res.status(400).json({
+        error: 'Missing required fields'
+      });
+    }
+
+    // Calculate summary stats
+    const tasks = reviewData.tasks || {};
+    const passCount = Object.values(tasks).filter((v: unknown) => v === 'pass').length;
+    const failCount = Object.values(tasks).filter((v: unknown) => v === 'fail').length;
+
+    const ratings = reviewData.ratings || {};
+    const ratingValues = Object.values(ratings).map((v: unknown) => parseInt(v as string) || 0).filter(v => v > 0);
+    const avgRating = ratingValues.length > 0
+      ? (ratingValues.reduce((a: number, b: number) => a + b, 0) / ratingValues.length).toFixed(1)
+      : 'N/A';
+
+    // Send email
+    const emailResult = await sendReviewSubmissionEmail({
+      to,
+      subject,
+      reviewerName,
+      reviewerEmail,
+      reviewData,
+      formattedBody,
+      summary: {
+        passCount,
+        failCount,
+        avgRating
+      }
+    });
+
+    if (!emailResult.success) {
+      throw new Error(emailResult.error || 'Failed to send email');
+    }
+
+    res.json({
+      success: true,
+      message: 'Review submitted successfully'
+    });
+  } catch (error: any) {
+    console.error('Error submitting review:', error);
+    res.status(500).json({
+      error: 'Failed to submit review',
+      details: error.message
     });
   }
 });

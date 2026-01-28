@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import HelpButton from '../../components/HelpButton';
 import './ManufacturerDashboard.css';
 
 const ManufacturerDashboard: React.FC = () => {
@@ -25,6 +26,7 @@ const ManufacturerDashboard: React.FC = () => {
           </div>
         </div>
         <div className="header-right">
+          <HelpButton userType="manufacturer" />
           <button className="contact-btn" onClick={() => navigate('/manufacturer/support')}>
             Contact Support
           </button>
