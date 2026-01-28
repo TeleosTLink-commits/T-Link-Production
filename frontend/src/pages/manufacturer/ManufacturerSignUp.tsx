@@ -6,6 +6,9 @@ import api from '../../services/api';
 const ManufacturerSignUp: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [emailChecked, setEmailChecked] = useState(false);
+  const [emailAuthorized, setEmailAuthorized] = useState(false);
+  const [authorizedRole, setAuthorizedRole] = useState('');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -17,6 +20,26 @@ const ManufacturerSignUp: React.FC = () => {
     address: '',
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  const checkEmail = async (email: string) => {
+    if (!email || !email.includes('@')) {
+      setEmailChecked(false);
+      return;
+    }
+
+    try {
+      const response = await api.post('/auth/check-email', { email });
+      setEmailChecked(true);
+      setEmailAuthorized(response.data.data.authorized);
+      setAuthorizedRole(response.data.data.role || '');
+    } catch (err) {
+      setEmailChecked(false);
+    }
+  };
+
+  const handleEmailBlur = () => {
+    checkEmail(formData.email);
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -30,6 +53,12 @@ const ManufacturerSignUp: React.FC = () => {
         ...prev,
         [name]: '',
       }));
+    }
+    // Reset email status if email is changed
+    if (name === 'email') {
+      setEmailChecked(false);
+      setEmailAuthorized(false);
+      setAuthorizedRole('');
     }
   };
 
@@ -180,9 +209,24 @@ const ManufacturerSignUp: React.FC = () => {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              style={{ ...styles.input, borderColor: errors.email ? '#dc3545' : '#ccc' }}
+              onBlur={handleEmailBlur}
+              style={{ 
+                ...styles.input, 
+                borderColor: errors.email ? '#dc3545' : emailChecked ? (emailAuthorized ? '#28a745' : '#dc3545') : '#ccc' 
+              }}
               placeholder="your@company.com"
             />
+            {emailChecked && (
+              <span style={{ 
+                ...styles.error, 
+                color: emailAuthorized ? '#28a745' : '#dc3545',
+                fontWeight: emailAuthorized ? '500' : 'normal'
+              }}>
+                {emailAuthorized 
+                  ? `✓ Email is pre-approved for ${authorizedRole.replace('_', ' ')} registration` 
+                  : '✗ This email is not authorized. Contact your Ajwa Labs representative.'}
+              </span>
+            )}
             {errors.email && <span style={styles.error}>{errors.email}</span>}
           </div>
 

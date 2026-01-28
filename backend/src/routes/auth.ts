@@ -113,6 +113,76 @@ router.post('/login', loginValidator, async (req: Request, res: Response, next: 
   }
 });
 
+// Check if email is authorized for registration (public endpoint for form validation)
+router.post('/check-email', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ data: { authorized: false, message: 'Email is required' } });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Check if already registered
+    const existingUser = await query(
+      'SELECT id, first_name, last_name FROM users WHERE LOWER(email) = $1',
+      [normalizedEmail]
+    );
+
+    if (existingUser.rows.length > 0) {
+      const user = existingUser.rows[0];
+      // Check if pending registration (admin-created placeholder)
+      if (user.first_name === 'Pending' && user.last_name === 'Registration') {
+        const authCheck = await query(
+          'SELECT role FROM authorized_emails WHERE LOWER(email) = $1',
+          [normalizedEmail]
+        );
+        const role = authCheck.rows[0]?.role || 'unknown';
+        return res.json({ 
+          data: {
+            authorized: true, 
+            role,
+            message: `Email is pre-approved for ${role.replace('_', ' ')} registration`
+          }
+        });
+      }
+      return res.json({ 
+        data: {
+          authorized: false, 
+          message: 'This email is already registered. Please sign in instead.'
+        }
+      });
+    }
+
+    // Check authorized_emails table
+    const authCheck = await query(
+      'SELECT role FROM authorized_emails WHERE LOWER(email) = $1',
+      [normalizedEmail]
+    );
+
+    if (authCheck.rows.length > 0) {
+      const role = authCheck.rows[0].role;
+      return res.json({ 
+        data: {
+          authorized: true, 
+          role,
+          message: `Email is pre-approved for ${role.replace('_', ' ')} registration`
+        }
+      });
+    }
+
+    return res.json({ 
+      data: {
+        authorized: false, 
+        message: 'This email is not authorized. Contact your Ajwa Labs representative to get approved.'
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Register (only if email is authorized) - with validation
 router.post('/register', registerValidator, async (req: Request, res: Response, next: NextFunction) => {
   try {
