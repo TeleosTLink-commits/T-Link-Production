@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>T-Link User Manual - Ajwa Labs (Internal Staff)</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --primary: #1e40af;
+      --primary-light: #3b82f6;
+      --accent: #f5d800;
+      --success: #059669;
+      --warning: #d97706;
+      --danger: #dc2626;
+      --text: #1f2937;
+      --text-light: #6b7280;
+      --bg: #f9fafb;
+      --white: #ffffff;
+      --border: #e5e7eb;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    /* Navigation */
+    .nav-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      color: white;
+      padding: 15px 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 1000;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .nav-brand h1 {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .nav-brand .subtitle {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    .nav-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .nav-btn {
+      padding: 8px 16px;
+      background: rgba(255,255,255,0.2);
+      border: none;
+      border-radius: 6px;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+
+    .nav-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      top: 60px;
+      left: 0;
+      width: 280px;
+      height: calc(100vh - 60px);
+      background: var(--white);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 20px 0;
+      z-index: 100;
+    }
+
+    .sidebar-title {
+      padding: 0 20px 15px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--text-light);
+      letter-spacing: 0.5px;
+    }
+
+    .toc-list {
+      list-style: none;
+    }
+
+    .toc-item {
+      border-left: 3px solid transparent;
+    }
+
+    .toc-link {
+      display: block;
+      padding: 10px 20px;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .toc-link:hover {
+      background: var(--bg);
+      color: var(--primary);
+    }
+
+    .toc-item.active {
+      border-left-color: var(--primary);
+      background: rgba(30, 64, 175, 0.05);
+    }
+
+    .toc-item.active .toc-link {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .toc-sublist {
+      list-style: none;
+      padding-left: 20px;
+    }
+
+    .toc-sublink {
+      display: block;
+      padding: 6px 20px;
+      color: var(--text-light);
+      text-decoration: none;
+      font-size: 13px;
+    }
+
+    .toc-sublink:hover {
+      color: var(--primary);
+    }
+
+    /* Main Content */
+    .main-content {
+      margin-left: 280px;
+      margin-top: 60px;
+      padding: 40px 60px;
+      max-width: 900px;
+    }
+
+    .version-info {
+      display: flex;
+      gap: 20px;
+      padding: 15px 20px;
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+      border-radius: 8px;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .version-info span {
+      color: var(--text-light);
+    }
+
+    .version-info strong {
+      color: var(--primary);
+    }
+
+    /* Sections */
+    .section {
+      margin-bottom: 50px;
+      scroll-margin-top: 80px;
+    }
+
+    h2 {
+      font-size: 28px;
+      color: var(--primary);
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid var(--accent);
+    }
+
+    h3 {
+      font-size: 20px;
+      color: var(--text);
+      margin: 25px 0 15px;
+    }
+
+    h4 {
+      font-size: 16px;
+      color: var(--text);
+      margin: 20px 0 10px;
+    }
+
+    p {
+      margin-bottom: 15px;
+      color: var(--text);
+    }
+
+    /* Lists */
+    ul, ol {
+      margin: 15px 0 15px 25px;
+    }
+
+    li {
+      margin-bottom: 8px;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 14px;
+    }
+
+    th {
+      background: var(--primary);
+      color: white;
+      padding: 12px 15px;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    td {
+      padding: 12px 15px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tr:nth-child(even) {
+      background: var(--bg);
+    }
+
+    tr:hover {
+      background: #f0f9ff;
+    }
+
+    /* Code/Highlight boxes */
+    .note-box {
+      padding: 15px 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .note-box.info {
+      background: #eff6ff;
+      border-left: 4px solid var(--primary);
+    }
+
+    .note-box.warning {
+      background: #fffbeb;
+      border-left: 4px solid var(--warning);
+    }
+
+    .note-box.success {
+      background: #f0fdf4;
+      border-left: 4px solid var(--success);
+    }
+
+    .note-box.danger {
+      background: #fef2f2;
+      border-left: 4px solid var(--danger);
+    }
+
+    .note-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .note-content {
+      flex: 1;
+    }
+
+    .note-content strong {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    /* Badge styles */
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge-green { background: #d1fae5; color: #065f46; }
+    .badge-blue { background: #dbeafe; color: #1e40af; }
+    .badge-yellow { background: #fef3c7; color: #92400e; }
+    .badge-red { background: #fee2e2; color: #991b1b; }
+
+    /* Steps */
+    .steps {
+      counter-reset: step;
+      list-style: none;
+      margin-left: 0;
+    }
+
+    .steps li {
+      position: relative;
+      padding-left: 50px;
+      margin-bottom: 20px;
+    }
+
+    .steps li::before {
+      counter-increment: step;
+      content: counter(step);
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 32px;
+      height: 32px;
+      background: var(--primary);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    /* Keyboard shortcuts */
+    kbd {
+      display: inline-block;
+      padding: 3px 8px;
+      background: #f3f4f6;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+
+    /* Links */
+    a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    /* Print button */
+    .print-btn {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      padding: 12px 20px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      transition: transform 0.2s;
+    }
+
+    .print-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 60px;
+      padding: 30px 0;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      color: var(--text-light);
+      font-size: 14px;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s;
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .main-content {
+        margin-left: 0;
+        padding: 30px 20px;
+      }
+
+      .menu-toggle {
+        display: block;
+      }
+    }
+
+    @media print {
+      .nav-header, .sidebar, .print-btn {
+        display: none;
+      }
+
+      .main-content {
+        margin: 0;
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation Header -->
+  <header class="nav-header">
+    <div class="nav-brand">
+      <div>
+        <h1>T-Link User Manual</h1>
+        <span class="subtitle">Ajwa Labs - Internal Staff</span>
+      </div>
+    </div>
+    <div class="nav-actions">
+      <button class="nav-btn" onclick="window.print()">🖨️ Print</button>
+      <button class="nav-btn" onclick="window.close()">✕ Close</button>
+    </div>
+  </header>
+
+  <!-- Sidebar Table of Contents -->
+  <nav class="sidebar">
+    <div class="sidebar-title">Table of Contents</div>
+    <ul class="toc-list">
+      <li class="toc-item active">
+        <a href="#getting-started" class="toc-link">1. Getting Started</a>
+        <ul class="toc-sublist">
+          <li><a href="#accessing-tlink" class="toc-sublink">Accessing T-Link</a></li>
+          <li><a href="#logging-in" class="toc-sublink">Logging In</a></li>
+          <li><a href="#user-roles" class="toc-sublink">User Roles</a></li>
+        </ul>
+      </li>
+      <li class="toc-item">
+        <a href="#dashboard" class="toc-link">2. Dashboard Overview</a>
+      </li>
+      <li class="toc-item">
+        <a href="#sample-inventory" class="toc-link">3. Sample Inventory</a>
+        <ul class="toc-sublist">
+          <li><a href="#adding-samples" class="toc-sublink">Adding Samples</a></li>
+          <li><a href="#editing-samples" class="toc-sublink">Editing Samples</a></li>
+          <li><a href="#documents" class="toc-sublink">Documents (CoA/SDS)</a></li>
+        </ul>
+      </li>
+      <li class="toc-item">
+        <a href="#test-methods" class="toc-link">4. Test Methods Library</a>
+      </li>
+      <li class="toc-item">
+        <a href="#shipments" class="toc-link">5. Shipment Logistics</a>
+        <ul class="toc-sublist">
+          <li><a href="#creating-shipment" class="toc-sublink">Creating Shipments</a></li>
+          <li><a href="#hazmat" class="toc-sublink">HazMat Shipments</a></li>
+        </ul>
+      </li>
+      <li class="toc-item">
+        <a href="#processing" class="toc-link">6. Processing Dashboard</a>
+      </li>
+      <li class="toc-item">
+        <a href="#supplies" class="toc-link">7. Supply Inventory</a>
+      </li>
+      <li class="toc-item">
+        <a href="#support" class="toc-link">8. Support System</a>
+      </li>
+      <li class="toc-item">
+        <a href="#troubleshooting" class="toc-link">9. Troubleshooting</a>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="version-info">
+      <span><strong>Version:</strong> 1.0</span>
+      <span><strong>Last Updated:</strong> January 27, 2026</span>
+      <span><strong>URL:</strong> <a href="https://t-link-production.vercel.app">t-link-production.vercel.app</a></span>
+    </div>
+
+    <!-- Section 1: Getting Started -->
+    <section id="getting-started" class="section">
+      <h2>1. Getting Started</h2>
+      
+      <h3 id="accessing-tlink">1.1 Accessing T-Link</h3>
+      <ol class="steps">
+        <li>Open your web browser and navigate to: <strong><a href="https://t-link-production.vercel.app">https://t-link-production.vercel.app</a></strong></li>
+        <li>You will see the T-Link login page with the company logo</li>
+      </ol>
+
+      <h3 id="logging-in">1.2 Logging In</h3>
+      <ol class="steps">
+        <li>Enter your <strong>Email Address</strong> (must be pre-authorized by an administrator)</li>
+        <li>Enter your <strong>Password</strong></li>
+        <li>Click <strong>Sign In</strong></li>
+      </ol>
+
+      <div class="note-box warning">
+        <span class="note-icon">⚠️</span>
+        <div class="note-content">
+          <strong>Security Note</strong>
+          After 5 failed login attempts, your account will be temporarily locked for 15 minutes.
+        </div>
+      </div>
+
+      <h3 id="user-roles">1.3 User Roles</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Role</th>
+            <th>Access Level</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-blue">Lab Staff</span></td>
+            <td>Sample Inventory, Test Methods, Shipment Creation</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-yellow">Admin</span></td>
+            <td>All Lab Staff functions + User management</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-red">Super Admin</span></td>
+            <td>Full platform control + System management</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Section 2: Dashboard -->
+    <section id="dashboard" class="section">
+      <h2>2. Dashboard Overview</h2>
+      <p>After logging in, you'll see the <strong>T-Link Dashboard</strong> with three main action buttons:</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Button</th>
+            <th>Function</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Test Methods</strong></td>
+            <td>Manage testing procedures and documentation</td>
+          </tr>
+          <tr>
+            <td><strong>Sample Inventory</strong></td>
+            <td>Track chemical samples, CoAs, and SDS documents</td>
+          </tr>
+          <tr>
+            <td><strong>Shipment Logistics</strong></td>
+            <td>Create and manage outbound shipments</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Navigation</h3>
+      <ul>
+        <li><strong>Help Button</strong> - Top right corner, access user manual and support</li>
+        <li><strong>Sign Out</strong> - Top right corner, securely logs you out</li>
+      </ul>
+    </section>
+
+    <!-- Section 3: Sample Inventory -->
+    <section id="sample-inventory" class="section">
+      <h2>3. Sample Inventory Management</h2>
+      
+      <h3>3.1 Dashboard Statistics</h3>
+      <p>At the top of the page, you'll see real-time statistics:</p>
+      <ul>
+        <li><strong>Total Samples</strong> - All samples in the system</li>
+        <li><strong>Active Samples</strong> - Currently active inventory</li>
+        <li><strong>Expired Samples</strong> - Samples past expiration date</li>
+        <li><strong>Expiring Soon</strong> - Samples expiring in 30/60/90 days</li>
+        <li><strong>With CoA</strong> - Samples with Certificate of Analysis attached</li>
+        <li><strong>With SDS</strong> - Samples with Safety Data Sheet attached</li>
+      </ul>
+
+      <h3 id="adding-samples">3.2 Adding a New Sample</h3>
+      <ol class="steps">
+        <li>Click <strong>+ Add Sample</strong> button</li>
+        <li>Fill in the required fields (Chemical Name, Lot Number, Received Date, Quantity)</li>
+        <li>Attach CoA and SDS files if available</li>
+        <li>Click <strong>Save Sample</strong></li>
+      </ol>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Description</th>
+            <th>Required</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Chemical Name</td><td>Full name of the chemical</td><td>Yes</td></tr>
+          <tr><td>Lot Number</td><td>Unique lot identifier</td><td>Yes</td></tr>
+          <tr><td>Received Date</td><td>Date sample was received</td><td>Yes</td></tr>
+          <tr><td>Quantity</td><td>Amount in stock</td><td>Yes</td></tr>
+          <tr><td>CAS Number</td><td>Chemical Abstracts Service number</td><td>No</td></tr>
+          <tr><td>Expiration Date</td><td>When the sample expires</td><td>Recommended</td></tr>
+          <tr><td>UN Number</td><td>DOT hazmat identifier</td><td>For HazMat</td></tr>
+          <tr><td>Hazard Class</td><td>DOT classification (1-9)</td><td>For HazMat</td></tr>
+        </tbody>
+      </table>
+
+      <h3>3.3 Expiration Badges</h3>
+      <p>Samples display colored badges based on expiration status:</p>
+      <ul>
+        <li><span class="badge badge-green">Valid</span> - More than 90 days until expiration</li>
+        <li><span class="badge badge-blue">60-90 days</span> - Expires in 60-90 days</li>
+        <li><span class="badge badge-yellow">30-60 days</span> - Expires in 30-60 days</li>
+        <li><span class="badge badge-red">Expires Soon</span> - Less than 30 days</li>
+        <li><span class="badge badge-red">Expired</span> - Past expiration date</li>
+      </ul>
+    </section>
+
+    <!-- Section 4: Test Methods -->
+    <section id="test-methods" class="section">
+      <h2>4. Test Methods Library</h2>
+      <p>The Test Methods Library displays all testing procedures with:</p>
+      <ul>
+        <li><strong>TM Number</strong> - Unique identifier (e.g., TM-001)</li>
+        <li><strong>Title</strong> - Test method name</li>
+        <li><strong>Version</strong> - Current version number</li>
+        <li><strong>Status</strong> - Active, Draft, or Archived</li>
+        <li><strong>Document</strong> - Attached PDF file</li>
+      </ul>
+
+      <h3>Adding a New Test Method</h3>
+      <ol class="steps">
+        <li>Click <strong>+ Add Test Method</strong></li>
+        <li>Fill in TM Number, Title, Version, and Description</li>
+        <li>Upload the test method PDF document</li>
+        <li>Click <strong>Save</strong></li>
+      </ol>
+    </section>
+
+    <!-- Section 5: Shipments -->
+    <section id="shipments" class="section">
+      <h2>5. Shipment Logistics</h2>
+      
+      <h3 id="creating-shipment">5.1 Creating a New Shipment</h3>
+      <ol class="steps">
+        <li>Click <strong>+ Create Shipment</strong></li>
+        <li>Select samples from the dropdown and enter quantities</li>
+        <li>Enter recipient contact information and address</li>
+        <li>Review HazMat information (auto-populated)</li>
+        <li>Click <strong>Create Shipment</strong></li>
+      </ol>
+
+      <h3 id="hazmat">5.2 HazMat Information</h3>
+      <p>For hazardous materials, the following is auto-populated:</p>
+      <ul>
+        <li><strong>UN Number</strong> - United Nations hazard ID</li>
+        <li><strong>Hazard Class</strong> - DOT classification (1-9)</li>
+        <li><strong>Packing Group</strong> - Severity level (I, II, or III)</li>
+        <li><strong>Proper Shipping Name</strong> - Official DOT name</li>
+        <li><strong>Emergency Contact</strong> - Required 24/7 contact</li>
+      </ul>
+
+      <div class="note-box info">
+        <span class="note-icon">📦</span>
+        <div class="note-content">
+          <strong>Required Supplies</strong>
+          The system automatically calculates required packaging based on quantity.
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 6: Processing -->
+    <section id="processing" class="section">
+      <h2>6. Processing Dashboard</h2>
+      
+      <h3>Processing Workflow</h3>
+      <ol class="steps">
+        <li><strong>Review Shipment</strong> - Verify all details are correct</li>
+        <li><strong>Print SDS</strong> - Print Safety Data Sheets for inclusion</li>
+        <li><strong>Validate Address</strong> - FedEx verifies the destination</li>
+        <li><strong>Get Rate Quote</strong> - Select service and get shipping cost</li>
+        <li><strong>Generate Label</strong> - Create FedEx shipping label</li>
+        <li><strong>Print Labels</strong> - Print shipping and HazMat labels</li>
+        <li><strong>Record Supplies</strong> - Update supply inventory</li>
+      </ol>
+    </section>
+
+    <!-- Section 7: Supplies -->
+    <section id="supplies" class="section">
+      <h2>7. Supply Inventory</h2>
+      
+      <h3>Stock Status Indicators</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Color</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-green">Green</span></td>
+            <td>In Stock</td>
+            <td>None needed</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-yellow">Yellow</span></td>
+            <td>Low Stock</td>
+            <td>Plan reorder</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-red">Red</span></td>
+            <td>Reorder Needed</td>
+            <td>Order immediately</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Section 8: Support -->
+    <section id="support" class="section">
+      <h2>8. Support System</h2>
+      
+      <h3>Support Types</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Contact</th>
+            <th>Use For</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Technical Support</strong></td>
+            <td><a href="mailto:jhunzie@ajwalabs.com">jhunzie@ajwalabs.com</a></td>
+            <td>Portal access, login issues, software bugs</td>
+          </tr>
+          <tr>
+            <td><strong>Lab Support</strong></td>
+            <td><a href="mailto:eboak@ajwalabs.com">eboak@ajwalabs.com</a></td>
+            <td>Sample questions, testing procedures, CoA/SDS</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="note-box success">
+        <span class="note-icon">💡</span>
+        <div class="note-content">
+          <strong>Quick Access</strong>
+          Click the <strong>Help</strong> button in the top-right corner to access support from any page.
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 9: Troubleshooting -->
+    <section id="troubleshooting" class="section">
+      <h2>9. Troubleshooting</h2>
+      
+      <h3>Common Issues</h3>
+      
+      <h4>Cannot Login</h4>
+      <ul>
+        <li>Verify email is spelled correctly</li>
+        <li>Check for CAPS LOCK</li>
+        <li>After 5 failed attempts, wait 15 minutes</li>
+        <li>Contact admin for password reset</li>
+      </ul>
+
+      <h4>Document Won't Download</h4>
+      <ul>
+        <li>Check popup blocker settings</li>
+        <li>Try right-click → "Open in new tab"</li>
+        <li>Clear browser cache</li>
+      </ul>
+
+      <h4>FedEx Label Not Generating</h4>
+      <ul>
+        <li>Validate the destination address first</li>
+        <li>Check all required fields are filled</li>
+        <li>Ensure weight is entered</li>
+        <li>Try a different service type</li>
+      </ul>
+
+      <h3>Browser Requirements</h3>
+      <p>For best experience, use:</p>
+      <ul>
+        <li>Google Chrome (recommended)</li>
+        <li>Microsoft Edge</li>
+        <li>Mozilla Firefox</li>
+        <li>Safari (Mac)</li>
+      </ul>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p><strong>© 2026 Ajwa Labs - T-Link Sample Management System</strong></p>
+      <p>Developed by AAL Digital Development</p>
+    </footer>
+  </main>
+
+  <!-- Print Button -->
+  <button class="print-btn" onclick="window.print()">
+    🖨️ Print Manual
+  </button>
+
+  <script>
+    // Highlight active TOC item on scroll
+    const sections = document.querySelectorAll('.section');
+    const tocItems = document.querySelectorAll('.toc-item');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop;
+        if (scrollY >= sectionTop - 100) {
+          current = section.getAttribute('id');
+        }
+      });
+
+      tocItems.forEach(item => {
+        item.classList.remove('active');
+        const link = item.querySelector('.toc-link');
+        if (link && link.getAttribute('href') === '#' + current) {
+          item.classList.add('active');
+        }
+      });
+    });
+
+    // Smooth scroll for TOC links
+    document.querySelectorAll('.toc-link, .toc-sublink').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const target = document.querySelector(link.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth' });
+        }
+      });
+    });
+  </script>
+</body>
+</html>

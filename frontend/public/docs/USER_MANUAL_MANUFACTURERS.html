@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>T-Link User Manual - Manufacturers</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --primary: #047857;
+      --primary-light: #10b981;
+      --accent: #fbbf24;
+      --success: #059669;
+      --warning: #d97706;
+      --danger: #dc2626;
+      --text: #1f2937;
+      --text-light: #6b7280;
+      --bg: #f9fafb;
+      --white: #ffffff;
+      --border: #e5e7eb;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    /* Navigation */
+    .nav-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      color: white;
+      padding: 15px 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 1000;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .nav-brand h1 {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .nav-brand .subtitle {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    .nav-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .nav-btn {
+      padding: 8px 16px;
+      background: rgba(255,255,255,0.2);
+      border: none;
+      border-radius: 6px;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+
+    .nav-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      top: 60px;
+      left: 0;
+      width: 280px;
+      height: calc(100vh - 60px);
+      background: var(--white);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 20px 0;
+      z-index: 100;
+    }
+
+    .sidebar-title {
+      padding: 0 20px 15px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--text-light);
+      letter-spacing: 0.5px;
+    }
+
+    .toc-list {
+      list-style: none;
+    }
+
+    .toc-item {
+      border-left: 3px solid transparent;
+    }
+
+    .toc-link {
+      display: block;
+      padding: 10px 20px;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .toc-link:hover {
+      background: var(--bg);
+      color: var(--primary);
+    }
+
+    .toc-item.active {
+      border-left-color: var(--primary);
+      background: rgba(4, 120, 87, 0.05);
+    }
+
+    .toc-item.active .toc-link {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .toc-sublist {
+      list-style: none;
+      padding-left: 20px;
+    }
+
+    .toc-sublink {
+      display: block;
+      padding: 6px 20px;
+      color: var(--text-light);
+      text-decoration: none;
+      font-size: 13px;
+    }
+
+    .toc-sublink:hover {
+      color: var(--primary);
+    }
+
+    /* Main Content */
+    .main-content {
+      margin-left: 280px;
+      margin-top: 60px;
+      padding: 40px 60px;
+      max-width: 900px;
+    }
+
+    .version-info {
+      display: flex;
+      gap: 20px;
+      padding: 15px 20px;
+      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+      border-radius: 8px;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .version-info span {
+      color: var(--text-light);
+    }
+
+    .version-info strong {
+      color: var(--primary);
+    }
+
+    /* Sections */
+    .section {
+      margin-bottom: 50px;
+      scroll-margin-top: 80px;
+    }
+
+    h2 {
+      font-size: 28px;
+      color: var(--primary);
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid var(--accent);
+    }
+
+    h3 {
+      font-size: 20px;
+      color: var(--text);
+      margin: 25px 0 15px;
+    }
+
+    h4 {
+      font-size: 16px;
+      color: var(--text);
+      margin: 20px 0 10px;
+    }
+
+    p {
+      margin-bottom: 15px;
+      color: var(--text);
+    }
+
+    /* Lists */
+    ul, ol {
+      margin: 15px 0 15px 25px;
+    }
+
+    li {
+      margin-bottom: 8px;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 14px;
+    }
+
+    th {
+      background: var(--primary);
+      color: white;
+      padding: 12px 15px;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    td {
+      padding: 12px 15px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tr:nth-child(even) {
+      background: var(--bg);
+    }
+
+    tr:hover {
+      background: #ecfdf5;
+    }
+
+    /* Note boxes */
+    .note-box {
+      padding: 15px 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .note-box.info {
+      background: #ecfdf5;
+      border-left: 4px solid var(--primary);
+    }
+
+    .note-box.warning {
+      background: #fffbeb;
+      border-left: 4px solid var(--warning);
+    }
+
+    .note-box.success {
+      background: #f0fdf4;
+      border-left: 4px solid var(--success);
+    }
+
+    .note-box.danger {
+      background: #fef2f2;
+      border-left: 4px solid var(--danger);
+    }
+
+    .note-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .note-content {
+      flex: 1;
+    }
+
+    .note-content strong {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    /* Badge styles */
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge-green { background: #d1fae5; color: #065f46; }
+    .badge-blue { background: #dbeafe; color: #1e40af; }
+    .badge-yellow { background: #fef3c7; color: #92400e; }
+    .badge-red { background: #fee2e2; color: #991b1b; }
+    .badge-gray { background: #f3f4f6; color: #374151; }
+
+    /* Steps */
+    .steps {
+      counter-reset: step;
+      list-style: none;
+      margin-left: 0;
+    }
+
+    .steps li {
+      position: relative;
+      padding-left: 50px;
+      margin-bottom: 20px;
+    }
+
+    .steps li::before {
+      counter-increment: step;
+      content: counter(step);
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 32px;
+      height: 32px;
+      background: var(--primary);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    /* Feature cards */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin: 20px 0;
+    }
+
+    .feature-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .feature-card h4 {
+      color: var(--primary);
+      margin-top: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .feature-icon {
+      font-size: 24px;
+    }
+
+    /* Links */
+    a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    /* Print button */
+    .print-btn {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      padding: 12px 20px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      transition: transform 0.2s;
+    }
+
+    .print-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 60px;
+      padding: 30px 0;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      color: var(--text-light);
+      font-size: 14px;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s;
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .main-content {
+        margin-left: 0;
+        padding: 30px 20px;
+      }
+
+      .feature-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media print {
+      .nav-header, .sidebar, .print-btn {
+        display: none;
+      }
+
+      .main-content {
+        margin: 0;
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation Header -->
+  <header class="nav-header">
+    <div class="nav-brand">
+      <div>
+        <h1>T-Link User Manual</h1>
+        <span class="subtitle">Manufacturer Portal</span>
+      </div>
+    </div>
+    <div class="nav-actions">
+      <button class="nav-btn" onclick="window.print()">🖨️ Print</button>
+      <button class="nav-btn" onclick="window.close()">✕ Close</button>
+    </div>
+  </header>
+
+  <!-- Sidebar Table of Contents -->
+  <nav class="sidebar">
+    <div class="sidebar-title">Table of Contents</div>
+    <ul class="toc-list">
+      <li class="toc-item active">
+        <a href="#welcome" class="toc-link">1. Welcome</a>
+      </li>
+      <li class="toc-item">
+        <a href="#getting-started" class="toc-link">2. Getting Started</a>
+        <ul class="toc-sublist">
+          <li><a href="#accessing-portal" class="toc-sublink">Accessing the Portal</a></li>
+          <li><a href="#first-login" class="toc-sublink">First Time Login</a></li>
+        </ul>
+      </li>
+      <li class="toc-item">
+        <a href="#dashboard" class="toc-link">3. Dashboard Overview</a>
+      </li>
+      <li class="toc-item">
+        <a href="#sample-requests" class="toc-link">4. Sample Requests</a>
+        <ul class="toc-sublist">
+          <li><a href="#viewing-requests" class="toc-sublink">Viewing Requests</a></li>
+          <li><a href="#filtering" class="toc-sublink">Filtering & Search</a></li>
+        </ul>
+      </li>
+      <li class="toc-item">
+        <a href="#shipping" class="toc-link">5. Shipping Instructions</a>
+        <ul class="toc-sublist">
+          <li><a href="#shipping-address" class="toc-sublink">Shipping Address</a></li>
+          <li><a href="#labeling" class="toc-sublink">Labeling Requirements</a></li>
+        </ul>
+      </li>
+      <li class="toc-item">
+        <a href="#tracking" class="toc-link">6. Shipment Tracking</a>
+      </li>
+      <li class="toc-item">
+        <a href="#documents" class="toc-link">7. Required Documents</a>
+      </li>
+      <li class="toc-item">
+        <a href="#support" class="toc-link">8. Getting Help</a>
+      </li>
+      <li class="toc-item">
+        <a href="#faq" class="toc-link">9. FAQ</a>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="version-info">
+      <span><strong>Version:</strong> 1.0</span>
+      <span><strong>Last Updated:</strong> January 27, 2026</span>
+      <span><strong>Portal:</strong> <a href="https://t-link-production.vercel.app">t-link-production.vercel.app</a></span>
+    </div>
+
+    <!-- Section 1: Welcome -->
+    <section id="welcome" class="section">
+      <h2>1. Welcome to T-Link</h2>
+      <p>Welcome to the <strong>T-Link Manufacturer Portal</strong>! This platform connects you directly with Ajwa Labs, making it easy to:</p>
+      
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h4><span class="feature-icon">📋</span> View Requests</h4>
+          <p>See all sample requests from Ajwa Labs in one place</p>
+        </div>
+        <div class="feature-card">
+          <h4><span class="feature-icon">📦</span> Ship Samples</h4>
+          <p>Get shipping labels and track your shipments</p>
+        </div>
+        <div class="feature-card">
+          <h4><span class="feature-icon">📄</span> Share Documents</h4>
+          <p>Upload CoA, SDS, and other required documents</p>
+        </div>
+        <div class="feature-card">
+          <h4><span class="feature-icon">💬</span> Communicate</h4>
+          <p>Direct messaging with the Ajwa Labs team</p>
+        </div>
+      </div>
+
+      <div class="note-box info">
+        <span class="note-icon">🎯</span>
+        <div class="note-content">
+          <strong>Our Goal</strong>
+          T-Link streamlines the sample submission process, reducing paperwork and ensuring your samples arrive safely with all required documentation.
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Getting Started -->
+    <section id="getting-started" class="section">
+      <h2>2. Getting Started</h2>
+      
+      <h3 id="accessing-portal">2.1 Accessing the Portal</h3>
+      <p>Navigate to: <strong><a href="https://t-link-production.vercel.app" target="_blank">https://t-link-production.vercel.app</a></strong></p>
+
+      <h3 id="first-login">2.2 First Time Login</h3>
+      <p>Your account is created by Ajwa Labs. You will receive an email with:</p>
+      <ul>
+        <li>Your login email address</li>
+        <li>Temporary password</li>
+        <li>Link to the portal</li>
+      </ul>
+
+      <ol class="steps">
+        <li>Click the link in your invitation email</li>
+        <li>Enter your email address</li>
+        <li>Enter your temporary password</li>
+        <li>You'll be prompted to change your password</li>
+        <li>Create a strong password (at least 8 characters)</li>
+      </ol>
+
+      <div class="note-box warning">
+        <span class="note-icon">🔐</span>
+        <div class="note-content">
+          <strong>Password Security</strong>
+          Your password must contain at least 8 characters including uppercase, lowercase, and numbers. Never share your login credentials.
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Dashboard -->
+    <section id="dashboard" class="section">
+      <h2>3. Dashboard Overview</h2>
+      <p>After logging in, you'll see your <strong>Manufacturer Dashboard</strong> with quick access to all features:</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Section</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>📊 Statistics Cards</strong></td>
+            <td>At-a-glance view of pending requests, active shipments, and completed orders</td>
+          </tr>
+          <tr>
+            <td><strong>📋 Recent Requests</strong></td>
+            <td>List of latest sample requests from Ajwa Labs</td>
+          </tr>
+          <tr>
+            <td><strong>📦 Active Shipments</strong></td>
+            <td>Shipments currently in transit</td>
+          </tr>
+          <tr>
+            <td><strong>🔔 Notifications</strong></td>
+            <td>Important updates and action items</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Navigation</h3>
+      <ul>
+        <li><strong>Help Button</strong> (top-right) - Opens this manual and support options</li>
+        <li><strong>Sign Out</strong> (top-right) - Securely log out of the portal</li>
+      </ul>
+    </section>
+
+    <!-- Section 4: Sample Requests -->
+    <section id="sample-requests" class="section">
+      <h2>4. Sample Requests</h2>
+      
+      <h3 id="viewing-requests">4.1 Viewing Requests</h3>
+      <p>When Ajwa Labs needs samples from your company, a request appears in your dashboard.</p>
+
+      <h4>Request Status Types</h4>
+      <table>
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Meaning</th>
+            <th>Your Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-yellow">Pending</span></td>
+            <td>New request awaiting your response</td>
+            <td>Review and acknowledge</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-blue">In Progress</span></td>
+            <td>You've acknowledged, preparing shipment</td>
+            <td>Prepare samples and ship</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-green">Shipped</span></td>
+            <td>Samples have been sent</td>
+            <td>Enter tracking information</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-green">Received</span></td>
+            <td>Ajwa Labs has received the samples</td>
+            <td>None - Complete!</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-gray">Cancelled</span></td>
+            <td>Request was cancelled</td>
+            <td>None needed</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 id="filtering">4.2 Filtering & Searching</h3>
+      <ul>
+        <li><strong>Search Box</strong> - Search by product name, lot number, or request ID</li>
+        <li><strong>Status Filter</strong> - Filter by request status</li>
+        <li><strong>Date Range</strong> - Filter by date requested</li>
+      </ul>
+    </section>
+
+    <!-- Section 5: Shipping -->
+    <section id="shipping" class="section">
+      <h2>5. Shipping Instructions</h2>
+      
+      <h3 id="shipping-address">5.1 Shipping Address</h3>
+      <div class="note-box info">
+        <span class="note-icon">📮</span>
+        <div class="note-content">
+          <strong>Ship To:</strong><br>
+          Ajwa Labs<br>
+          Attn: Sample Receiving<br>
+          7215 E State Road 46<br>
+          Batesville, IN 47006<br>
+          Phone: (812) 934-2101
+        </div>
+      </div>
+
+      <h3 id="labeling">5.2 Labeling Requirements</h3>
+      <p>All packages must be clearly labeled with:</p>
+      <ol class="steps">
+        <li><strong>T-Link Request Number</strong> - Found on your request details page</li>
+        <li><strong>Product Name</strong> - Full chemical or product name</li>
+        <li><strong>Lot/Batch Number</strong> - Your internal lot identifier</li>
+        <li><strong>Quantity</strong> - Amount being shipped</li>
+      </ol>
+
+      <h4>Hazardous Materials</h4>
+      <p>For hazardous samples, include:</p>
+      <ul>
+        <li>UN Number (e.g., UN1993)</li>
+        <li>Proper Shipping Name</li>
+        <li>Hazard Class diamond</li>
+        <li>Emergency contact number</li>
+      </ul>
+
+      <div class="note-box danger">
+        <span class="note-icon">⚠️</span>
+        <div class="note-content">
+          <strong>HazMat Shipping</strong>
+          All hazardous materials must be shipped in compliance with DOT regulations. Contact Ajwa Labs if you need assistance with hazmat shipping requirements.
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 6: Tracking -->
+    <section id="tracking" class="section">
+      <h2>6. Shipment Tracking</h2>
+      
+      <h3>Adding Tracking Information</h3>
+      <ol class="steps">
+        <li>Click on the sample request you've shipped</li>
+        <li>Click <strong>Update Shipping Status</strong></li>
+        <li>Select your carrier (FedEx, UPS, USPS, etc.)</li>
+        <li>Enter the tracking number</li>
+        <li>Click <strong>Save</strong></li>
+      </ol>
+
+      <p>Once tracking is entered, both you and Ajwa Labs can monitor the shipment's progress in real-time.</p>
+
+      <div class="note-box success">
+        <span class="note-icon">✅</span>
+        <div class="note-content">
+          <strong>Automatic Updates</strong>
+          The system automatically updates shipment status when the carrier scans the package. You'll receive a notification when Ajwa Labs confirms receipt.
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 7: Documents -->
+    <section id="documents" class="section">
+      <h2>7. Required Documents</h2>
+      <p>The following documents should accompany each sample:</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Document</th>
+            <th>Required</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Certificate of Analysis (CoA)</strong></td>
+            <td><span class="badge badge-green">Required</span></td>
+            <td>Lab analysis results for the specific lot being shipped</td>
+          </tr>
+          <tr>
+            <td><strong>Safety Data Sheet (SDS)</strong></td>
+            <td><span class="badge badge-green">Required</span></td>
+            <td>Current SDS for the product</td>
+          </tr>
+          <tr>
+            <td><strong>Technical Data Sheet</strong></td>
+            <td><span class="badge badge-gray">Optional</span></td>
+            <td>Product specifications and usage information</td>
+          </tr>
+          <tr>
+            <td><strong>Bill of Lading</strong></td>
+            <td><span class="badge badge-yellow">For HazMat</span></td>
+            <td>Required for hazardous material shipments</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Uploading Documents</h3>
+      <ol class="steps">
+        <li>Navigate to the sample request</li>
+        <li>Click <strong>Attach Documents</strong></li>
+        <li>Select the document type (CoA, SDS, etc.)</li>
+        <li>Click <strong>Upload</strong> and select your file</li>
+        <li>Documents are automatically linked to the request</li>
+      </ol>
+
+      <p><strong>Accepted formats:</strong> PDF, JPG, PNG (Max 10MB per file)</p>
+    </section>
+
+    <!-- Section 8: Support -->
+    <section id="support" class="section">
+      <h2>8. Getting Help</h2>
+      
+      <h3>Contact Options</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Contact</th>
+            <th>Best For</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Technical Support</strong></td>
+            <td><a href="mailto:jhunzie@ajwalabs.com">jhunzie@ajwalabs.com</a></td>
+            <td>Portal login, technical issues, bugs</td>
+          </tr>
+          <tr>
+            <td><strong>Sample Coordination</strong></td>
+            <td><a href="mailto:eboak@ajwalabs.com">eboak@ajwalabs.com</a></td>
+            <td>Sample requests, quantities, deadlines</td>
+          </tr>
+          <tr>
+            <td><strong>Phone</strong></td>
+            <td>(812) 934-2101</td>
+            <td>Urgent matters, shipping questions</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Using In-App Support</h3>
+      <ol class="steps">
+        <li>Click the <strong>Help</strong> button (top-right corner)</li>
+        <li>Select <strong>Contact Support</strong></li>
+        <li>Choose your issue type</li>
+        <li>Describe your issue in detail</li>
+        <li>Click <strong>Submit</strong></li>
+      </ol>
+
+      <p>Support requests typically receive a response within 24 hours during business days.</p>
+    </section>
+
+    <!-- Section 9: FAQ -->
+    <section id="faq" class="section">
+      <h2>9. Frequently Asked Questions</h2>
+      
+      <h4>Q: I forgot my password. How do I reset it?</h4>
+      <p>Click "Forgot Password" on the login page. Enter your email and you'll receive a reset link within a few minutes.</p>
+
+      <h4>Q: Can I update a request after it's been submitted?</h4>
+      <p>Yes, as long as the status is still "In Progress." Once marked as "Shipped," you can only add tracking information.</p>
+
+      <h4>Q: What carriers do you accept?</h4>
+      <p>We accept all major carriers: FedEx, UPS, USPS, and DHL. For hazmat shipments, please verify your carrier is certified for hazardous materials.</p>
+
+      <h4>Q: How long should I keep samples available?</h4>
+      <p>Please maintain sample availability for at least 30 days after request date, or until the request is completed.</p>
+
+      <h4>Q: Can I delegate access to another team member?</h4>
+      <p>Contact Ajwa Labs to add additional users to your company's manufacturer account.</p>
+
+      <h4>Q: What if there's an issue with the samples after delivery?</h4>
+      <p>Contact our Sample Coordination team immediately. We'll work with you to resolve any issues.</p>
+
+      <div class="note-box info">
+        <span class="note-icon">💡</span>
+        <div class="note-content">
+          <strong>Pro Tip</strong>
+          Bookmark the T-Link portal for quick access. Enable browser notifications to stay informed about new requests.
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p><strong>© 2026 Ajwa Labs - T-Link Manufacturer Portal</strong></p>
+      <p>Thank you for partnering with Ajwa Labs!</p>
+      <p style="margin-top: 10px;">Questions? Contact us at <a href="mailto:eboak@ajwalabs.com">eboak@ajwalabs.com</a></p>
+    </footer>
+  </main>
+
+  <!-- Print Button -->
+  <button class="print-btn" onclick="window.print()">
+    🖨️ Print Manual
+  </button>
+
+  <script>
+    // Highlight active TOC item on scroll
+    const sections = document.querySelectorAll('.section');
+    const tocItems = document.querySelectorAll('.toc-item');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop;
+        if (scrollY >= sectionTop - 100) {
+          current = section.getAttribute('id');
+        }
+      });
+
+      tocItems.forEach(item => {
+        item.classList.remove('active');
+        const link = item.querySelector('.toc-link');
+        if (link && link.getAttribute('href') === '#' + current) {
+          item.classList.add('active');
+        }
+      });
+    });
+
+    // Smooth scroll for TOC links
+    document.querySelectorAll('.toc-link, .toc-sublink').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const target = document.querySelector(link.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth' });
+        }
+      });
+    });
+  </script>
+</body>
+</html>

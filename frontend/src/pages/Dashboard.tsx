@@ -33,9 +33,6 @@ const Dashboard: React.FC = () => {
         <div className="header-right">
           <NotificationBell />
           <HelpButton userType="internal" />
-          <button className="contact-btn" onClick={() => navigate('/internal/support')}>
-            Contact Support
-          </button>
           <button className="sign-out-btn" onClick={handleLogout}>
             Sign Out
           </button>

@@ -27,9 +27,6 @@ const ManufacturerDashboard: React.FC = () => {
         </div>
         <div className="header-right">
           <HelpButton userType="manufacturer" />
-          <button className="contact-btn" onClick={() => navigate('/manufacturer/support')}>
-            Contact Support
-          </button>
           <button className="sign-out-btn" onClick={handleLogout}>
             Sign Out
           </button>

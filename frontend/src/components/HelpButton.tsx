@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './HelpButton.css';
 
 interface HelpButtonProps {
@@ -8,6 +9,7 @@ interface HelpButtonProps {
 const HelpButton: React.FC<HelpButtonProps> = ({ userType }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -24,8 +26,8 @@ const HelpButton: React.FC<HelpButtonProps> = ({ userType }) => {
   const handleOpenManual = () => {
     // Open the appropriate user manual based on user type
     const manualPath = userType === 'internal' 
-      ? '/docs/USER_MANUAL_AJWA_LABS.md'
-      : '/docs/USER_MANUAL_MANUFACTURERS.md';
+      ? '/docs/USER_MANUAL_AJWA_LABS.html'
+      : '/docs/USER_MANUAL_MANUFACTURERS.html';
     
     window.open(manualPath, '_blank');
     setIsOpen(false);
@@ -37,6 +39,14 @@ const HelpButton: React.FC<HelpButtonProps> = ({ userType }) => {
       window.open('/docs/AJWA_LABS_QUICK_REVIEW.html', '_blank');
       setIsOpen(false);
     }
+  };
+
+  const handleContactSupport = () => {
+    const supportPath = userType === 'internal' 
+      ? '/internal/support'
+      : '/manufacturer/support';
+    navigate(supportPath);
+    setIsOpen(false);
   };
 
   return (
@@ -74,13 +84,13 @@ const HelpButton: React.FC<HelpButtonProps> = ({ userType }) => {
               </button>
             )}
 
-            <a href="/support" className="help-menu-item">
+            <button className="help-menu-item" onClick={handleContactSupport}>
               <span className="menu-icon">✉️</span>
               <div className="menu-text">
                 <span className="menu-title">Contact Support</span>
                 <span className="menu-desc">Get help from our team</span>
               </div>
-            </a>
+            </button>
           </div>
         </div>
       )}
