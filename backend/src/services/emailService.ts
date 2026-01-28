@@ -29,13 +29,24 @@ const stripHtmlTags = (html: string): string => {
   return result.replace(/\s+/g, ' ').trim();
 };
 
+// Validate SMTP configuration
+const smtpHost = process.env.SMTP_HOST;
+const smtpPort = parseInt(process.env.SMTP_PORT || '587');
+const smtpUser = process.env.SMTP_USER;
+const smtpPassword = process.env.SMTP_PASSWORD;
+
+if (!smtpHost || !smtpUser || !smtpPassword) {
+  logger.warn('SMTP configuration incomplete. Email functionality may not work.');
+  logger.warn(`SMTP_HOST: ${smtpHost ? 'set' : 'MISSING'}, SMTP_USER: ${smtpUser ? 'set' : 'MISSING'}, SMTP_PASSWORD: ${smtpPassword ? 'set' : 'MISSING'}`);
+}
+
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || '587'),
+  host: smtpHost || 'smtp.gmail.com',
+  port: smtpPort,
   secure: process.env.SMTP_SECURE === 'true',
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASSWORD,
+    user: smtpUser,
+    pass: smtpPassword,
   },
 });
 
