@@ -116,18 +116,19 @@ router.post('/login', loginValidator, async (req: Request, res: Response, next: 
 // Register (only if email is authorized) - with validation
 router.post('/register', registerValidator, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password, first_name, last_name } = req.body;
+    const { email, password, first_name, last_name, company_name, contact_phone, address } = req.body;
+    const normalizedEmail = email.toLowerCase().trim();
 
     // Check if email is authorized
     const authCheck = await query(
-      'SELECT * FROM authorized_emails WHERE email = $1',
-      [email.toLowerCase()]
+      'SELECT * FROM authorized_emails WHERE LOWER(email) = $1',
+      [normalizedEmail]
     );
 
     // Check if user was created by admin (pending registration)
     const existingUser = await query(
-      'SELECT * FROM users WHERE email = $1',
-      [email.toLowerCase()]
+      'SELECT * FROM users WHERE LOWER(email) = $1',
+      [normalizedEmail]
     );
 
     let userRole = null;
@@ -148,6 +149,11 @@ router.post('/register', registerValidator, async (req: Request, res: Response, 
       userRole = authCheck.rows[0].role;
     }
 
+    // For manufacturers, require company_name
+    if (userRole === 'manufacturer' && !company_name) {
+      throw new AppError('Company name is required for manufacturer registration', 400);
+    }
+
     // Hash password
     const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
 
@@ -157,9 +163,9 @@ router.post('/register', registerValidator, async (req: Request, res: Response, 
       result = await query(
         `UPDATE users 
          SET first_name = $1, last_name = $2, password_hash = $3, is_active = true, email_verified = true, username = $4
-         WHERE email = $5
+         WHERE LOWER(email) = $5
          RETURNING id, email, first_name, last_name, role, created_at`,
-        [first_name, last_name, password_hash, email.toLowerCase(), email.toLowerCase()]
+        [first_name, last_name, password_hash, normalizedEmail, normalizedEmail]
       );
     } else {
       // Create new user from authorized_emails
@@ -167,11 +173,41 @@ router.post('/register', registerValidator, async (req: Request, res: Response, 
         `INSERT INTO users (email, password_hash, first_name, last_name, role, is_active, email_verified, username)
          VALUES ($1, $2, $3, $4, $5, true, true, $1)
          RETURNING id, email, first_name, last_name, role, created_at`,
-        [email.toLowerCase(), password_hash, first_name, last_name, userRole]
+        [normalizedEmail, password_hash, first_name, last_name, userRole]
       );
     }
 
     const user = result.rows[0];
+
+    // For manufacturers, create/link company
+    if (userRole === 'manufacturer' && company_name) {
+      // Check if company exists
+      const existingCompany = await query(
+        'SELECT id FROM manufacturer_companies WHERE company_name = $1',
+        [company_name]
+      );
+
+      let companyId: string;
+      if (existingCompany.rows.length > 0) {
+        companyId = existingCompany.rows[0].id;
+      } else {
+        // Create new company
+        const companyResult = await query(
+          `INSERT INTO manufacturer_companies (company_name, contact_email, contact_phone, address, is_active)
+           VALUES ($1, $2, $3, $4, true)
+           RETURNING id`,
+          [company_name, normalizedEmail, contact_phone || null, address || null]
+        );
+        companyId = companyResult.rows[0].id;
+      }
+
+      // Link user to company
+      await query(
+        `INSERT INTO manufacturer_users (user_id, company_id) VALUES ($1, $2)
+         ON CONFLICT (user_id, company_id) DO NOTHING`,
+        [user.id, companyId]
+      );
+    }
 
     // Generate JWT token
     const signOptions: SignOptions = { expiresIn: JWT_EXPIRES_IN };

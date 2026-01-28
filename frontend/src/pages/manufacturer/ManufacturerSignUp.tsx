@@ -59,7 +59,8 @@ const ManufacturerSignUp: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await api.post('/auth/manufacturer/signup', {
+      // Use the unified register endpoint (same as internal users)
+      const response = await api.post('/auth/register', {
         email: formData.email,
         password: formData.password,
         first_name: formData.first_name,
@@ -70,13 +71,16 @@ const ManufacturerSignUp: React.FC = () => {
       });
 
       // Store token (use same key as main login)
-      localStorage.setItem('auth_token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      const userData = response.data.data?.user || response.data.user;
+      const token = response.data.data?.token || response.data.token;
+      
+      localStorage.setItem('auth_token', token);
+      localStorage.setItem('user', JSON.stringify(userData));
 
       toast.success('Account created successfully!');
       navigate('/manufacturer/dashboard');
     } catch (error: any) {
-      const errorMsg = error.response?.data?.error || 'Failed to create account';
+      const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Failed to create account';
       toast.error(errorMsg);
     } finally {
       setLoading(false);
