@@ -406,6 +406,100 @@ export const sendSupportRequestNotification = async (
   return sendEmail({ to: senderEmail, subject: `Confirmation: ${emailSubject}`, html: manufacturerHtml });
 };
 
+/**
+ * Send registration invitation email when admin authorizes a new user
+ */
+export const sendRegistrationInvitation = async (
+  email: string,
+  role: string
+): Promise<boolean> => {
+  const roleDisplayName = role.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+  const baseUrl = process.env.FRONTEND_URL || 'https://t-link-production.vercel.app';
+  
+  // Determine the correct registration URL based on role
+  const registrationUrl = role === 'manufacturer' 
+    ? `${baseUrl}/manufacturer/signup`
+    : `${baseUrl}/register`;
+
+  const subject = `You're Invited to Join T-Link - Teleos Logistics Platform`;
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #1a4d2e 0%, #2d5016 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+          .header img { max-width: 200px; }
+          .header h1 { color: white; margin: 20px 0 0; font-size: 24px; }
+          .content { background: #f9f9f9; padding: 30px; border: 1px solid #ddd; }
+          .role-badge { display: inline-block; background: #1a4d2e; color: white; padding: 5px 15px; border-radius: 20px; font-weight: bold; }
+          .button { display: inline-block; background: #1a4d2e; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }
+          .button:hover { background: #2d5016; }
+          .footer { background: #eee; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 8px 8px; }
+          .steps { background: white; padding: 20px; border-radius: 5px; margin: 20px 0; }
+          .steps ol { margin: 0; padding-left: 20px; }
+          .steps li { margin: 10px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Welcome to T-Link</h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0;">Teleos Logistics and Information Network</p>
+          </div>
+          
+          <div class="content">
+            <p>Hello,</p>
+            
+            <p>You have been authorized to create an account on <strong>T-Link</strong>, the Teleos/Ajwa Labs logistics and information management platform.</p>
+            
+            <p>Your authorized role: <span class="role-badge">${roleDisplayName}</span></p>
+            
+            <div class="steps">
+              <h3 style="margin-top: 0;">How to Complete Your Registration:</h3>
+              <ol>
+                <li>Click the registration button below</li>
+                <li>Enter your email address: <strong>${email}</strong></li>
+                <li>Create a secure password (minimum 8 characters)</li>
+                <li>Fill in your personal/company information</li>
+                <li>Submit to create your account</li>
+              </ol>
+            </div>
+            
+            <div style="text-align: center;">
+              <a href="${registrationUrl}" class="button">Complete Your Registration</a>
+            </div>
+            
+            <p style="color: #666; font-size: 14px;">
+              <strong>Important:</strong> You must use the email address <strong>${email}</strong> when registering, as this is the only authorized email for your account.
+            </p>
+            
+            <p>If you did not expect this invitation or have questions, please contact Ajwa Labs support.</p>
+          </div>
+          
+          <div class="footer">
+            <p>This is an automated message from T-Link. Please do not reply to this email.</p>
+            <p>© ${new Date().getFullYear()} Teleos / Ajwa Labs. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  try {
+    const result = await sendEmail({ to: email, subject, html });
+    if (result) {
+      logger.info(`Registration invitation sent to ${email} for role: ${role}`);
+    }
+    return result;
+  } catch (error) {
+    logger.error(`Failed to send registration invitation to ${email}:`, error);
+    return false;
+  }
+};
+
 function escapeHtml(text: string): string {
   const map: { [key: string]: string } = {
     '&': '&amp;',

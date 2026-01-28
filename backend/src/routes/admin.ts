@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { pool } from '../config/database';
 import bcrypt from 'bcrypt';
 import { authenticate, AuthRequest } from '../middleware/auth';
+import { sendRegistrationInvitation } from '../services/emailService';
 
 const router = Router();
 
@@ -128,13 +129,21 @@ router.post('/users', async (req, res) => {
       VALUES ($1, $2)
     `, [normalizedEmail, role]);
 
-    // TODO: Send email invitation with registration link
-    // await emailService.sendUserInvitation(email, role);
+    // Send email invitation with registration link
+    let emailSent = false;
+    try {
+      emailSent = await sendRegistrationInvitation(normalizedEmail, role);
+    } catch (emailError) {
+      console.error('Failed to send invitation email:', emailError);
+      // Don't fail the whole operation if email fails
+    }
 
     res.json({ 
       success: true, 
-      message: 'User authorized successfully. They can now register at the portal.',
-      data: { email, role }
+      message: emailSent 
+        ? 'User authorized successfully. An invitation email has been sent.'
+        : 'User authorized successfully. They can now register at the portal. (Email notification could not be sent)',
+      data: { email: normalizedEmail, role, emailSent }
     });
   } catch (error: any) {
     console.error('Error authorizing user:', error);
