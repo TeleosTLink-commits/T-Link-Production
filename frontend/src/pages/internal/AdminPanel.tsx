@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
-import { useAuthStore } from '../../store/authStore';
 import './AdminPanel.css';
 
 interface User {
@@ -57,7 +56,19 @@ interface ActivityData {
 
 const AdminPanel: React.FC = () => {
   const navigate = useNavigate();
-  const { user: currentUser } = useAuthStore();
+  
+  // Get current user role directly from localStorage (more reliable than store hydration)
+  const getCurrentUserRole = (): string => {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        return JSON.parse(userStr)?.role || '';
+      }
+    } catch (e) {}
+    return '';
+  };
+  const isSuperAdmin = getCurrentUserRole() === 'super_admin';
+  
   const [activeTab, setActiveTab] = useState<'users' | 'activity' | 'shipments' | 'samples' | 'testmethods' | 'system'>('users');
   const [loading, setLoading] = useState(false);
   
@@ -387,7 +398,7 @@ const AdminPanel: React.FC = () => {
                             >
                               {user.is_active ? 'Deactivate' : 'Activate'}
                             </button>
-                            {currentUser?.role === 'super_admin' && (
+                            {isSuperAdmin && (
                               <button 
                                 className="action-btn small danger"
                                 onClick={() => handleDeleteUser(user.id, user.email)}
