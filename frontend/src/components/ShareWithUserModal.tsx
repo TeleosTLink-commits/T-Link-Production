@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
 import './ShareWithUserModal.css';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://tlink-production-backend.onrender.com/api';
+
 interface User {
   id: number;
   email: string;
@@ -75,7 +77,7 @@ const ShareWithUserModal: React.FC<ShareWithUserModalProps> = ({ isOpen, onClose
       formData.append('message', message);
 
       const token = localStorage.getItem('auth_token');
-      const response = await fetch('/api/admin/share-file', {
+      const response = await fetch(`${API_BASE_URL}/admin/share-file`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
