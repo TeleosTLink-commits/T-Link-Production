@@ -79,6 +79,9 @@ router.post('/users', async (req, res) => {
       });
     }
 
+    // Normalize email to lowercase
+    const normalizedEmail = email.toLowerCase().trim();
+
     // Validate role
     const validRoles = ['manufacturer', 'lab_staff', 'admin', 'super_admin'];
     if (!validRoles.includes(role)) {
@@ -88,10 +91,10 @@ router.post('/users', async (req, res) => {
       });
     }
 
-    // Check if email already exists in users table
+    // Check if email already exists in users table (case-insensitive)
     const existingUser = await pool.query(
-      'SELECT id FROM users WHERE email = $1',
-      [email]
+      'SELECT id FROM users WHERE LOWER(email) = $1',
+      [normalizedEmail]
     );
 
     if (existingUser.rows.length > 0) {
@@ -100,30 +103,30 @@ router.post('/users', async (req, res) => {
       });
     }
 
-    // Check if email already in authorized_emails
+    // Check if email already in authorized_emails (case-insensitive)
     const existingAuthorized = await pool.query(
-      'SELECT id FROM authorized_emails WHERE email = $1',
-      [email]
+      'SELECT id FROM authorized_emails WHERE LOWER(email) = $1',
+      [normalizedEmail]
     );
 
     if (existingAuthorized.rows.length > 0) {
       // Update existing authorized email with new role
       await pool.query(
-        'UPDATE authorized_emails SET role = $1 WHERE email = $2',
-        [role, email]
+        'UPDATE authorized_emails SET role = $1 WHERE LOWER(email) = $2',
+        [role, normalizedEmail]
       );
       return res.json({ 
         success: true, 
         message: 'User authorization updated. They can now register with this role.',
-        data: { email, role } 
+        data: { email: normalizedEmail, role } 
       });
     }
 
-    // Add to authorized_emails table - user will complete registration themselves
+    // Add to authorized_emails table with normalized email
     await pool.query(`
       INSERT INTO authorized_emails (email, role)
       VALUES ($1, $2)
-    `, [email, role]);
+    `, [normalizedEmail, role]);
 
     // TODO: Send email invitation with registration link
     // await emailService.sendUserInvitation(email, role);

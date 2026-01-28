@@ -36,10 +36,13 @@ router.post('/signup', manufacturerSignupValidator, async (req: Request, res: Re
   try {
     const { email, password, first_name, last_name, company_name, contact_phone, address } = req.body;
 
-    // Check if email is in authorized list
+    // Normalize email to lowercase for consistent comparison
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Check if email is in authorized list (case-insensitive)
     const authorizedCheck = await client.query(
-      'SELECT id FROM authorized_emails WHERE email = $1 AND role = $2',
-      [email, 'manufacturer']
+      'SELECT id FROM authorized_emails WHERE LOWER(email) = $1 AND role = $2',
+      [normalizedEmail, 'manufacturer']
     );
 
     if (authorizedCheck.rows.length === 0) {
@@ -48,8 +51,8 @@ router.post('/signup', manufacturerSignupValidator, async (req: Request, res: Re
       });
     }
 
-    // Check if user already exists
-    const existingUser = await client.query('SELECT id FROM users WHERE email = $1', [email]);
+    // Check if user already exists (case-insensitive)
+    const existingUser = await client.query('SELECT id FROM users WHERE LOWER(email) = $1', [normalizedEmail]);
     if (existingUser.rows.length > 0) {
       return res.status(409).json({ error: 'Email already registered' });
     }
@@ -60,13 +63,13 @@ router.post('/signup', manufacturerSignupValidator, async (req: Request, res: Re
     // Start transaction
     await client.query('BEGIN');
 
-    // Create user
+    // Create user with normalized email
     const userId = uuidv4();
     const userResult = await client.query(
       `INSERT INTO users (id, username, email, password_hash, first_name, last_name, role, is_active)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING id, email, first_name, last_name, role`,
-      [userId, email, email, password_hash, first_name, last_name, 'manufacturer', true]
+      [userId, normalizedEmail, normalizedEmail, password_hash, first_name, last_name, 'manufacturer', true]
     );
 
     // Create or link to manufacturer company
