@@ -533,10 +533,14 @@ router.get('/supplies/all', authenticate, async (req: AuthRequest, res, next) =>
 router.post('/supplies/:id/restock', authenticate, authorize('admin', 'logistics'), async (req: AuthRequest, res, next) => {
   try {
     const { id } = req.params;
-    const { quantity, notes } = req.body;
+    const { quantity, count, notes } = req.body;
+    
+    // Accept either 'quantity' (to add) or 'count' (new total)
+    const amountToAdd = quantity;
+    const newTotal = count;
 
-    if (!quantity) {
-      throw new AppError('Quantity is required', 400);
+    if (amountToAdd === undefined && newTotal === undefined) {
+      throw new AppError('Either quantity (to add) or count (new total) is required', 400);
     }
 
     const supplyData = await query('SELECT count FROM shipping_supplies WHERE id = $1', [id]);
@@ -545,8 +549,9 @@ router.post('/supplies/:id/restock', authenticate, authorize('admin', 'logistics
       throw new AppError('Supply not found', 404);
     }
 
-    const oldQuantity = supplyData.rows[0].count;
-    const newQuantity = oldQuantity + parseInt(quantity);
+    const oldQuantity = supplyData.rows[0].count || 0;
+    // If newTotal provided, use that; otherwise add quantity to old
+    const newQuantity = newTotal !== undefined ? parseInt(newTotal) : (oldQuantity + parseInt(amountToAdd));
 
     await query(
       `UPDATE shipping_supplies SET count = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
@@ -569,6 +574,51 @@ router.get('/supplies/alerts/low-stock', authenticate, async (req: AuthRequest, 
     );
 
     res.json(result.rows);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Create new shipping supply
+router.post('/supplies', authenticate, authorize('admin', 'logistics'), async (req: AuthRequest, res, next) => {
+  try {
+    const {
+      un_box_type,
+      inner_packing_type,
+      dot_sp_number,
+      item_number,
+      purchased_from,
+      price_per_unit,
+      count,
+      notes
+    } = req.body;
+
+    if (!un_box_type) {
+      throw new AppError('UN Box Type is required', 400);
+    }
+
+    const result = await query(
+      `INSERT INTO shipping_supplies 
+       (un_box_type, inner_packing_type, dot_sp_number, item_number, purchased_from, price_per_unit, count, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING *`,
+      [
+        un_box_type,
+        inner_packing_type || null,
+        dot_sp_number || null,
+        item_number || null,
+        purchased_from || null,
+        price_per_unit || null,
+        count || 0,
+        notes || null
+      ]
+    );
+
+    res.status(201).json({ 
+      success: true, 
+      message: 'Supply created successfully', 
+      data: result.rows[0] 
+    });
   } catch (error) {
     next(error);
   }

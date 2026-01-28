@@ -13,15 +13,12 @@ interface Notification {
 }
 
 interface Stats {
-  expiring_30_days: number;
-  expired_samples: number;
-  samples_missing_coa: number;
-  samples_missing_sds: number;
+  expiring_30_days: string | number;
+  expired_samples: string | number;
 }
 
 interface SupplyStats {
-  reorder_needed: number;
-  low_stock: number;
+  low_stock: string | number;
 }
 
 const NotificationBell: React.FC = () => {
@@ -55,75 +52,58 @@ const NotificationBell: React.FC = () => {
     try {
       const newNotifications: Notification[] = [];
 
-      // Fetch sample stats
+      // Fetch sample stats - expiring items
       try {
         const sampleResponse = await api.get('/sample-inventory/stats');
         const stats: Stats = sampleResponse.data.data;
 
-        if (stats.expired_samples > 0) {
+        // Parse as integers to avoid string concatenation
+        const expiredCount = parseInt(String(stats.expired_samples), 10) || 0;
+        const expiringCount = parseInt(String(stats.expiring_30_days), 10) || 0;
+
+        if (expiredCount > 0) {
           newNotifications.push({
             id: 'expired',
             type: 'danger',
-            title: 'Expired Samples',
-            message: `${stats.expired_samples} sample${stats.expired_samples > 1 ? 's have' : ' has'} expired CoA`,
+            title: 'Expired CoA',
+            message: `${expiredCount} sample${expiredCount > 1 ? 's have' : ' has'} expired CoA`,
             link: '/inventory',
-            count: stats.expired_samples,
+            count: expiredCount,
           });
         }
 
-        if (stats.expiring_30_days > 0) {
+        if (expiringCount > 0) {
           newNotifications.push({
             id: 'expiring',
             type: 'warning',
             title: 'Expiring Soon',
-            message: `${stats.expiring_30_days} sample${stats.expiring_30_days > 1 ? 's' : ''} expiring within 30 days`,
+            message: `${expiringCount} sample${expiringCount > 1 ? 's' : ''} expiring within 30 days`,
             link: '/inventory',
-            count: stats.expiring_30_days,
-          });
-        }
-
-        if (stats.samples_missing_coa > 0) {
-          newNotifications.push({
-            id: 'missing-coa',
-            type: 'info',
-            title: 'Missing CoA',
-            message: `${stats.samples_missing_coa} sample${stats.samples_missing_coa > 1 ? 's' : ''} without CoA document`,
-            link: '/inventory',
-            count: stats.samples_missing_coa,
+            count: expiringCount,
           });
         }
       } catch (err) {
         console.error('Error fetching sample stats:', err);
       }
 
-      // Fetch supply stats
+      // Fetch supply stats - low stock (less than 2 items)
       try {
         const supplyResponse = await api.get('/sample-inventory/supply-stats');
         const supplyStats: SupplyStats = supplyResponse.data.data;
 
-        if (supplyStats.reorder_needed > 0) {
-          newNotifications.push({
-            id: 'reorder',
-            type: 'danger',
-            title: 'Reorder Supplies',
-            message: `${supplyStats.reorder_needed} shipping supplie${supplyStats.reorder_needed > 1 ? 's need' : ' needs'} reorder`,
-            link: '/internal/supplies',
-            count: supplyStats.reorder_needed,
-          });
-        }
+        const lowStockCount = parseInt(String(supplyStats.low_stock), 10) || 0;
 
-        if (supplyStats.low_stock > 0) {
+        if (lowStockCount > 0) {
           newNotifications.push({
-            id: 'low-stock',
+            id: 'low-supplies',
             type: 'warning',
-            title: 'Low Stock',
-            message: `${supplyStats.low_stock} supplie${supplyStats.low_stock > 1 ? 's are' : ' is'} running low`,
-            link: '/internal/supplies',
-            count: supplyStats.low_stock,
+            title: 'Low Shipping Supplies',
+            message: `${lowStockCount} supply item${lowStockCount > 1 ? 's' : ''} below 2 units`,
+            link: '/shipments',
+            count: lowStockCount,
           });
         }
       } catch (err) {
-        // Supply stats endpoint might not exist yet, that's ok
         console.log('Supply stats not available');
       }
 
@@ -135,6 +115,7 @@ const NotificationBell: React.FC = () => {
     }
   };
 
+  // Calculate total - ensure we're adding numbers
   const totalCount = notifications.reduce((sum, n) => sum + (n.count || 1), 0);
   const hasUrgent = notifications.some(n => n.type === 'danger');
 
@@ -218,8 +199,8 @@ const NotificationBell: React.FC = () => {
               <button onClick={() => { navigate('/inventory'); setIsOpen(false); }}>
                 View Inventory
               </button>
-              <button onClick={() => { navigate('/internal/supplies'); setIsOpen(false); }}>
-                View Supplies
+              <button onClick={() => { navigate('/shipments'); setIsOpen(false); }}>
+                View Shipments
               </button>
             </div>
           )}

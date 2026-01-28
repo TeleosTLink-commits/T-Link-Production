@@ -27,17 +27,42 @@ interface ShipmentItem {
   hazard_description?: string;
 }
 
+interface Supply {
+  id: number;
+  un_box_type: string;
+  inner_packing_type?: string;
+  dot_sp_number?: string;
+  item_number?: string;
+  purchased_from?: string;
+  price_per_unit?: string;
+  count: number;
+  notes?: string;
+}
+
 const Shipments: React.FC = () => {
   const navigate = useNavigate();
   const [shipments, setShipments] = useState<any[]>([]);
   const [samples, setSamples] = useState<Sample[]>([]);
-  const [supplies, setSupplies] = useState<any[]>([]);
+  const [supplies, setSupplies] = useState<Supply[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [showSupplyModal, setShowSupplyModal] = useState(false);
-  const [selectedSupply, setSelectedSupply] = useState<any>(null);
+  const [showAddSupplyModal, setShowAddSupplyModal] = useState(false);
+  const [selectedSupply, setSelectedSupply] = useState<Supply | null>(null);
   const [restockAmount, setRestockAmount] = useState('');
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'all' | 'processing' | 'shipped'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'processing' | 'shipped' | 'supplies'>('all');
+  
+  // New supply form state
+  const [newSupply, setNewSupply] = useState({
+    un_box_type: '',
+    inner_packing_type: '',
+    dot_sp_number: '',
+    item_number: '',
+    purchased_from: '',
+    price_per_unit: '',
+    count: 0,
+    notes: ''
+  });
   
   const [formData, setFormData] = useState({
     shipment_items: [{ sample_id: '', amount_shipped: '', un_number: '', hazard_class: '', packing_group: '', proper_shipping_name: '', hazard_description: '' }] as ShipmentItem[],
@@ -245,6 +270,34 @@ const Shipments: React.FC = () => {
     }
   };
 
+  const handleAddSupply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSupply.un_box_type) {
+      alert('Please enter a UN Box Type');
+      return;
+    }
+    
+    try {
+      await api.post('/shipments/supplies', newSupply);
+      
+      alert(`Added new supply: ${newSupply.un_box_type}`);
+      setShowAddSupplyModal(false);
+      setNewSupply({
+        un_box_type: '',
+        inner_packing_type: '',
+        dot_sp_number: '',
+        item_number: '',
+        purchased_from: '',
+        price_per_unit: '',
+        count: 0,
+        notes: ''
+      });
+      fetchSupplies();
+    } catch (err: any) {
+      alert(err.response?.data?.error || err.response?.data?.message || 'Failed to add supply');
+    }
+  };
+
   return (
     <div className="shipments-page">
       {/* Green Gradient Portal Header */}
@@ -280,6 +333,12 @@ const Shipments: React.FC = () => {
             onClick={() => setActiveTab('shipped')}
           >
             Shipped & Tracking
+          </button>
+          <button 
+            className={`shipments-tab ${activeTab === 'supplies' ? 'active' : ''}`}
+            onClick={() => setActiveTab('supplies')}
+          >
+            Shipping Supplies
           </button>
         </div>      </div>
 
@@ -491,12 +550,26 @@ const Shipments: React.FC = () => {
         </div>
         )}
 
-        {/* Shipping Supplies Section */}
+        {/* Shipping Supplies Tab */}
+        {activeTab === 'supplies' && (
         <div className="shipments-section">
           <div className="shipments-section-header">
             <h2>Shipping Supplies Inventory</h2>
+            <button 
+              className="shipments-primary-btn"
+              onClick={() => setShowAddSupplyModal(true)}
+            >
+              + Add New Supply
+            </button>
           </div>
           <div className="shipments-section-body">
+            {supplies.length === 0 ? (
+              <div className="shipments-empty">
+                <div className="shipments-empty-icon">📦</div>
+                <h3>No Supplies Found</h3>
+                <p>Add your first shipping supply to get started</p>
+              </div>
+            ) : (
             <div className="shipments-table-wrapper">
               <table className="shipments-table">
                 <thead>
@@ -551,8 +624,10 @@ const Shipments: React.FC = () => {
                 </tbody>
               </table>
             </div>
+            )}
           </div>
         </div>
+        )}
       </div>
 
       {/* Create Shipment Modal */}
@@ -890,6 +965,123 @@ const Shipments: React.FC = () => {
                 </button>
                 <button type="submit" className="shipments-form-submit">
                   Update Stock
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add New Supply Modal */}
+      {showAddSupplyModal && (
+        <div className="shipments-modal-overlay" onClick={() => setShowAddSupplyModal(false)}>
+          <div className="shipments-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="shipments-modal-header">
+              <h2>Add New Shipping Supply</h2>
+              <button className="shipments-modal-close" onClick={() => setShowAddSupplyModal(false)}>
+                Close
+              </button>
+            </div>
+            <form onSubmit={handleAddSupply}>
+              <div className="shipments-form-group">
+                <label htmlFor="un-box-type">UN Box Type *</label>
+                <input
+                  id="un-box-type"
+                  type="text"
+                  required
+                  value={newSupply.un_box_type}
+                  onChange={(e) => setNewSupply({ ...newSupply, un_box_type: e.target.value })}
+                  placeholder="e.g., 4GV/X 2.9/S/23"
+                />
+              </div>
+
+              <div className="shipments-form-group">
+                <label htmlFor="inner-packing">Inner Packing Type</label>
+                <input
+                  id="inner-packing"
+                  type="text"
+                  value={newSupply.inner_packing_type}
+                  onChange={(e) => setNewSupply({ ...newSupply, inner_packing_type: e.target.value })}
+                  placeholder="e.g., Glass vials, plastic bags"
+                />
+              </div>
+
+              <div className="shipments-form-row">
+                <div className="shipments-form-group">
+                  <label htmlFor="dot-sp">DOT-SP Number</label>
+                  <input
+                    id="dot-sp"
+                    type="text"
+                    value={newSupply.dot_sp_number}
+                    onChange={(e) => setNewSupply({ ...newSupply, dot_sp_number: e.target.value })}
+                    placeholder="e.g., DOT-SP 12345"
+                  />
+                </div>
+                <div className="shipments-form-group">
+                  <label htmlFor="item-num">Item Number</label>
+                  <input
+                    id="item-num"
+                    type="text"
+                    value={newSupply.item_number}
+                    onChange={(e) => setNewSupply({ ...newSupply, item_number: e.target.value })}
+                    placeholder="Supplier item #"
+                  />
+                </div>
+              </div>
+
+              <div className="shipments-form-row">
+                <div className="shipments-form-group">
+                  <label htmlFor="supplier">Supplier/Vendor</label>
+                  <input
+                    id="supplier"
+                    type="text"
+                    value={newSupply.purchased_from}
+                    onChange={(e) => setNewSupply({ ...newSupply, purchased_from: e.target.value })}
+                    placeholder="e.g., Labelmaster, Uline"
+                  />
+                </div>
+                <div className="shipments-form-group">
+                  <label htmlFor="price">Price</label>
+                  <input
+                    id="price"
+                    type="text"
+                    value={newSupply.price_per_unit}
+                    onChange={(e) => setNewSupply({ ...newSupply, price_per_unit: e.target.value })}
+                    placeholder="e.g., $25.00 or $61 for 15"
+                  />
+                </div>
+              </div>
+
+              <div className="shipments-form-group">
+                <label htmlFor="initial-count">Initial Stock Count *</label>
+                <input
+                  id="initial-count"
+                  type="number"
+                  required
+                  min="0"
+                  value={newSupply.count}
+                  onChange={(e) => setNewSupply({ ...newSupply, count: parseInt(e.target.value) || 0 })}
+                  placeholder="0"
+                />
+              </div>
+
+              <div className="shipments-form-group">
+                <label htmlFor="notes">Notes</label>
+                <textarea
+                  id="notes"
+                  value={newSupply.notes}
+                  onChange={(e) => setNewSupply({ ...newSupply, notes: e.target.value })}
+                  placeholder="Any additional notes about this supply"
+                  rows={2}
+                />
+              </div>
+
+              <div className="shipments-form-actions">
+                <button type="button" className="shipments-form-cancel" onClick={() => setShowAddSupplyModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="shipments-form-submit">
+                  Add Supply
                 </button>
               </div>
             </form>

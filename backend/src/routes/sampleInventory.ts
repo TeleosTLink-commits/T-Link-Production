@@ -192,24 +192,23 @@ router.get('/stats', authenticate, async (req: AuthRequest, res: Response) => {
 // GET /api/sample-inventory/supply-stats - Get shipping supply statistics for notifications
 router.get('/supply-stats', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    // Use 'count' column (production) with fallback, default reorder level of 5
+    // Count supplies with less than 2 items as low stock
     const result = await pool.query(`
       SELECT 
-        COUNT(*) FILTER (WHERE COALESCE(count, 0) <= 5) as reorder_needed,
-        COUNT(*) FILTER (WHERE COALESCE(count, 0) > 5 AND COALESCE(count, 0) < 10) as low_stock
+        COUNT(*) FILTER (WHERE COALESCE(count, 0) < 2) as low_stock
       FROM shipping_supplies
     `);
 
     res.json({
       success: true,
-      data: result.rows[0]
+      data: { low_stock: parseInt(result.rows[0].low_stock, 10) || 0 }
     });
   } catch (error: any) {
     console.error('Error fetching supply stats:', error);
     // Return zeros instead of failing - notifications will just show no supply alerts
     res.json({ 
       success: true, 
-      data: { reorder_needed: 0, low_stock: 0 } 
+      data: { low_stock: 0 } 
     });
   }
 });

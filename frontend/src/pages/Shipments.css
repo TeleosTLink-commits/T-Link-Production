@@ -531,6 +531,19 @@
   }
 }
 
+/* ============ Form Rows for Side-by-Side Fields ============ */
+.shipments-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 576px) {
+  .shipments-form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ============ Footer Styling ============ */
 .dashboard-footer {
   background: linear-gradient(135deg, rgba(45, 80, 22, 0.95) 0%, rgba(61, 107, 31, 0.95) 100%);
