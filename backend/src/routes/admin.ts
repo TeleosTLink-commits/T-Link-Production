@@ -252,9 +252,11 @@ router.post('/users', async (req, res) => {
     // Send email invitation with registration link
     let emailSent = false;
     try {
+      console.log(`Attempting to send registration invitation to: ${normalizedEmail}`);
       emailSent = await sendRegistrationInvitation(normalizedEmail, role);
-    } catch (emailError) {
-      console.error('Failed to send invitation email:', emailError);
+      console.log(`Registration invitation result for ${normalizedEmail}: ${emailSent ? 'SUCCESS' : 'FAILED'}`);
+    } catch (emailError: any) {
+      console.error('Failed to send invitation email:', emailError.message || emailError);
       // Don't fail the whole operation if email fails
     }
 

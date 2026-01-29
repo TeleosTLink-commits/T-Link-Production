@@ -200,8 +200,8 @@ const AdminPanel: React.FC = () => {
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/admin/users', newUser);
-      alert('User invitation sent successfully. They will receive instructions to complete registration.');
+      const response = await api.post('/admin/users', newUser);
+      alert(response.data.message || 'User added successfully');
       setShowAddUser(false);
       setNewUser({ email: '', role: 'manufacturer' });
       fetchUsers();
