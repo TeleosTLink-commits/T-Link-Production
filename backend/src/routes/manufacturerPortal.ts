@@ -341,15 +341,21 @@ router.post('/shipments/request', authenticate, checkManufacturer, async (req: R
     await client.query('COMMIT');
 
     // Send email notification to manufacturer
-    await sendShipmentCreatedNotification(userEmail, `${first_name} ${last_name}`, {
-      shipment_id: shipmentId,
-      lot_number,
-      sample_name,
-      quantity_requested,
-      unit: quantity_unit,
-      delivery_address,
-      scheduled_ship_date: scheduled_ship_date || 'TBD',
-    });
+    try {
+      const emailSent = await sendShipmentCreatedNotification(userEmail, `${first_name} ${last_name}`, {
+        shipment_id: shipmentId,
+        lot_number,
+        sample_name,
+        quantity_requested,
+        unit: quantity_unit,
+        delivery_address,
+        scheduled_ship_date: scheduled_ship_date || 'TBD',
+      });
+      logger.info(`Shipment confirmation email ${emailSent ? 'sent' : 'failed'} to ${userEmail}`);
+    } catch (emailError: any) {
+      logger.error('Failed to send shipment confirmation email:', emailError.message);
+      // Don't fail the request if email fails - shipment was created successfully
+    }
 
     res.status(201).json({
       success: true,
@@ -564,15 +570,21 @@ router.post('/shipments/request-multiple', authenticate, checkManufacturer, asyn
     await client.query('COMMIT');
 
     // Send email notification to manufacturer
-    await sendShipmentCreatedNotification(userEmail, `${first_name} ${last_name}`, {
-      shipment_id: shipmentId,
-      lot_number: sampleData.map(s => s.lot_number).join(', '),
-      sample_name: `${sampleData.length} sample(s)`,
-      quantity_requested: totalQuantity,
-      unit: 'ml',
-      delivery_address,
-      scheduled_ship_date: scheduled_ship_date || 'TBD',
-    });
+    try {
+      const emailSent = await sendShipmentCreatedNotification(userEmail, `${first_name} ${last_name}`, {
+        shipment_id: shipmentId,
+        lot_number: sampleData.map(s => s.lot_number).join(', '),
+        sample_name: `${sampleData.length} sample(s)`,
+        quantity_requested: totalQuantity,
+        unit: 'ml',
+        delivery_address: fullAddress,
+        scheduled_ship_date: scheduled_ship_date || 'TBD',
+      });
+      logger.info(`Multi-sample shipment confirmation email ${emailSent ? 'sent' : 'failed'} to ${userEmail}`);
+    } catch (emailError: any) {
+      logger.error('Failed to send multi-sample shipment confirmation email:', emailError.message);
+      // Don't fail the request if email fails - shipment was created successfully
+    }
 
     res.status(201).json({
       success: true,
