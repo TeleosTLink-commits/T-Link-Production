@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>T-Link Quick Test Guide - Internal Workflow</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    @page { 
+      size: letter; 
+      margin: 0.75in; 
+    }
+    
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 11pt;
+      line-height: 1.5;
+      color: #1f2937;
+      max-width: 8.5in;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 3px solid #047857;
+      padding-bottom: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .header h1 {
+      color: #047857;
+      font-size: 20pt;
+    }
+    
+    .header .info {
+      text-align: right;
+      font-size: 9pt;
+      color: #6b7280;
+    }
+    
+    .intro {
+      background: #f0fdf4;
+      border-left: 4px solid #047857;
+      padding: 12px 15px;
+      margin-bottom: 20px;
+      font-size: 10pt;
+    }
+    
+    .intro strong { color: #047857; }
+    
+    .section {
+      margin-bottom: 20px;
+      page-break-inside: avoid;
+    }
+    
+    .section-header {
+      background: #047857;
+      color: white;
+      padding: 8px 12px;
+      font-weight: 600;
+      font-size: 11pt;
+      margin-bottom: 0;
+    }
+    
+    .section-content {
+      border: 1px solid #e5e7eb;
+      border-top: none;
+      padding: 12px;
+    }
+    
+    .step {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px dashed #e5e7eb;
+    }
+    
+    .step:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+    
+    .step-num {
+      background: #047857;
+      color: white;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10pt;
+      font-weight: bold;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+    
+    .step-content {
+      flex: 1;
+    }
+    
+    .step-action {
+      font-weight: 600;
+      color: #1f2937;
+    }
+    
+    .step-result {
+      font-size: 9pt;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+    
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      margin-top: 6px;
+    }
+    
+    .checkbox {
+      width: 14px;
+      height: 14px;
+      border: 2px solid #047857;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+    
+    .checkbox-label {
+      font-size: 9pt;
+    }
+    
+    .pass { color: #059669; }
+    .fail { color: #dc2626; }
+    
+    .footer {
+      margin-top: 25px;
+      padding-top: 15px;
+      border-top: 2px solid #047857;
+    }
+    
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    
+    .footer-item label {
+      font-size: 9pt;
+      color: #6b7280;
+      display: block;
+      margin-bottom: 5px;
+    }
+    
+    .footer-item .line {
+      border-bottom: 1px solid #1f2937;
+      height: 25px;
+    }
+    
+    .notes-box {
+      margin-top: 15px;
+    }
+    
+    .notes-box label {
+      font-size: 9pt;
+      color: #6b7280;
+      display: block;
+      margin-bottom: 5px;
+    }
+    
+    .notes-box .lines {
+      border: 1px solid #e5e7eb;
+      height: 60px;
+    }
+    
+    @media print {
+      body { padding: 0; }
+      .section { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>T-Link Quick Test Guide</h1>
+      <div style="font-size: 10pt; color: #6b7280;">Internal Staff Workflow Verification</div>
+    </div>
+    <div class="info">
+      <div><strong>Est. Time:</strong> 8-10 minutes</div>
+      <div><strong>URL:</strong> t-link-production.vercel.app</div>
+    </div>
+  </div>
+
+  <div class="intro">
+    <strong>Instructions:</strong> Complete each step in order. Check ✓ Pass or ✗ Fail for each item. 
+    If something doesn't work, note the issue and continue to the next step.
+  </div>
+
+  <!-- Section 1: Login -->
+  <div class="section">
+    <div class="section-header">1. LOGIN (1 min)</div>
+    <div class="section-content">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <div class="step-action">Go to t-link-production.vercel.app</div>
+          <div class="step-result">Expected: Login page appears with T-Link logo</div>
+          <div class="checkbox-row">
+            <div class="checkbox"></div><span class="checkbox-label pass">Pass</span>
+            <div class="checkbox" style="margin-left: 15px;"></div><span class="checkbox-label fail">Fail</span>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <div class="step-action">Enter your email and password → Click "Sign In"</div>
+          <div class="step-result">Expected: Dashboard appears with 3 green buttons</div>
+          <div class="checkbox-row">
+            <div class="checkbox"></div><span class="checkbox-label pass">Pass</span>
+            <div class="checkbox" style="margin-left: 15px;"></div><span class="checkbox-label fail">Fail</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Dashboard -->
+  <div class="section">
+    <div class="section-header">2. DASHBOARD & NAVIGATION (1 min)</div>
+    <div class="section-content">
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <div class="step-action">Verify dashboard shows: Test Methods, Sample Inventory, Shipment Logistics</div>
+          <div class="step-result">Expected: All 3 buttons are visible and clickable</div>
+          <div class="checkbox-row">
+            <div class="checkbox"></div><span class="checkbox-label pass">Pass</span>
+            <div class="checkbox" style="margin-left: 15px;"></div><span class="checkbox-label fail">Fail</span>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <div class="step-action">Click "Help" button (top-right) → Click "User Manual"</div>
+          <div class="step-result">Expected: User manual opens in new tab</div>
+          <div class="checkbox-row">
+            <div class="checkbox"></div><span class="checkbox-label pass">Pass</span>
+            <div class="checkbox" style="margin-left: 15px;"></div><span class="checkbox-label fail">Fail</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3: Sample Inventory -->
+  <div class="section">
+    <div class="section-header">3. SAMPLE INVENTORY (2 min)</div>
+    <div class="section-content">
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-content">
+          <div class="step-action">Click "Sample Inventory" → View sample list</div>
+          <div class="step-result">Expected: Table displays with samples, statistics cards shown at top</div>
+          <div class="checkbox-row">
+            <div class="checkbox"></div><span class="checkbox-label pass">Pass</span>
+            <div class="checkbox" style="margin-left: 15px;"></div><span class="checkbox-label fail">Fail</span>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-content">
+          <div class="step-action">Use the search box to search for any sample name</div>
+          <div class="step-result">Expected: Results filter as you type</div>
+          <div class="checkbox-row">
+            <div class="checkbox"></div><span class="checkbox-label pass">Pass</span>
+            <div class="checkbox" style="margin-left: 15px;"></div><span class="checkbox-label fail">Fail</span>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">7</div>
+        <div class="step-content">
+          <div class="step-action">Click any sample row to view details</div>
+          <div class="step-result">Expected: Sample details panel opens showing lot#, quantity, expiration</div>
+          <div class="checkbox-row">
+            <div class="checkbox"></div><span class="checkbox-label pass">Pass</span>
+            <div class="checkbox" style="margin-left: 15px;"></div><span class="checkbox-label fail">Fail</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 4: Test Methods -->
+  <div class="section">
+    <div class="section-header">4. TEST METHODS (1 min)</div>
+    <div class="section-content">
+      <div class="step">
+        <div class="step-num">8</div>
+        <div class="step-content">
+          <div class="step-action">Return to Dashboard → Click "Test Methods"</div>
+          <div class="step-result">Expected: Test methods list appears with TM numbers</div>
+          <div class="checkbox-row">
+            <div class="checkbox"></div><span class="checkbox-label pass">Pass</span>
+            <div class="checkbox" style="margin-left: 15px;"></div><span class="checkbox-label fail">Fail</span>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">9</div>
+        <div class="step-content">
+          <div class="step-action">Click "View" on any test method with a document</div>
+          <div class="step-result">Expected: PDF opens or downloads</div>
+          <div class="checkbox-row">
+            <div class="checkbox"></div><span class="checkbox-label pass">Pass</span>
+            <div class="checkbox" style="margin-left: 15px;"></div><span class="checkbox-label fail">Fail</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 5: Shipments -->
+  <div class="section">
+    <div class="section-header">5. SHIPMENT LOGISTICS (2 min)</div>
+    <div class="section-content">
+      <div class="step">
+        <div class="step-num">10</div>
+        <div class="step-content">
+          <div class="step-action">Return to Dashboard → Click "Shipment Logistics"</div>
+          <div class="step-result">Expected: Shipments list appears with status filters</div>
+          <div class="checkbox-row">
+            <div class="checkbox"></div><span class="checkbox-label pass">Pass</span>
+            <div class="checkbox" style="margin-left: 15px;"></div><span class="checkbox-label fail">Fail</span>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">11</div>
+        <div class="step-content">
+          <div class="step-action">Click "+ Create Shipment" and verify form opens</div>
+          <div class="step-result">Expected: Form appears with sample selection, address fields</div>
+          <div class="checkbox-row">
+            <div class="checkbox"></div><span class="checkbox-label pass">Pass</span>
+            <div class="checkbox" style="margin-left: 15px;"></div><span class="checkbox-label fail">Fail</span>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">12</div>
+        <div class="step-content">
+          <div class="step-action">Click any existing shipment to view details</div>
+          <div class="step-result">Expected: Shipment details show recipient, samples, status</div>
+          <div class="checkbox-row">
+            <div class="checkbox"></div><span class="checkbox-label pass">Pass</span>
+            <div class="checkbox" style="margin-left: 15px;"></div><span class="checkbox-label fail">Fail</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 6: Logout -->
+  <div class="section">
+    <div class="section-header">6. SIGN OUT (30 sec)</div>
+    <div class="section-content">
+      <div class="step">
+        <div class="step-num">13</div>
+        <div class="step-content">
+          <div class="step-action">Click "Sign Out" (top-right corner)</div>
+          <div class="step-result">Expected: Returns to login page</div>
+          <div class="checkbox-row">
+            <div class="checkbox"></div><span class="checkbox-label pass">Pass</span>
+            <div class="checkbox" style="margin-left: 15px;"></div><span class="checkbox-label fail">Fail</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-grid">
+      <div class="footer-item">
+        <label>Tester Name:</label>
+        <div class="line"></div>
+      </div>
+      <div class="footer-item">
+        <label>Date:</label>
+        <div class="line"></div>
+      </div>
+    </div>
+    <div class="notes-box">
+      <label>Issues Found / Notes:</label>
+      <div class="lines"></div>
+    </div>
+    <div style="margin-top: 15px; font-size: 9pt; color: #6b7280; text-align: center;">
+      Report issues to: jhunzie@ajwalabs.com | T-Link v1.0 | © 2026 Ajwa Labs
+    </div>
+  </div>
+</body>
+</html>
