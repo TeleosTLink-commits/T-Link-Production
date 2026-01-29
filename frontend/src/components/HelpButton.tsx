@@ -33,14 +33,6 @@ const HelpButton: React.FC<HelpButtonProps> = ({ userType }) => {
     setIsOpen(false);
   };
 
-  const handleOpenQuickReview = () => {
-    // Only available for internal users (Ajwa Labs staff)
-    if (userType === 'internal') {
-      window.open('/docs/AJWA_LABS_QUICK_REVIEW.html', '_blank');
-      setIsOpen(false);
-    }
-  };
-
   const handleContactSupport = () => {
     const supportPath = userType === 'internal' 
       ? '/internal/support'
@@ -73,16 +65,6 @@ const HelpButton: React.FC<HelpButtonProps> = ({ userType }) => {
                 <span className="menu-desc">Complete documentation</span>
               </div>
             </button>
-            
-            {userType === 'internal' && (
-              <button className="help-menu-item" onClick={handleOpenQuickReview}>
-                <span className="menu-icon">📋</span>
-                <div className="menu-text">
-                  <span className="menu-title">Quick Review Form</span>
-                  <span className="menu-desc">Submit feedback</span>
-                </div>
-              </button>
-            )}
 
             <button className="help-menu-item" onClick={handleContactSupport}>
               <span className="menu-icon">✉️</span>
