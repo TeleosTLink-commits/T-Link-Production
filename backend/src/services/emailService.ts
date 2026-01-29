@@ -53,8 +53,10 @@ const transporter = nodemailer.createTransport({
 export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
   try {
     // Use sanitize-html library for proper XSS protection
+    // Remove 'style' tag from allowedTags to avoid XSS vulnerability
+    // Instead, use inline styles on allowed elements
     const safeHtml = sanitizeHtmlLib(options.html, {
-      allowedTags: sanitizeHtmlLib.defaults.allowedTags.concat(['img', 'style']),
+      allowedTags: sanitizeHtmlLib.defaults.allowedTags.concat(['img']),
       allowedAttributes: {
         ...sanitizeHtmlLib.defaults.allowedAttributes,
         '*': ['style', 'class'],
