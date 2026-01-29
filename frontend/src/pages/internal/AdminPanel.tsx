@@ -75,6 +75,7 @@ const AdminPanel: React.FC = () => {
   
   // Users
   const [users, setUsers] = useState<User[]>([]);
+  const [pendingInvitations, setPendingInvitations] = useState<Array<{id: number; email: string; role: string; invited_at: string}>>([]);
   const [showAddUser, setShowAddUser] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [newUser, setNewUser] = useState({ email: '', role: 'manufacturer' });
@@ -123,8 +124,12 @@ const AdminPanel: React.FC = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/admin/users');
-      setUsers(response.data.data || response.data);
+      const [usersResponse, pendingResponse] = await Promise.all([
+        api.get('/admin/users'),
+        api.get('/admin/pending-invitations')
+      ]);
+      setUsers(usersResponse.data.data || usersResponse.data);
+      setPendingInvitations(pendingResponse.data.data || []);
     } catch (err) {
       console.error('Error fetching users:', err);
     } finally {
@@ -420,6 +425,71 @@ const AdminPanel: React.FC = () => {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {/* Pending Invitations Section */}
+            {pendingInvitations.length > 0 && (
+              <div className="pending-invitations-section" style={{ marginTop: '40px' }}>
+                <h3 style={{ color: '#1a4d2e', marginBottom: '15px' }}>
+                  📧 Pending Invitations ({pendingInvitations.length})
+                </h3>
+                <p style={{ color: '#666', marginBottom: '15px', fontSize: '14px' }}>
+                  These users have been authorized but haven't registered yet.
+                </p>
+                <div className="admin-table-wrapper">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Invited</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pendingInvitations.map((invitation) => (
+                        <tr key={invitation.id}>
+                          <td>{invitation.email}</td>
+                          <td><span className={`role-badge ${invitation.role}`}>{invitation.role}</span></td>
+                          <td>{new Date(invitation.invited_at).toLocaleDateString()}</td>
+                          <td>
+                            <div className="action-buttons">
+                              <button 
+                                className="action-btn small"
+                                onClick={async () => {
+                                  try {
+                                    const response = await api.post(`/admin/resend-invitation/${invitation.id}`);
+                                    alert(response.data.message);
+                                  } catch (err) {
+                                    alert('Failed to resend invitation');
+                                  }
+                                }}
+                              >
+                                Resend Email
+                              </button>
+                              <button 
+                                className="action-btn small danger"
+                                onClick={async () => {
+                                  if (confirm(`Revoke invitation for ${invitation.email}?`)) {
+                                    try {
+                                      await api.delete(`/admin/pending-invitations/${invitation.id}`);
+                                      fetchUsers();
+                                    } catch (err) {
+                                      alert('Failed to revoke invitation');
+                                    }
+                                  }
+                                }}
+                              >
+                                Revoke
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>

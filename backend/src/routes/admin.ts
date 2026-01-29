@@ -98,6 +98,95 @@ router.get('/users', async (req, res) => {
   }
 });
 
+// Get pending invitations (authorized but not yet registered)
+router.get('/pending-invitations', async (req, res) => {
+  try {
+    // Get authorized emails that don't have a corresponding user account yet
+    const result = await pool.query(`
+      SELECT 
+        ae.id,
+        ae.email,
+        ae.role,
+        ae.created_at as invited_at
+      FROM authorized_emails ae
+      LEFT JOIN users u ON LOWER(ae.email) = LOWER(u.email)
+      WHERE u.id IS NULL
+      ORDER BY ae.created_at DESC
+    `);
+    
+    res.json({ 
+      success: true, 
+      data: result.rows 
+    });
+  } catch (error: any) {
+    console.error('Error fetching pending invitations:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch pending invitations',
+      details: error.message 
+    });
+  }
+});
+
+// Resend invitation email
+router.post('/resend-invitation/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await pool.query(
+      'SELECT email, role FROM authorized_emails WHERE id = $1',
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Invitation not found' });
+    }
+    
+    const { email, role } = result.rows[0];
+    const emailSent = await sendRegistrationInvitation(email, role);
+    
+    res.json({
+      success: true,
+      emailSent,
+      message: emailSent 
+        ? 'Invitation email resent successfully'
+        : 'Failed to send invitation email. Please check SMTP configuration.'
+    });
+  } catch (error: any) {
+    console.error('Error resending invitation:', error);
+    res.status(500).json({
+      error: 'Failed to resend invitation',
+      details: error.message
+    });
+  }
+});
+
+// Delete pending invitation
+router.delete('/pending-invitations/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await pool.query(
+      'DELETE FROM authorized_emails WHERE id = $1 RETURNING email',
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Invitation not found' });
+    }
+    
+    res.json({
+      success: true,
+      message: `Invitation for ${result.rows[0].email} has been revoked`
+    });
+  } catch (error: any) {
+    console.error('Error deleting invitation:', error);
+    res.status(500).json({
+      error: 'Failed to delete invitation',
+      details: error.message
+    });
+  }
+});
+
 // Create new user
 router.post('/users', async (req, res) => {
   try {
