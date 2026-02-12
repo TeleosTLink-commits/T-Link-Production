@@ -49,6 +49,7 @@ coverage/
 *.tmp
 *.temp
 temp_*.txt
+tmpclaude-*
 
 # Sensitive credential files - NEVER COMMIT THESE
 *credentials*.txt

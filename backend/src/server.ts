@@ -24,6 +24,54 @@ import internalSupportRoutes from './routes/internalSupport';
 
 dotenv.config();
 
+// ============================================================================
+// SECURITY: Environment Variable Validation
+// ============================================================================
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Critical environment variables that MUST be set in production
+const requiredProductionEnvVars = [
+  'JWT_SECRET',
+  'DB_HOST',
+  'DB_NAME',
+  'DB_USER',
+  'DB_PASSWORD',
+  'CLOUDINARY_CLOUD_NAME',
+  'CLOUDINARY_API_KEY',
+  'CLOUDINARY_API_SECRET',
+];
+
+// Validate JWT_SECRET strength
+if (process.env.JWT_SECRET) {
+  const jwtSecret = process.env.JWT_SECRET;
+  if (jwtSecret.length < 32) {
+    if (isProduction) {
+      console.error('❌ FATAL SECURITY ERROR: JWT_SECRET must be at least 32 characters in production');
+      console.error('   Generate a strong secret: openssl rand -base64 64');
+      process.exit(1);
+    } else {
+      console.warn('⚠️  WARNING: JWT_SECRET is weak (< 32 chars). This is only acceptable in development.');
+    }
+  }
+} else if (isProduction) {
+  console.error('❌ FATAL: JWT_SECRET is required in production');
+  process.exit(1);
+}
+
+// Validate all required environment variables in production
+if (isProduction) {
+  const missingVars = requiredProductionEnvVars.filter(varName => !process.env[varName]);
+  
+  if (missingVars.length > 0) {
+    console.error('❌ FATAL SECURITY ERROR: Missing required environment variables in production:');
+    missingVars.forEach(varName => console.error(`   - ${varName}`));
+    console.error('\n   Set these in your Render.com dashboard or deployment environment.');
+    process.exit(1);
+  }
+  
+  console.log('✅ All required environment variables validated');
+}
+
 const app = express();
 
 // Trust proxy for rate limiting behind reverse proxies (Render, Vercel, etc.)

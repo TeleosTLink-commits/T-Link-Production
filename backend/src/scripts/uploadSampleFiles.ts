@@ -6,31 +6,52 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Configure Cloudinary
+// Validate required environment variables
+const requiredEnvVars = [
+  'CLOUDINARY_CLOUD_NAME',
+  'CLOUDINARY_API_KEY',
+  'CLOUDINARY_API_SECRET',
+  'DB_HOST',
+  'DB_NAME',
+  'DB_USER',
+  'DB_PASSWORD',
+];
+
+for (const envVar of requiredEnvVars) {
+  if (!process.env[envVar]) {
+    throw new Error(`FATAL: ${envVar} environment variable is required`);
+  }
+}
+
+// Configure Cloudinary using environment variables
 cloudinary.v2.config({
-  cloud_name: 'di7yyu1mx',
-  api_key: '733869953499621',
-  api_secret: 'S4ASfISu4o4Br1r3fchP0SiIko4',
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Production database
+// Production database using environment variables
 const prodPool = new Pool({
-  host: 'dpg-d5g3r0qli9vc7398d08g-a.oregon-postgres.render.com',
-  port: 5432,
-  database: 'tlink_db_zlsw',
-  user: 'tlink_user',
-  password: 'illvriAUF5XcsXFPFuPeuK8YfQplyCJz',
-  ssl: { rejectUnauthorized: false },
+  host: process.env.DB_HOST,
+  port: parseInt(process.env.DB_PORT || '5432'),
+  database: process.env.DB_NAME,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: true } : false,
 });
 
-// Local database to get file path mappings
+// Local database using environment variables
 const localPool = new Pool({
-  user: 'postgres',
-  host: 'localhost',
-  database: 'tlink_db',
-  password: 'Ajwa8770',
-  port: 5432,
+  user: process.env.LOCAL_DB_USER || 'postgres',
+  host: process.env.LOCAL_DB_HOST || 'localhost',
+  database: process.env.LOCAL_DB_NAME || 'tlink_db',
+  password: process.env.LOCAL_DB_PASSWORD,
+  port: parseInt(process.env.LOCAL_DB_PORT || '5432'),
 });
+
+if (!process.env.LOCAL_DB_PASSWORD) {
+  console.warn('WARNING: LOCAL_DB_PASSWORD not set. Script may fail to connect to local database.');
+}
 
 async function uploadToCloudinary(
   filePath: string,

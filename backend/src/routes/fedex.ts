@@ -5,12 +5,17 @@ import { authenticate } from '../middleware/auth';
 
 const router = Router();
 
+// Validate database password is set
+if (!process.env.DB_PASSWORD) {
+  throw new Error('FATAL: DB_PASSWORD environment variable is required');
+}
+
 // Create a new database pool for this route file
 const pool = new Pool({
   user: process.env.DB_USER || 'postgres',
   host: process.env.DB_HOST || 'localhost',
   database: process.env.DB_NAME || 'tlink_db',
-  password: process.env.DB_PASSWORD || 'Ajwa8770',
+  password: process.env.DB_PASSWORD,
   port: parseInt(process.env.DB_PORT || '5432', 10),
 });
 

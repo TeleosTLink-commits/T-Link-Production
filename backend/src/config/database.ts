@@ -16,7 +16,11 @@ const poolConfig: PoolConfig = {
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
-  ssl: sslEnabled ? { rejectUnauthorized: false } : false,
+  ssl: sslEnabled ? {
+    rejectUnauthorized: true,
+    // Allow custom CA certificate if provided
+    ca: process.env.DB_SSL_CA ? process.env.DB_SSL_CA : undefined,
+  } : false,
 };
 
 console.log(`Database SSL: ${sslEnabled ? 'enabled' : 'disabled'} (NODE_ENV: ${process.env.NODE_ENV})`);
