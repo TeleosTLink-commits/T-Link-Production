@@ -5,6 +5,17 @@ import { AppError } from '../middleware/errorHandler';
 
 const router = Router();
 
+// Countries that don't require state/province codes
+const COUNTRIES_WITHOUT_STATES = ['NL', 'BE', 'DK', 'FI', 'IE', 'NO', 'PT', 'SE', 'AT', 'SG', 'IL', 'NZ'];
+
+/**
+ * Helper function to determine if a country requires state/province
+ */
+function requiresState(countryCode?: string): boolean {
+  if (!countryCode) return true;
+  return !COUNTRIES_WITHOUT_STATES.includes(countryCode.toUpperCase());
+}
+
 // Get all shipments
 router.get('/', authenticate, async (req: AuthRequest, res, next) => {
   try {
@@ -254,8 +265,17 @@ router.post('/multi', authenticate, authorize('admin', 'lab_staff', 'logistics',
       throw new AppError('Maximum 10 samples per shipment', 400);
     }
 
-    if (!recipient_name || !recipient_address || !recipient_city || !recipient_state || !recipient_zip) {
-      throw new AppError('Missing required recipient address fields', 400);
+    // State is only required for countries that use states/provinces
+    const stateRequired = requiresState(recipient_country);
+    
+    if (!recipient_name || !recipient_address || !recipient_city || (stateRequired && !recipient_state) || !recipient_zip) {
+      const missingFields = [];
+      if (!recipient_name) missingFields.push('recipient_name');
+      if (!recipient_address) missingFields.push('recipient_address');
+      if (!recipient_city) missingFields.push('recipient_city');
+      if (stateRequired && !recipient_state) missingFields.push('recipient_state');
+      if (!recipient_zip) missingFields.push('recipient_zip');
+      throw new AppError(`Missing required recipient address fields: ${missingFields.join(', ')}`, 400);
     }
 
     if (!recipient_phone) {
