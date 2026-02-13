@@ -44,16 +44,25 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
     // Try to get token from Authorization header first
     let token = null;
     const authHeader = req.headers.authorization;
-    
+
     if (authHeader && authHeader.startsWith('Bearer ')) {
       token = authHeader.substring(7);
-    } 
+    }
     // Fall back to query parameter (for file downloads via window.open)
     else if (req.query && req.query.token) {
       token = req.query.token as string;
     }
 
     if (!token) {
+      // Log debugging info to help diagnose the issue
+      console.log('AUTH FAILED - No token provided:', {
+        origin: req.headers.origin,
+        referer: req.headers.referer,
+        hasAuthHeader: !!authHeader,
+        authHeaderValue: authHeader ? authHeader.substring(0, 20) + '...' : 'none',
+        method: req.method,
+        path: req.path,
+      });
       return res.status(401).json({ error: 'No token provided' });
     }
 
