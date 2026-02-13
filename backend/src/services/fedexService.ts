@@ -105,11 +105,11 @@ class FedExService {
     try {
       const response = await axios.post(
         `${FEDEX_API_BASE_URL}/oauth/token`,
-        {
+        new URLSearchParams({
           grant_type: 'client_credentials',
-          client_id: FEDEX_API_KEY,
-          client_secret: FEDEX_SECRET_KEY,
-        },
+          client_id: FEDEX_API_KEY || '',
+          client_secret: FEDEX_SECRET_KEY || '',
+        }),
         {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -180,6 +180,7 @@ class FedExService {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
             'X-locale': 'en_US',
+            'x-customer-transaction-id': `tlink-addr-${Date.now()}`,
           },
         }
       );
@@ -285,31 +286,9 @@ class FedExService {
         packageSpecialServices = {
           specialServiceTypes: [hazmatServiceType],
           dangerousGoodsDetail: {
-            offeror: process.env.LAB_HAZMAT_OFFEROR || 'AJWA Labs LLC',
-            emergencyContactNumber: request.hazmatDetails.emergencyContact || process.env.LAB_EMERGENCY_PHONE || '1-800-555-0199',
             regulation: 'DOT',
-            accessibility: 'ACCESSIBLE',
-            options: ['HAZARDOUS_MATERIALS'],
-            containers: [
-              {
-                containerType: 'PACKAGE',
-                hazardousCommodities: [
-                  {
-                    description: {
-                      id: request.hazmatDetails.unNumber,
-                      sequenceNumber: 1,
-                      packingGroup: request.hazmatDetails.packingGroup || 'II',
-                      properShippingName: request.hazmatDetails.properShippingName,
-                      hazardClass: request.hazmatDetails.hazardClass,
-                    },
-                    quantity: {
-                      amount: request.hazmatDetails.quantity || 1,
-                      units: request.hazmatDetails.quantityUnits || 'ML',
-                    },
-                  },
-                ],
-              },
-            ],
+            accessibility: isGround ? 'INACCESSIBLE' : 'ACCESSIBLE',
+            options: isGround ? ['HAZARDOUS_MATERIALS'] : ['DANGEROUS_GOODS'],
           },
         };
       } else if (request.isHazmat) {
@@ -420,6 +399,7 @@ class FedExService {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
             'X-locale': 'en_US',
+            'x-customer-transaction-id': `tlink-ship-${Date.now()}`,
           },
         }
       );
@@ -454,6 +434,13 @@ class FedExService {
       };
     } catch (error: any) {
       console.error('FedEx shipment creation error:', error.response?.data || error.message);
+      
+      // Log specific FedEx error codes for debugging
+      if (error.response?.data?.errors) {
+        error.response.data.errors.forEach((err: any) => {
+          console.error(`FedEx Error: ${err.code} - ${err.message}`);
+        });
+      }
       
       // In sandbox mode, return mock data if the API fails
       if (FEDEX_API_BASE_URL?.includes('sandbox')) {
