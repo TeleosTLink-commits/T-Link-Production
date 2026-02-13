@@ -142,7 +142,7 @@ class FedExService {
         correctedAddress: {
           street: address.street,
           city: address.city,
-          state: address.stateOrProvinceCode,
+          state: address.stateOrProvinceCode || '',
           zip: address.postalCode,
           country: address.countryCode || 'US',
         },
@@ -198,7 +198,7 @@ class FedExService {
           correctedAddress: {
             street: resolved.streetLinesToken?.[0] || address.street,
             city: resolved.city || address.city,
-            state: resolved.stateOrProvinceCode || address.stateOrProvinceCode,
+            state: resolved.stateOrProvinceCode || address.stateOrProvinceCode || '',
             zip: resolved.postalCode || address.postalCode,
             country: resolved.countryCode || 'US',
           },
@@ -213,7 +213,7 @@ class FedExService {
           correctedAddress: {
             street: address.street,
             city: address.city,
-            state: address.stateOrProvinceCode,
+            state: address.stateOrProvinceCode || '',
             zip: address.postalCode,
             country: address.countryCode || 'US',
           },
@@ -225,7 +225,7 @@ class FedExService {
         correctedAddress: {
           street: address.street,
           city: address.city,
-          state: address.stateOrProvinceCode,
+          state: address.stateOrProvinceCode || '',
           zip: address.postalCode,
           country: address.countryCode || 'US',
         },
@@ -240,7 +240,7 @@ class FedExService {
           correctedAddress: {
             street: address.street,
             city: address.city,
-            state: address.stateOrProvinceCode,
+            state: address.stateOrProvinceCode || '',
             zip: address.postalCode,
             country: address.countryCode || 'US',
           },
