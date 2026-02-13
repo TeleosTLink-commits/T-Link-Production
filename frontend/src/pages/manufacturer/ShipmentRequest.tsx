@@ -4,6 +4,17 @@ import { toast } from 'react-toastify';
 import api from '../../services/api';
 import './ShipmentRequest.css';
 
+// Countries that don't require state/province codes
+const COUNTRIES_WITHOUT_STATES = ['NL', 'BE', 'DK', 'FI', 'IE', 'NO', 'PT', 'SE', 'AT', 'SG', 'IL', 'NZ'];
+
+/**
+ * Helper function to determine if a country requires state/province
+ */
+function requiresState(countryCode?: string): boolean {
+  if (!countryCode) return true;
+  return !COUNTRIES_WITHOUT_STATES.includes(countryCode.toUpperCase());
+}
+
 interface SampleInventory {
   id: string;
   chemical_name: string;
@@ -173,7 +184,10 @@ const ShipmentRequest: React.FC = () => {
     if (!formData.last_name) newErrors.last_name = 'Last name is required';
     if (!formData.street_address) newErrors.street_address = 'Street address is required';
     if (!formData.city) newErrors.city = 'City is required';
-    if (!formData.state) newErrors.state = 'State/Province is required';
+    // State is only required for countries that use states/provinces
+    if (requiresState(formData.country) && !formData.state) {
+      newErrors.state = 'State/Province is required';
+    }
     if (!formData.zip_code) newErrors.zip_code = 'ZIP/Postal code is required';
     if (!formData.recipient_phone) newErrors.recipient_phone = 'Phone number is required';
     if (!formData.emergency_contact_phone) newErrors.emergency_contact_phone = 'Emergency contact phone is required for hazmat shipments';
@@ -502,7 +516,7 @@ const ShipmentRequest: React.FC = () => {
 
                 <div className="shipment-request-form-group">
                   <label htmlFor="state" className="shipment-request-label">
-                    State/Province *
+                    State/Province {requiresState(formData.country) ? '*' : '(Optional)'}
                   </label>
                   <input
                     type="text"
@@ -511,9 +525,14 @@ const ShipmentRequest: React.FC = () => {
                     value={formData.state}
                     onChange={handleChange}
                     className={`shipment-request-input ${errors.state ? 'error' : ''}`}
-                    placeholder="IN"
+                    placeholder={requiresState(formData.country) ? "IN" : "Leave blank if not applicable"}
                   />
                   {errors.state && <span className="shipment-request-error">{errors.state}</span>}
+                  {!requiresState(formData.country) && (
+                    <small style={{ color: '#666', display: 'block', marginTop: '4px' }}>
+                      {formData.country === 'NL' ? 'Netherlands does not require state/province' : 'Not required for this country'}
+                    </small>
+                  )}
                 </div>
               </div>
 

@@ -10,9 +10,33 @@ const FEDEX_ACCOUNT_NUMBER = process.env.FEDEX_ACCOUNT_NUMBER;
 interface AddressValidationInput {
   street: string;
   city: string;
-  stateOrProvinceCode: string;
+  stateOrProvinceCode?: string;
   postalCode: string;
   countryCode?: string;
+}
+
+// Countries that don't require state/province codes
+const COUNTRIES_WITHOUT_STATES = [
+  'NL', // Netherlands
+  'BE', // Belgium
+  'DK', // Denmark
+  'FI', // Finland
+  'IE', // Ireland
+  'NO', // Norway
+  'PT', // Portugal
+  'SE', // Sweden
+  'AT', // Austria
+  'SG', // Singapore
+  'IL', // Israel
+  'NZ', // New Zealand (uses regions but not required)
+];
+
+/**
+ * Helper function to determine if a country requires state/province
+ */
+function requiresState(countryCode?: string): boolean {
+  if (!countryCode) return true;
+  return !COUNTRIES_WITHOUT_STATES.includes(countryCode.toUpperCase());
 }
 
 interface AddressValidationResult {
@@ -129,18 +153,25 @@ class FedExService {
       const token = await this.getAuthToken();
       console.log('FedEx auth token obtained, calling address validation API...');
 
+      // Build address object, conditionally including stateOrProvinceCode
+      const addressPayload: any = {
+        streetLines: [address.street],
+        city: address.city,
+        postalCode: address.postalCode,
+        countryCode: address.countryCode || 'US',
+      };
+
+      // Only include state if country requires it or if provided
+      if (address.stateOrProvinceCode && requiresState(address.countryCode)) {
+        addressPayload.stateOrProvinceCode = address.stateOrProvinceCode;
+      }
+
       const response = await axios.post(
         `${FEDEX_API_BASE_URL}/address/v1/addresses/resolve`,
         {
           addressesToValidate: [
             {
-              address: {
-                streetLines: [address.street],
-                city: address.city,
-                stateOrProvinceCode: address.stateOrProvinceCode,
-                postalCode: address.postalCode,
-                countryCode: address.countryCode || 'US',
-              },
+              address: addressPayload,
             },
           ],
         },
@@ -298,13 +329,19 @@ class FedExService {
               phoneNumber: process.env.LAB_PHONE || '2255551234',
               companyName: process.env.LAB_COMPANY_NAME || 'AJWA Labs LLC',
             },
-            address: {
-              streetLines: [request.fromAddress.street],
-              city: request.fromAddress.city,
-              stateOrProvinceCode: request.fromAddress.stateOrProvinceCode,
-              postalCode: request.fromAddress.postalCode,
-              countryCode: request.fromAddress.countryCode || 'US',
-            },
+            address: (() => {
+              const addr: any = {
+                streetLines: [request.fromAddress.street],
+                city: request.fromAddress.city,
+                postalCode: request.fromAddress.postalCode,
+                countryCode: request.fromAddress.countryCode || 'US',
+              };
+              // Only include state if country requires it or if provided
+              if (request.fromAddress.stateOrProvinceCode && requiresState(request.fromAddress.countryCode)) {
+                addr.stateOrProvinceCode = request.fromAddress.stateOrProvinceCode;
+              }
+              return addr;
+            })(),
           },
           recipients: [
             {
@@ -312,13 +349,19 @@ class FedExService {
                 personName: 'Recipient',
                 phoneNumber: '0000000000',
               },
-              address: {
-                streetLines: [request.toAddress.street],
-                city: request.toAddress.city,
-                stateOrProvinceCode: request.toAddress.stateOrProvinceCode,
-                postalCode: request.toAddress.postalCode,
-                countryCode: request.toAddress.countryCode || 'US',
-              },
+              address: (() => {
+                const addr: any = {
+                  streetLines: [request.toAddress.street],
+                  city: request.toAddress.city,
+                  postalCode: request.toAddress.postalCode,
+                  countryCode: request.toAddress.countryCode || 'US',
+                };
+                // Only include state if country requires it or if provided
+                if (request.toAddress.stateOrProvinceCode && requiresState(request.toAddress.countryCode)) {
+                  addr.stateOrProvinceCode = request.toAddress.stateOrProvinceCode;
+                }
+                return addr;
+              })(),
             },
           ],
           shipDatestamp: new Date().toISOString().split('T')[0],
@@ -533,6 +576,7 @@ class FedExService {
    * Get shipping rate quote without creating a shipment
    */
   async getShippingRate(request: ShipmentLabelRequest): Promise<{ rate: number; error?: string }> {
+    // Note: For rate quotes, we also handle countries without states
     // If FedEx credentials are not configured, return mock rate
     if (!FEDEX_API_KEY || !FEDEX_SECRET_KEY) {
       console.warn('FedEx API credentials not configured. Using mock rate.');
@@ -551,23 +595,33 @@ class FedExService {
           },
           requestedShipment: {
             shipper: {
-              address: {
-                streetLines: [request.fromAddress.street],
-                city: request.fromAddress.city,
-                stateOrProvinceCode: request.fromAddress.stateOrProvinceCode,
-                postalCode: request.fromAddress.postalCode,
-                countryCode: request.fromAddress.countryCode || 'US',
-              },
+              address: (() => {
+                const addr: any = {
+                  streetLines: [request.fromAddress.street],
+                  city: request.fromAddress.city,
+                  postalCode: request.fromAddress.postalCode,
+                  countryCode: request.fromAddress.countryCode || 'US',
+                };
+                if (request.fromAddress.stateOrProvinceCode && requiresState(request.fromAddress.countryCode)) {
+                  addr.stateOrProvinceCode = request.fromAddress.stateOrProvinceCode;
+                }
+                return addr;
+              })(),
             },
             recipients: [
               {
-                address: {
-                  streetLines: [request.toAddress.street],
-                  city: request.toAddress.city,
-                  stateOrProvinceCode: request.toAddress.stateOrProvinceCode,
-                  postalCode: request.toAddress.postalCode,
-                  countryCode: request.toAddress.countryCode || 'US',
-                },
+                address: (() => {
+                  const addr: any = {
+                    streetLines: [request.toAddress.street],
+                    city: request.toAddress.city,
+                    postalCode: request.toAddress.postalCode,
+                    countryCode: request.toAddress.countryCode || 'US',
+                  };
+                  if (request.toAddress.stateOrProvinceCode && requiresState(request.toAddress.countryCode)) {
+                    addr.stateOrProvinceCode = request.toAddress.stateOrProvinceCode;
+                  }
+                  return addr;
+                })(),
               },
             ],
             shipDatestamp: new Date().toISOString().split('T')[0],

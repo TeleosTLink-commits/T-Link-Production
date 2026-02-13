@@ -9,6 +9,17 @@ import logger from '../config/logger';
 
 const router: Router = express.Router();
 
+// Countries that don't require state/province codes
+const COUNTRIES_WITHOUT_STATES = ['NL', 'BE', 'DK', 'FI', 'IE', 'NO', 'PT', 'SE', 'AT', 'SG', 'IL', 'NZ'];
+
+/**
+ * Helper function to determine if a country requires state/province
+ */
+function requiresState(countryCode?: string): boolean {
+  if (!countryCode) return true;
+  return !COUNTRIES_WITHOUT_STATES.includes(countryCode.toUpperCase());
+}
+
 // Allowed directories for file operations (prevent path traversal)
 const ALLOWED_LABEL_DIR = path.resolve(__dirname, '../../uploads/shipping-labels');
 
@@ -650,15 +661,24 @@ router.post('/validate-address', authenticate, checkLabStaff, async (req: Reques
 
     console.log('Address validation request:', { street, city, state, zip, country });
 
-    if (!street || !city || !state || !zip) {
-      console.error('Missing address fields:', { street: !!street, city: !!city, state: !!state, zip: !!zip });
-      return res.status(400).json({ error: 'Missing required address fields', received: { street, city, state, zip } });
+    // State is only required for countries that use states/provinces
+    const stateRequired = requiresState(country);
+    
+    if (!street || !city || (stateRequired && !state) || !zip) {
+      console.error('Missing address fields:', { street: !!street, city: !!city, state: !!state, zip: !!zip, country, stateRequired });
+      const errorMsg = stateRequired 
+        ? 'Missing required address fields: street, city, state, zip'
+        : 'Missing required address fields: street, city, zip (state not required for this country)';
+      return res.status(400).json({ 
+        error: errorMsg, 
+        received: { street, city, state, zip, country } 
+      });
     }
 
     const validationResult = await fedexService.validateAddress({
       street,
       city,
-      stateOrProvinceCode: state,
+      stateOrProvinceCode: state || undefined,
       postalCode: zip,
       countryCode: country || 'US',
     });

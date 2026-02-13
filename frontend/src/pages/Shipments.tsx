@@ -3,6 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import './Shipments.css';
 
+// Countries that don't require state/province codes
+const COUNTRIES_WITHOUT_STATES = ['NL', 'BE', 'DK', 'FI', 'IE', 'NO', 'PT', 'SE', 'AT', 'SG', 'IL', 'NZ'];
+
+/**
+ * Helper function to determine if a country requires state/province
+ */
+function requiresState(countryCode?: string): boolean {
+  if (!countryCode) return true;
+  return !COUNTRIES_WITHOUT_STATES.includes(countryCode.toUpperCase());
+}
+
 interface Sample {
   id: string;
   chemical_name: string;
@@ -830,14 +841,19 @@ const Shipments: React.FC = () => {
               </div>
 
               <div className="shipments-form-group">
-                <label>State *</label>
+                <label>State {requiresState(formData.recipient_country) ? '*' : '(Optional)'}</label>
                 <input
                   type="text"
-                  required
+                  required={requiresState(formData.recipient_country)}
                   value={formData.recipient_state}
                   onChange={(e) => setFormData({ ...formData, recipient_state: e.target.value })}
-                  placeholder="State"
+                  placeholder={requiresState(formData.recipient_country) ? "State" : "Leave blank if not applicable"}
                 />
+                {!requiresState(formData.recipient_country) && (
+                  <small style={{ color: '#666', display: 'block', marginTop: '4px' }}>
+                    {formData.recipient_country === 'NL' ? 'Netherlands does not require state/province' : 'Not required for this country'}
+                  </small>
+                )}
               </div>
 
               <div className="shipments-form-group">

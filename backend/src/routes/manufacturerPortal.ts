@@ -14,6 +14,17 @@ import logger from '../config/logger';
 
 const router: Router = express.Router();
 
+// Countries that don't require state/province codes
+const COUNTRIES_WITHOUT_STATES = ['NL', 'BE', 'DK', 'FI', 'IE', 'NO', 'PT', 'SE', 'AT', 'SG', 'IL', 'NZ'];
+
+/**
+ * Helper function to determine if a country requires state/province
+ */
+function requiresState(countryCode?: string): boolean {
+  if (!countryCode) return true;
+  return !COUNTRIES_WITHOUT_STATES.includes(countryCode.toUpperCase());
+}
+
 /**
  * Middleware: Check if user is manufacturer
  */
@@ -417,10 +428,24 @@ router.post('/shipments/request-multiple', authenticate, checkManufacturer, asyn
     } = req.body;
 
     // Validation - require structured address OR legacy delivery_address
-    const hasStructuredAddress = street_address && city && state && zip_code;
+    // State is only required for countries that use states/provinces
+    const stateRequired = requiresState(country);
+    const hasStructuredAddress = street_address && city && (!stateRequired || state) && zip_code;
+    
     if (!first_name || !last_name || (!hasStructuredAddress && !delivery_address) || !samples || !Array.isArray(samples)) {
+      const missingFields = [];
+      if (!first_name) missingFields.push('first_name');
+      if (!last_name) missingFields.push('last_name');
+      if (!hasStructuredAddress && !delivery_address) {
+        missingFields.push('address fields (street_address, city, zip_code');
+        if (stateRequired) missingFields.push('state');
+        missingFields.push('OR delivery_address)');
+      }
+      if (!samples || !Array.isArray(samples)) missingFields.push('samples (array)');
+      
       return res.status(400).json({
-        error: 'Missing required fields: first_name, last_name, address fields (street_address, city, state, zip_code OR delivery_address), samples (array)',
+        error: `Missing required fields: ${missingFields.join(', ')}`,
+        hint: stateRequired ? undefined : `State/Province is optional for ${country || 'this country'}`,
       });
     }
 
