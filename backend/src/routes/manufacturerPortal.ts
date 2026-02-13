@@ -511,7 +511,7 @@ router.post('/shipments/request-multiple', authenticate, checkManufacturer, asyn
 
     // Build full address from structured fields or use legacy
     const fullAddress = hasStructuredAddress
-      ? `${street_address}, ${city}, ${state} ${zip_code}${country && country !== 'USA' ? `, ${country}` : ''}`
+      ? `${street_address}, ${city}, ${state} ${zip_code}${country && country !== 'US' && country !== 'USA' ? `, ${country}` : ''}`
       : delivery_address;
 
     // Insert main shipment record with structured address fields
@@ -537,7 +537,7 @@ router.post('/shipments/request-multiple', authenticate, checkManufacturer, asyn
         city || null,
         state || null,
         zip_code || null,
-        country || 'USA',
+        country || 'US',
         userId,
         first_name,
         last_name,

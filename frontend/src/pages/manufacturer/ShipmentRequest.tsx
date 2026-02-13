@@ -203,7 +203,7 @@ const ShipmentRequest: React.FC = () => {
         formData.city,
         formData.state,
         formData.zip_code,
-        formData.country || 'USA'
+        formData.country || 'US'
       ].filter(Boolean).join(', ');
       
       const response = await api.post('/manufacturer/shipments/request-multiple', {
@@ -216,7 +216,7 @@ const ShipmentRequest: React.FC = () => {
         city: formData.city,
         state: formData.state,
         zip_code: formData.zip_code,
-        country: formData.country || 'USA',
+        country: formData.country || 'US',
         // Legacy field for backward compatibility
         delivery_address: fullAddress,
         // Shipping details
@@ -265,7 +265,7 @@ const ShipmentRequest: React.FC = () => {
       city: '',
       state: '',
       zip_code: '',
-      country: 'USA',
+      country: 'US',
       is_international: false,
       emergency_contact_phone: '',
       special_instructions: '',
@@ -545,9 +545,48 @@ const ShipmentRequest: React.FC = () => {
                     onChange={handleChange}
                     className="shipment-request-select"
                   >
-                    <option value="USA">United States</option>
-                    <option value="CAN">Canada</option>
-                    <option value="MEX">Mexico</option>
+                    <option value="US">United States</option>
+                    <option value="CA">Canada</option>
+                    <option value="MX">Mexico</option>
+                    <optgroup label="Europe">
+                      <option value="AT">Austria</option>
+                      <option value="BE">Belgium</option>
+                      <option value="DK">Denmark</option>
+                      <option value="FI">Finland</option>
+                      <option value="FR">France</option>
+                      <option value="DE">Germany</option>
+                      <option value="IE">Ireland</option>
+                      <option value="IT">Italy</option>
+                      <option value="NL">Netherlands</option>
+                      <option value="NO">Norway</option>
+                      <option value="PL">Poland</option>
+                      <option value="PT">Portugal</option>
+                      <option value="ES">Spain</option>
+                      <option value="SE">Sweden</option>
+                      <option value="CH">Switzerland</option>
+                      <option value="GB">United Kingdom</option>
+                    </optgroup>
+                    <optgroup label="Asia">
+                      <option value="CN">China</option>
+                      <option value="IN">India</option>
+                      <option value="ID">Indonesia</option>
+                      <option value="JP">Japan</option>
+                      <option value="MY">Malaysia</option>
+                      <option value="SG">Singapore</option>
+                      <option value="KR">South Korea</option>
+                      <option value="TW">Taiwan</option>
+                      <option value="TH">Thailand</option>
+                    </optgroup>
+                    <optgroup label="Oceania">
+                      <option value="AU">Australia</option>
+                      <option value="NZ">New Zealand</option>
+                    </optgroup>
+                    <optgroup label="South America">
+                      <option value="AR">Argentina</option>
+                      <option value="BR">Brazil</option>
+                      <option value="CL">Chile</option>
+                      <option value="CO">Colombia</option>
+                    </optgroup>
                   </select>
                 </div>
               </div>
