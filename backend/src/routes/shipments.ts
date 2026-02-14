@@ -336,7 +336,11 @@ router.post('/multi', authenticate, authorize('admin', 'lab_staff', 'logistics',
 
     // Generate shipment number
     const shipmentNumber = `SHIP-${Date.now()}`;
-    const fullAddress = `${recipient_address}, ${recipient_city}, ${recipient_state} ${recipient_zip}`;
+    // Handle state for countries that don't require it (empty string -> null -> proper formatting)
+    const stateValue = recipient_state && recipient_state.trim() !== '' ? recipient_state : null;
+    const fullAddress = stateValue
+      ? `${recipient_address}, ${recipient_city}, ${stateValue} ${recipient_zip}`
+      : `${recipient_address}, ${recipient_city}, ${recipient_zip}`;
     const isHazmat = hasHazmat || totalAmount >= 30;
 
     // Create shipment record
@@ -358,7 +362,7 @@ router.post('/multi', authenticate, authorize('admin', 'lab_staff', 'logistics',
         recipient_company || null,
         fullAddress,
         recipient_city,
-        recipient_state,
+        stateValue,
         recipient_zip,
         recipient_country || 'US',
         notes || null,

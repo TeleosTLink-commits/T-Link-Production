@@ -54,15 +54,6 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
     }
 
     if (!token) {
-      // Log debugging info to help diagnose the issue
-      console.log('AUTH FAILED - No token provided:', {
-        origin: req.headers.origin,
-        referer: req.headers.referer,
-        hasAuthHeader: !!authHeader,
-        authHeaderValue: authHeader ? authHeader.substring(0, 20) + '...' : 'none',
-        method: req.method,
-        path: req.path,
-      });
       return res.status(401).json({ error: 'No token provided' });
     }
 
