@@ -857,14 +857,25 @@ const Shipments: React.FC = () => {
               </div>
 
               <div className="shipments-form-group">
-                <label>ZIP Code *</label>
+                <label>ZIP/Postal Code *</label>
                 <input
                   type="text"
                   required
                   value={formData.recipient_zip}
                   onChange={(e) => setFormData({ ...formData, recipient_zip: e.target.value })}
-                  placeholder="ZIP"
+                  placeholder={
+                    formData.recipient_country === 'US' ? '12345' :
+                    formData.recipient_country === 'CA' ? 'A1A 1A1' :
+                    formData.recipient_country === 'NL' ? '1234 AB' :
+                    formData.recipient_country === 'GB' ? 'SW1A 1AA' :
+                    'Postal Code'
+                  }
                 />
+                {formData.recipient_country === 'NL' && (
+                  <small style={{ color: '#666', display: 'block', marginTop: '4px' }}>
+                    Netherlands format: 1234 AB (4 digits + 2 letters)
+                  </small>
+                )}
               </div>
 
               <div className="shipments-form-group">
