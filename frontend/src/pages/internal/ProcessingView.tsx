@@ -157,6 +157,12 @@ const ProcessingView: React.FC = () => {
         country: shipment.destination_country || 'US'
       });
       
+      // Auto-select international service if destination is not US
+      const destCountry = shipment.destination_country || 'US';
+      if (destCountry !== 'US') {
+        setService('INTERNATIONAL_PRIORITY');
+      }
+      
       // Show SDS print prompt if SDS documents are available
       const hasSds = (shipment.sds_documents && shipment.sds_documents.length > 0) ||
         shipment.sds_file_path ||
@@ -832,9 +838,37 @@ const ProcessingView: React.FC = () => {
               <div className="form-group">
                 <label>Shipping Service *</label>
                 <select value={service} onChange={(e) => setService(e.target.value)} aria-label="Shipping service">
-                  <option value="GROUND_HOME_DELIVERY">Ground (5 days)</option>
-                  <option value="EXPRESS_SAVER">2-Day Express</option>
-                  <option value="OVERNIGHT_EXPRESS">Overnight</option>
+                  {editableAddress.country && editableAddress.country !== 'US' ? (
+                    <>
+                      <optgroup label="International Services">
+                        <option value="INTERNATIONAL_PRIORITY">International Priority (1-3 days)</option>
+                        <option value="INTERNATIONAL_ECONOMY">International Economy (4-6 days)</option>
+                        <option value="INTERNATIONAL_FIRST">International First (1-2 days)</option>
+                        <option value="INTERNATIONAL_GROUND">International Ground (7-10 days)</option>
+                      </optgroup>
+                      <optgroup label="Domestic Services">
+                        <option value="GROUND_HOME_DELIVERY">Ground (5 days)</option>
+                        <option value="FEDEX_EXPRESS_SAVER">Express Saver (3 days)</option>
+                        <option value="PRIORITY_OVERNIGHT">Priority Overnight</option>
+                        <option value="STANDARD_OVERNIGHT">Standard Overnight</option>
+                      </optgroup>
+                    </>
+                  ) : (
+                    <>
+                      <optgroup label="Domestic Services">
+                        <option value="GROUND_HOME_DELIVERY">Ground (5 days)</option>
+                        <option value="FEDEX_EXPRESS_SAVER">Express Saver (3 days)</option>
+                        <option value="PRIORITY_OVERNIGHT">Priority Overnight</option>
+                        <option value="STANDARD_OVERNIGHT">Standard Overnight</option>
+                      </optgroup>
+                      <optgroup label="International Services">
+                        <option value="INTERNATIONAL_PRIORITY">International Priority (1-3 days)</option>
+                        <option value="INTERNATIONAL_ECONOMY">International Economy (4-6 days)</option>
+                        <option value="INTERNATIONAL_FIRST">International First (1-2 days)</option>
+                        <option value="INTERNATIONAL_GROUND">International Ground (7-10 days)</option>
+                      </optgroup>
+                    </>
+                  )}
                 </select>
               </div>
 

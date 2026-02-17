@@ -67,7 +67,7 @@ interface ShipmentLabelRequest {
   toAddress: AddressValidationInput;
   weight: number;
   weightUnit: 'LB' | 'KG';
-  service: 'GROUND_HOME_DELIVERY' | 'FEDEX_GROUND' | 'OVERNIGHT_EXPRESS' | 'EXPRESS_SAVER' | 'FEDEX_EXPRESS_SAVER' | 'PRIORITY_OVERNIGHT';
+  service: 'GROUND_HOME_DELIVERY' | 'FEDEX_GROUND' | 'OVERNIGHT_EXPRESS' | 'EXPRESS_SAVER' | 'FEDEX_EXPRESS_SAVER' | 'PRIORITY_OVERNIGHT' | 'STANDARD_OVERNIGHT' | 'INTERNATIONAL_PRIORITY' | 'INTERNATIONAL_ECONOMY' | 'INTERNATIONAL_FIRST' | 'INTERNATIONAL_GROUND';
   packageValue: number;
   isHazmat?: boolean;
   hazmatDetails?: HazmatDetails;
@@ -262,7 +262,9 @@ class FedExService {
     if (!FEDEX_API_KEY || !FEDEX_SECRET_KEY) {
       console.warn('FedEx API credentials not configured. Using mock label.');
       const mockTrackingNumber = `MOCK${Date.now().toString().slice(-10)}`;
-      const mockCost = request.weight * (request.service === 'OVERNIGHT_EXPRESS' ? 45 : 12);
+      const isInternational = request.service.startsWith('INTERNATIONAL');
+      const isOvernight = request.service.includes('OVERNIGHT') || request.service === 'INTERNATIONAL_FIRST';
+      const mockCost = request.weight * (isOvernight ? 45 : isInternational ? 35 : 12);
       const mockDelivery = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
       
       return {
@@ -446,7 +448,9 @@ class FedExService {
       if (FEDEX_API_BASE_URL?.includes('sandbox')) {
         console.warn('FedEx sandbox API error - returning mock label data');
         const mockTrackingNumber = `MOCK${Date.now()}`;
-        const mockCost = request.service === 'GROUND_HOME_DELIVERY' ? 15.99 : 29.99;
+        const isIntl = request.service.startsWith('INTERNATIONAL');
+        const isExpress = request.service.includes('OVERNIGHT') || request.service === 'INTERNATIONAL_FIRST';
+        const mockCost = isExpress ? 29.99 : isIntl ? 24.99 : 15.99;
         const mockDelivery = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
         
         return {
@@ -534,12 +538,28 @@ class FedExService {
 
     switch (service) {
       case 'OVERNIGHT_EXPRESS':
+      case 'PRIORITY_OVERNIGHT':
+      case 'STANDARD_OVERNIGHT':
         daysToAdd = 1;
         break;
       case 'EXPRESS_SAVER':
+      case 'FEDEX_EXPRESS_SAVER':
+        daysToAdd = 3;
+        break;
+      case 'INTERNATIONAL_FIRST':
         daysToAdd = 2;
         break;
+      case 'INTERNATIONAL_PRIORITY':
+        daysToAdd = 3;
+        break;
+      case 'INTERNATIONAL_ECONOMY':
+        daysToAdd = 6;
+        break;
+      case 'INTERNATIONAL_GROUND':
+        daysToAdd = 10;
+        break;
       case 'GROUND_HOME_DELIVERY':
+      case 'FEDEX_GROUND':
       default:
         daysToAdd = 5;
     }
@@ -567,7 +587,9 @@ class FedExService {
     // If FedEx credentials are not configured, return mock rate
     if (!FEDEX_API_KEY || !FEDEX_SECRET_KEY) {
       console.warn('FedEx API credentials not configured. Using mock rate.');
-      const mockRate = request.weight * (request.service === 'OVERNIGHT_EXPRESS' ? 45 : 12);
+      const isInternational = request.service.startsWith('INTERNATIONAL');
+      const isOvernight = request.service.includes('OVERNIGHT') || request.service === 'INTERNATIONAL_FIRST';
+      const mockRate = request.weight * (isOvernight ? 45 : isInternational ? 35 : 12);
       return { rate: mockRate };
     }
 
