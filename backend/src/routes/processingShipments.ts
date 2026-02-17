@@ -132,12 +132,14 @@ router.get('/shipments', authenticate, checkLabStaff, async (req: Request, res: 
  */
 router.get('/supplies', authenticate, checkLabStaff, async (req: Request, res: Response) => {
   try {
+    console.log('[Processing Supplies] Fetching shipping supplies...');
     const result = await pool.query(
       `SELECT id, un_box_type, inner_packing_type, dot_sp_number, item_number, purchased_from, price_per_unit, count
        FROM shipping_supplies
        ORDER BY inner_packing_type ASC, item_number ASC`
     );
 
+    console.log(`[Processing Supplies] Found ${result.rows.length} supplies`);
     const supplies = result.rows.map((row: any) => ({
       id: row.id,
       supply_name: row.item_number || row.un_box_type || 'Unknown',
@@ -148,10 +150,11 @@ router.get('/supplies', authenticate, checkLabStaff, async (req: Request, res: R
 
     res.json(supplies);
   } catch (error: any) {
-    console.error('Error fetching supplies:', error);
+    console.error('[Processing Supplies] Error:', error.message);
+    console.error('[Processing Supplies] Stack:', error.stack);
     res.status(500).json({
       error: 'Failed to fetch supplies',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      details: error.message,
     });
   }
 });
@@ -163,6 +166,7 @@ router.get('/supplies', authenticate, checkLabStaff, async (req: Request, res: R
 router.get('/:id', authenticate, checkLabStaff, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    console.log(`[Processing Shipment] Fetching shipment ${id}...`);
 
     // Get shipment details with all necessary information
     const shipmentResult = await pool.query(
@@ -177,9 +181,11 @@ router.get('/:id', authenticate, checkLabStaff, async (req: Request, res: Respon
     );
 
     if (shipmentResult.rows.length === 0) {
+      console.log(`[Processing Shipment] Shipment ${id} not found`);
       return res.status(404).json({ error: 'Shipment not found' });
     }
 
+    console.log(`[Processing Shipment] Found shipment ${id}`);
     const shipment = shipmentResult.rows[0];
 
     // Get samples from shipment_samples junction table with hazmat info
@@ -259,9 +265,14 @@ router.get('/:id', authenticate, checkLabStaff, async (req: Request, res: Respon
         sds_documents: sdsDocuments
       }
     });
-  } catch (error) {
+  } catch (error: any) {
+    console.error(`[Processing Shipment] Error:`, error.message);
+    console.error(`[Processing Shipment] Stack:`, error.stack);
     logger.error('Error fetching shipment for processing:', error);
-    res.status(500).json({ error: 'Failed to fetch shipment details' });
+    res.status(500).json({ 
+      error: 'Failed to fetch shipment details',
+      details: error.message 
+    });
   }
 });
 
