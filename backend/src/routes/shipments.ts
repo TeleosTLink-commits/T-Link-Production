@@ -240,6 +240,13 @@ router.post('/', authenticate, authorize('admin', 'lab_staff', 'logistics'), asy
 // Create multi-sample shipment (internal use)
 router.post('/multi', authenticate, authorize('admin', 'lab_staff', 'logistics', 'super_admin'), async (req: AuthRequest, res, next) => {
   try {
+    // Debug logging
+    console.log('[Multi Shipment] Request received', {
+      user: req.user?.email,
+      role: req.user?.role,
+      itemCount: req.body.shipment_items?.length,
+    });
+
     const {
       shipment_items,
       unit,

@@ -53,19 +53,32 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
       token = req.query.token as string;
     }
 
+    // Debug logging for troubleshooting
     if (!token) {
+      console.error('[Auth] No token provided', {
+        url: req.url,
+        method: req.method,
+        authHeader: authHeader || 'missing',
+        hasQueryToken: !!req.query?.token,
+        headers: Object.keys(req.headers),
+      });
       return res.status(401).json({ error: 'No token provided' });
     }
 
     const decoded = verifyToken(token);
 
     if (!decoded) {
+      console.error('[Auth] Invalid token', {
+        url: req.url,
+        tokenLength: token.length,
+      });
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
     req.user = decoded;
     next();
   } catch (error) {
+    console.error('[Auth] Authentication error:', error);
     return res.status(401).json({ error: 'Authentication failed' });
   }
 };
