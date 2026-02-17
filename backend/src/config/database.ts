@@ -17,7 +17,7 @@ const poolConfig: PoolConfig = {
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
   ssl: sslEnabled ? {
-    rejectUnauthorized: true,
+    rejectUnauthorized: false, // Required for Render PostgreSQL
     // Allow custom CA certificate if provided
     ca: process.env.DB_SSL_CA ? process.env.DB_SSL_CA : undefined,
   } : false,
