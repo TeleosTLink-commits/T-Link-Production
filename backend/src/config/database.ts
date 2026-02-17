@@ -8,6 +8,9 @@ const isProduction = process.env.NODE_ENV === 'production';
 const isRemoteDb = process.env.DB_HOST && !process.env.DB_HOST.includes('localhost') && !process.env.DB_HOST.includes('127.0.0.1');
 const sslEnabled = process.env.DB_SSL === 'false' ? false : (isRemoteDb || isProduction || process.env.DB_SSL === 'true');
 
+// Use simpler SSL configuration - just require SSL without certificate validation
+const sslConfig = sslEnabled ? { rejectUnauthorized: false } : false;
+
 const poolConfig: PoolConfig = {
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432'),
@@ -16,13 +19,11 @@ const poolConfig: PoolConfig = {
   password: process.env.DB_PASSWORD,
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-  ssl: sslEnabled ? {
-    rejectUnauthorized: false, // Required for Render PostgreSQL
-    // Allow custom CA certificate if provided
-    ca: process.env.DB_SSL_CA ? process.env.DB_SSL_CA : undefined,
-  } : false,
+  connectionTimeoutMillis: 5000, // Increased timeout
+  ssl: sslConfig,
 };
+
+console.log(`Database SSL config:`, JSON.stringify({ ssl: sslConfig, enabled: sslEnabled }));
 
 console.log(`Database SSL: ${sslEnabled ? 'enabled' : 'disabled'} (HOST: ${process.env.DB_HOST}, NODE_ENV: ${process.env.NODE_ENV})`);
 
