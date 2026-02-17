@@ -808,11 +808,19 @@ const ProcessingView: React.FC = () => {
                 <label>Weight *</label>
                 <div className="input-group">
                   <input
-                    type="number"
-                    step="0.1"
+                    id="package-weight"
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*\.?[0-9]*"
                     value={weight}
-                    onChange={(e) => setWeight(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                        setWeight(val);
+                      }
+                    }}
                     placeholder="0.0"
+                    autoComplete="off"
                   />
                   <select value={weightUnit} onChange={(e) => setWeightUnit(e.target.value as 'LB' | 'KG')} aria-label="Weight unit">
                     <option value="LB">LB</option>
