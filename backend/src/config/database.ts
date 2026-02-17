@@ -3,9 +3,10 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Auto-detect SSL: Enable for production or when DB_SSL is explicitly set
+// Auto-detect SSL: Enable for remote databases (not localhost)
 const isProduction = process.env.NODE_ENV === 'production';
-const sslEnabled = process.env.DB_SSL === 'true' || isProduction;
+const isRemoteDb = process.env.DB_HOST && !process.env.DB_HOST.includes('localhost') && !process.env.DB_HOST.includes('127.0.0.1');
+const sslEnabled = process.env.DB_SSL === 'false' ? false : (isRemoteDb || isProduction || process.env.DB_SSL === 'true');
 
 const poolConfig: PoolConfig = {
   host: process.env.DB_HOST || 'localhost',
@@ -23,7 +24,7 @@ const poolConfig: PoolConfig = {
   } : false,
 };
 
-console.log(`Database SSL: ${sslEnabled ? 'enabled' : 'disabled'} (NODE_ENV: ${process.env.NODE_ENV})`);
+console.log(`Database SSL: ${sslEnabled ? 'enabled' : 'disabled'} (HOST: ${process.env.DB_HOST}, NODE_ENV: ${process.env.NODE_ENV})`);
 
 export const pool = new Pool(poolConfig);
 
