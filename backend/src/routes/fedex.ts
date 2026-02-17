@@ -1,23 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { Pool } from 'pg';
 import fedexService from '../services/fedexService';
 import { authenticate } from '../middleware/auth';
+import pool from '../config/database';
 
 const router = Router();
-
-// Validate database password is set
-if (!process.env.DB_PASSWORD) {
-  throw new Error('FATAL: DB_PASSWORD environment variable is required');
-}
-
-// Create a new database pool for this route file
-const pool = new Pool({
-  user: process.env.DB_USER || 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_NAME || 'tlink_db',
-  password: process.env.DB_PASSWORD,
-  port: parseInt(process.env.DB_PORT || '5432', 10),
-});
 
 /**
  * POST /api/fedex/validate-address

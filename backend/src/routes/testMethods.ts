@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { Pool } from 'pg';
 import { authenticate, authorize, AuthRequest } from '../middleware/auth';
+import pool from '../config/database';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -67,14 +67,6 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
 });
 const router = Router();
-const pool = new Pool({
-  user: process.env.DB_USER || 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_NAME || 'tlink_db',
-  password: process.env.DB_PASSWORD,
-  port: parseInt(process.env.DB_PORT || '5432', 10),
-  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
-});
 
 // Get statistics (new schema)
 router.get('/stats', authenticate, async (req, res) => {

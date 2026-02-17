@@ -1,11 +1,11 @@
 import express, { Router, Request, Response } from 'express';
-import { Pool } from 'pg';
 import { authenticate } from '../middleware/auth';
 import { v4 as uuidv4 } from 'uuid';
 import fedexService from '../services/fedexService';
 import fs from 'fs/promises';
 import path from 'path';
 import logger from '../config/logger';
+import pool from '../config/database';
 
 const router: Router = express.Router();
 
@@ -30,15 +30,6 @@ const isLabelPathSafe = (filePath: string): boolean => {
   const resolvedPath = path.resolve(filePath);
   return resolvedPath.startsWith(ALLOWED_LABEL_DIR);
 };
-
-// Database pool
-const pool = new Pool({
-  user: process.env.DB_USER || 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_NAME || 'tlink_db',
-  password: process.env.DB_PASSWORD || 'Ajwa8770',
-  port: parseInt(process.env.DB_PORT || '5432', 10),
-});
 
 /**
  * Middleware: Check if user is lab staff or admin
