@@ -4,6 +4,7 @@
 **Reviewed Against:** Official FedEx OpenAPI 3.0 specifications in `/docs/FedEx/`
 
 ## Files Reviewed
+
 1. `address-validation.json` - Address Validation API v1
 2. `postal-code.json` - Postal Code Validation API v1
 3. `ship.json` - Ship API v1
@@ -63,6 +64,7 @@
 4. **Hazmat/Dangerous Goods Simplification**
    - **Changed:** Simplified `dangerousGoodsDetail` structure to match basic spec requirements
    - **Structure:**
+
      ```typescript
      {
        regulation: 'DOT',
@@ -70,6 +72,7 @@
        options: ['HAZARDOUS_MATERIALS'] | ['DANGEROUS_GOODS']
      }
      ```
+
    - **Removed:** Complex nested container structures that are optional for basic hazmat
    - **Note:** Full hazmat details can be added later if needed for complex shipments
 
@@ -78,7 +81,7 @@
 Per FedEx API spec and our implementation, these countries do NOT require `stateOrProvinceCode`:
 
 | Country | Code | Notes |
-|---------|------|-------|
+| --- | --- | --- |
 | Netherlands | NL | Primary fix request |
 | Belgium | BE | |
 | Denmark | DK | |
@@ -153,7 +156,7 @@ Per FedEx API spec and our implementation, these countries do NOT require `state
 
 ## References
 
-- FedEx Developer Portal: https://developer.fedex.com/
+- FedEx Developer Portal: <https://developer.fedex.com/>
 - Address Validation API Docs: `/docs/FedEx/address-validation.json`
 - Ship API Docs: `/docs/FedEx/ship.json`
 - Postal Code API Docs: `/docs/FedEx/postal-code.json`
