@@ -58,6 +58,7 @@
         "nodemailer": "^7.0.12",
         "pdf-parse": "^2.4.5",
         "pg": "^8.16.3",
+        "fast-xml-parser": "^5.3.6",
         "sanitize-html": "^2.17.0",
         "tesseract.js": "^7.0.0",
         "ts-node": "^10.9.2",
@@ -74,6 +75,6 @@
         "ts-jest": "^29.1.1"
     },
     "overrides": {
-        "fast-xml-parser": ">=5.3.6"
+        "fast-xml-parser": "$fast-xml-parser"
     }
 }
