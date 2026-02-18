@@ -150,8 +150,26 @@ app.use(cors({
 // Rate limiting - after CORS
 app.use(apiLimiter);
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// ============================================================================
+// SECURITY: Block XML entity expansion attacks (CVE: GHSA-jmr7-xgp7-cmfj)
+// This API only accepts JSON. Reject any request with XML content-type or
+// request bodies containing DOCTYPE declarations to prevent entity expansion DoS.
+// ============================================================================
+app.use((req, res, next) => {
+  const contentType = req.headers['content-type'] || '';
+  if (contentType.includes('xml')) {
+    return res.status(415).json({ error: 'XML content type is not supported. Use application/json.' });
+  }
+  // Check raw body for DOCTYPE if somehow passed through
+  if (req.body && typeof req.body === 'string' && req.body.includes('<!DOCTYPE')) {
+    return res.status(400).json({ error: 'Request body contains prohibited content (DOCTYPE).' });
+  }
+  next();
+});
+
 app.use(morgan('combined', {
   stream: { write: (message) => logger.info(message.trim()) },
 }));

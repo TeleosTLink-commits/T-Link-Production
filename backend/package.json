@@ -72,5 +72,8 @@
         "pdfkit": "^0.17.2",
         "supertest": "^6.3.3",
         "ts-jest": "^29.1.1"
+    },
+    "overrides": {
+        "fast-xml-parser": ">=5.3.6"
     }
 }
