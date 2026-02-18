@@ -42,15 +42,29 @@ export const verifyToken = (token: string): any => {
 export const authenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     // Try to get token from Authorization header first
-    let token = null;
+    let token: string | null = null;
     const authHeader = req.headers.authorization;
 
-    if (authHeader && authHeader.startsWith('Bearer ')) {
+    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
       token = authHeader.substring(7);
     }
     // Fall back to query parameter (for file downloads via window.open)
-    else if (req.query && req.query.token) {
-      token = req.query.token as string;
+    else if (req.query && req.query.token != null) {
+      const queryToken = req.query.token as unknown;
+      if (typeof queryToken === 'string') {
+        token = queryToken;
+      } else if (Array.isArray(queryToken) && queryToken.length > 0 && typeof queryToken[0] === 'string') {
+        // If multiple tokens are provided, use the first one
+        token = queryToken[0];
+      } else {
+        // Unsupported token type
+        console.error('[Auth] Invalid token type in query', {
+          url: req.url,
+          method: req.method,
+          tokenType: typeof queryToken,
+        });
+        return res.status(400).json({ error: 'Invalid token parameter' });
+      }
     }
 
     // Debug logging for troubleshooting
