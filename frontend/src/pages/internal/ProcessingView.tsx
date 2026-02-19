@@ -384,15 +384,19 @@ const ProcessingView: React.FC = () => {
           zip: shipment.destination_zip,
           country: shipment.destination_country || 'US',
         },
-        weight,
+        weight: parseFloat(weight) || 0,
         weightUnit,
         service,
-        packageValue,
+        packageValue: parseFloat(packageValue) || 100,
         isHazmat,
       });
 
       setRateQuote(response.data.data.rate);
-      setError('');
+      if (response.data.data.error) {
+        setError(response.data.data.error);
+      } else {
+        setError('');
+      }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to get rate quote');
     } finally {

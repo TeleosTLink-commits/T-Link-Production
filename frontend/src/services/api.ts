@@ -22,10 +22,15 @@ api.interceptors.request.use(
       // Debug logging in development
       if (import.meta.env.DEV) {
         console.log('[API Request]', config.method?.toUpperCase(), config.url);
-        console.log('[Auth Token]', token ? 'Present' : 'Missing');
+        console.log('[Auth Token]', 'Present');
       }
     } else {
-      console.warn('[API] No auth_token found in localStorage for request:', config.url);
+      // Only warn for routes that require authentication (skip login/register/public)
+      const publicRoutes = ['/auth/login', '/auth/register', '/manufacturer-auth/login', '/manufacturer-auth/register'];
+      const isPublicRoute = publicRoutes.some(route => config.url?.includes(route));
+      if (!isPublicRoute) {
+        console.warn('[API] No auth_token found in localStorage for request:', config.url);
+      }
     }
     return config;
   },

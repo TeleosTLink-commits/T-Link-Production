@@ -666,9 +666,15 @@ class FedExService {
         error: 'Could not calculate rate',
       };
     } catch (error: any) {
+      console.error('[FedEx Rate] API error:', error.response?.data || error.message);
+      // Fall back to mock rate on API failure
+      console.warn('[FedEx Rate] Falling back to estimated rate calculation');
+      const isInternational = request.service.startsWith('INTERNATIONAL');
+      const isOvernight = request.service.includes('OVERNIGHT') || request.service === 'INTERNATIONAL_FIRST';
+      const fallbackRate = request.weight * (isOvernight ? 45 : isInternational ? 35 : 12);
       return {
-        rate: 0,
-        error: error.message || 'Rate calculation failed',
+        rate: fallbackRate,
+        error: 'Using estimated rate (FedEx API unavailable)',
       };
     }
   }

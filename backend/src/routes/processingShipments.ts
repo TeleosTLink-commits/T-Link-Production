@@ -710,6 +710,13 @@ router.post('/get-rate', authenticate, checkLabStaff, async (req: Request, res: 
       return res.status(400).json({ error: 'Missing required fields for rate quote' });
     }
 
+    const parsedWeight = parseFloat(weight);
+    if (isNaN(parsedWeight) || parsedWeight <= 0) {
+      return res.status(400).json({ error: 'Weight must be a positive number' });
+    }
+
+    console.log('[Rate Quote] Request:', { weight: parsedWeight, weightUnit, service, toAddress: toAddress.city + ', ' + toAddress.state + ' ' + toAddress.zip });
+
     // Get lab address from env or database
     const fromAddress = {
       street: process.env.LAB_ADDRESS_STREET || '123 Lab Street',
@@ -728,12 +735,14 @@ router.post('/get-rate', authenticate, checkLabStaff, async (req: Request, res: 
         postalCode: toAddress.zip,
         countryCode: toAddress.country || 'US',
       },
-      weight: parseFloat(weight),
+      weight: parsedWeight,
       weightUnit: weightUnit.toUpperCase() as 'LB' | 'KG',
       service: service as any,
       packageValue: parseFloat(packageValue) || 100,
       isHazmat: isHazmat || false,
     });
+
+    console.log('[Rate Quote] Result:', rateResult);
 
     res.json({
       success: true,
