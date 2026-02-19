@@ -306,9 +306,9 @@ class FedExService {
         requestedShipment: {
           shipper: {
             contact: {
-              personName: process.env.LAB_CONTACT_NAME || 'Lab Shipping',
-              phoneNumber: process.env.LAB_PHONE || '2255551234',
-              companyName: process.env.LAB_COMPANY_NAME || 'AJWA Labs LLC',
+              personName: process.env.LAB_CONTACT_NAME || 'AJWA Analytical Laboratories',
+              phoneNumber: process.env.LAB_PHONE || '4088425000',
+              companyName: process.env.LAB_COMPANY_NAME || 'AJWA Analytical Laboratories',
             },
             address: (() => {
               const addr: any = {
@@ -385,12 +385,20 @@ class FedExService {
         };
       }
 
-      // Log only non-sensitive metadata (no PII or full payloads)
-      console.log('FedEx shipment request initiated:', {
+      // Log request details for debugging (no sensitive data)
+      console.log('[FedEx Label] Request details:', {
         service: request.service,
         isHazmat: request.isHazmat || false,
         weight: request.weight,
-        weightUnit: request.weightUnit
+        weightUnit: request.weightUnit,
+        fromCity: request.fromAddress.city,
+        fromState: request.fromAddress.stateOrProvinceCode,
+        fromZip: request.fromAddress.postalCode,
+        fromCountry: request.fromAddress.countryCode || 'US',
+        toCity: request.toAddress.city,
+        toState: request.toAddress.stateOrProvinceCode,
+        toZip: request.toAddress.postalCode,
+        toCountry: request.toAddress.countryCode || 'US',
       });
 
       const response = await axios.post(
@@ -435,12 +443,13 @@ class FedExService {
         error: 'Failed to generate shipping label',
       };
     } catch (error: any) {
-      console.error('FedEx shipment creation error:', error.response?.data || error.message);
+      console.error('[FedEx Label] API error details:', JSON.stringify(error.response?.data || error.message, null, 2));
+      console.error('[FedEx Label] HTTP status:', error.response?.status);
       
       // Log specific FedEx error codes for debugging
       if (error.response?.data?.errors) {
         error.response.data.errors.forEach((err: any) => {
-          console.error(`FedEx Error: ${err.code} - ${err.message}`);
+          console.error(`[FedEx Label] Error: code=${err.code}, message=${err.message}, parameterList=${JSON.stringify(err.parameterList)}`);
         });
       }
       
@@ -658,7 +667,13 @@ class FedExService {
         error: 'Could not calculate rate',
       };
     } catch (error: any) {
-      console.error('[FedEx Rate] API error:', error.response?.data || error.message);
+      console.error('[FedEx Rate] API error details:', JSON.stringify(error.response?.data || error.message, null, 2));
+      console.error('[FedEx Rate] HTTP status:', error.response?.status);
+      if (error.response?.data?.errors) {
+        error.response.data.errors.forEach((err: any) => {
+          console.error(`[FedEx Rate] Error: code=${err.code}, message=${err.message}, parameterList=${JSON.stringify(err.parameterList)}`);
+        });
+      }
       // Fall back to mock rate on API failure
       console.warn('[FedEx Rate] Falling back to estimated rate calculation');
       const isInternational = request.service.startsWith('INTERNATIONAL');

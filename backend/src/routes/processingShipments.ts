@@ -719,10 +719,10 @@ router.post('/get-rate', authenticate, checkLabStaff, async (req: Request, res: 
 
     // Get lab address from env or database
     const fromAddress = {
-      street: process.env.LAB_ADDRESS_STREET || '123 Lab Street',
-      city: process.env.LAB_ADDRESS_CITY || 'Baton Rouge',
-      stateOrProvinceCode: process.env.LAB_ADDRESS_STATE || 'LA',
-      postalCode: process.env.LAB_ADDRESS_ZIP || '70802',
+      street: process.env.LAB_ADDRESS_STREET || '8100 ARROYO CIR',
+      city: process.env.LAB_ADDRESS_CITY || 'GILROY',
+      stateOrProvinceCode: process.env.LAB_ADDRESS_STATE || 'CA',
+      postalCode: process.env.LAB_ADDRESS_ZIP || '95020',
       countryCode: 'US',
     };
 
@@ -816,10 +816,10 @@ router.post('/generate-label', authenticate, checkLabStaff, async (req: Request,
 
     // Get lab address
     const fromAddress = {
-      street: process.env.LAB_ADDRESS_STREET || '123 Lab Street',
-      city: process.env.LAB_ADDRESS_CITY || 'Baton Rouge',
-      stateOrProvinceCode: process.env.LAB_ADDRESS_STATE || 'LA',
-      postalCode: process.env.LAB_ADDRESS_ZIP || '70802',
+      street: process.env.LAB_ADDRESS_STREET || '8100 ARROYO CIR',
+      city: process.env.LAB_ADDRESS_CITY || 'GILROY',
+      stateOrProvinceCode: process.env.LAB_ADDRESS_STATE || 'CA',
+      postalCode: process.env.LAB_ADDRESS_ZIP || '95020',
       countryCode: 'US',
     };
 
