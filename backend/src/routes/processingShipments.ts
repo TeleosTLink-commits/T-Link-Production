@@ -847,24 +847,28 @@ router.post('/generate-label', authenticate, checkLabStaff, async (req: Request,
       return res.status(500).json({ error: `FedEx label generation failed: ${labelResult.error}` });
     }
 
-    // Save label PDF to file system (use pre-validated directory)
-    const labelDir = ALLOWED_LABEL_DIR;
-    await fs.mkdir(labelDir, { recursive: true });
+    // Determine if this is a mock/fallback label (no actual PDF)
+    const isMockLabel = !labelResult.label || labelResult.label === '';
+    let labelWebPath = '';
 
-    // Sanitize shipmentId to prevent path traversal in filename
-    const safeShipmentId = String(shipmentId).replace(/[^a-zA-Z0-9-]/g, '');
-    const labelFileName = `label_${safeShipmentId}_${Date.now()}.pdf`;
-    const labelPath = path.join(labelDir, labelFileName);
+    // Save label PDF to file system only if we have actual label data
+    if (!isMockLabel) {
+      const labelDir = ALLOWED_LABEL_DIR;
+      await fs.mkdir(labelDir, { recursive: true });
 
-    // Validate path before writing
-    if (!isLabelPathSafe(labelPath)) {
-      return res.status(400).json({ error: 'Invalid file path' });
-    }
+      // Sanitize shipmentId to prevent path traversal in filename
+      const safeShipmentId = String(shipmentId).replace(/[^a-zA-Z0-9-]/g, '');
+      const labelFileName = `label_${safeShipmentId}_${Date.now()}.pdf`;
+      const labelPath = path.join(labelDir, labelFileName);
 
-    // Decode base64 and save
-    if (labelResult.label) {
+      // Validate path before writing
+      if (!isLabelPathSafe(labelPath)) {
+        return res.status(400).json({ error: 'Invalid file path' });
+      }
+
       const labelBuffer = Buffer.from(labelResult.label, 'base64');
       await fs.writeFile(labelPath, labelBuffer);
+      labelWebPath = `/uploads/shipping-labels/${labelFileName}`;
     }
 
     // Update shipment with tracking info
@@ -877,7 +881,7 @@ router.post('/generate-label', authenticate, checkLabStaff, async (req: Request,
            shipped_date = CURRENT_TIMESTAMP,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $4`,
-      [labelResult.trackingNumber, labelResult.cost, `/uploads/shipping-labels/${labelFileName}`, shipmentId]
+      [labelResult.trackingNumber, labelResult.cost, labelWebPath || null, shipmentId]
     );
 
     // Record supplies used
@@ -920,7 +924,8 @@ router.post('/generate-label', authenticate, checkLabStaff, async (req: Request,
         trackingNumber: labelResult.trackingNumber,
         cost: labelResult.cost,
         estimatedDelivery: labelResult.estimatedDelivery,
-        labelPath: `/uploads/shipping-labels/${labelFileName}`,
+        labelPath: labelWebPath || null,
+        isMockLabel,
       },
     });
   } catch (error: any) {
