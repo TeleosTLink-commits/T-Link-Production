@@ -39,6 +39,25 @@ function requiresState(countryCode?: string): boolean {
   return !COUNTRIES_WITHOUT_STATES.includes(countryCode.toUpperCase());
 }
 
+/**
+ * Split a street address into lines of max 35 characters (FedEx limit).
+ * FedEx allows up to 2 street lines of 35 chars each.
+ */
+function splitStreetLines(street: string): string[] {
+  if (!street) return [''];
+  const trimmed = street.trim();
+  if (trimmed.length <= 35) return [trimmed];
+  
+  // Try to split at a natural break point (space, comma) near the 35-char mark
+  let splitIndex = trimmed.lastIndexOf(' ', 35);
+  if (splitIndex <= 0) splitIndex = trimmed.lastIndexOf(',', 35);
+  if (splitIndex <= 0) splitIndex = 35; // Hard split if no natural break
+  
+  const line1 = trimmed.substring(0, splitIndex).trim();
+  const line2 = trimmed.substring(splitIndex).trim().substring(0, 35); // Cap line 2 at 35 too
+  return line2 ? [line1, line2] : [line1];
+}
+
 interface AddressValidationResult {
   valid: boolean;
   correctedAddress?: {
@@ -312,7 +331,7 @@ class FedExService {
             },
             address: (() => {
               const addr: any = {
-                streetLines: [request.fromAddress.street],
+                streetLines: splitStreetLines(request.fromAddress.street),
                 city: request.fromAddress.city,
                 postalCode: request.fromAddress.postalCode,
                 countryCode: request.fromAddress.countryCode || 'US',
@@ -332,7 +351,7 @@ class FedExService {
               },
               address: (() => {
                 const addr: any = {
-                  streetLines: [request.toAddress.street],
+                  streetLines: splitStreetLines(request.toAddress.street),
                   city: request.toAddress.city,
                   postalCode: request.toAddress.postalCode,
                   countryCode: request.toAddress.countryCode || 'US',
@@ -607,7 +626,7 @@ class FedExService {
             shipper: {
               address: (() => {
                 const addr: any = {
-                  streetLines: [request.fromAddress.street],
+                  streetLines: splitStreetLines(request.fromAddress.street),
                   city: request.fromAddress.city,
                   postalCode: request.fromAddress.postalCode,
                   countryCode: request.fromAddress.countryCode || 'US',
@@ -618,25 +637,23 @@ class FedExService {
                 return addr;
               })(),
             },
-            recipients: [
-              {
-                address: (() => {
-                  const addr: any = {
-                    streetLines: [request.toAddress.street],
-                    city: request.toAddress.city,
-                    postalCode: request.toAddress.postalCode,
-                    countryCode: request.toAddress.countryCode || 'US',
-                  };
-                  if (request.toAddress.stateOrProvinceCode && requiresState(request.toAddress.countryCode)) {
-                    addr.stateOrProvinceCode = request.toAddress.stateOrProvinceCode;
-                  }
-                  return addr;
-                })(),
-              },
-            ],
+            recipient: {
+              address: (() => {
+                const addr: any = {
+                  streetLines: splitStreetLines(request.toAddress.street),
+                  city: request.toAddress.city,
+                  postalCode: request.toAddress.postalCode,
+                  countryCode: request.toAddress.countryCode || 'US',
+                };
+                if (request.toAddress.stateOrProvinceCode && requiresState(request.toAddress.countryCode)) {
+                  addr.stateOrProvinceCode = request.toAddress.stateOrProvinceCode;
+                }
+                return addr;
+              })(),
+            },
             shipDatestamp: new Date().toISOString().split('T')[0],
             serviceType: request.service,
-            packages: [
+            requestedPackageLineItems: [
               {
                 weight: {
                   units: request.weightUnit,

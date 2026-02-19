@@ -109,7 +109,7 @@ const ProcessingView: React.FC = () => {
   const [showSdsPrintPrompt, setShowSdsPrintPrompt] = useState(false);
   const [showLabelPrintPrompt, setShowLabelPrintPrompt] = useState(false);
   const [showHazmatLabelPrompt, setShowHazmatLabelPrompt] = useState(false);
-  const [generatedLabel, setGeneratedLabel] = useState<{ trackingNumber: string; labelPath: string; cost: number } | null>(null);
+  const [generatedLabel, setGeneratedLabel] = useState<{ trackingNumber: string; labelPath: string; cost: number; isMockLabel?: boolean } | null>(null);
   const [sdsPrinted, setSdsPrinted] = useState(false);
   
   // Address validation
@@ -229,15 +229,15 @@ const ProcessingView: React.FC = () => {
   const handlePrintLabel = () => {
     if (generatedLabel?.labelPath) {
       window.open(generatedLabel.labelPath, '_blank');
-      setShowLabelPrintPrompt(false);
-      
-      // If hazmat, show hazmat label prompt
-      if (isHazmat) {
-        setShowHazmatLabelPrompt(true);
-      } else {
-        // Navigate back if not hazmat
-        navigate('/internal/processing-dashboard');
-      }
+    }
+    setShowLabelPrintPrompt(false);
+    
+    // If hazmat, show hazmat label prompt
+    if (isHazmat) {
+      setShowHazmatLabelPrompt(true);
+    } else {
+      // Navigate back if not hazmat
+      navigate('/internal/processing-dashboard');
     }
   };
 
@@ -443,6 +443,7 @@ const ProcessingView: React.FC = () => {
         trackingNumber: response.data.data.trackingNumber,
         labelPath: response.data.data.labelPath,
         cost: response.data.data.cost,
+        isMockLabel: response.data.data.isMockLabel || false,
       });
       
       // Show label print prompt instead of navigating away
@@ -523,19 +524,33 @@ const ProcessingView: React.FC = () => {
         <div className="procview-modal-overlay">
           <div className="procview-modal">
             <div className="procview-modal-header success">
-              <h3>✅ Label Generated Successfully!</h3>
+              <h3>✅ {generatedLabel.isMockLabel ? 'Shipment Recorded!' : 'Label Generated Successfully!'}</h3>
             </div>
             <div className="procview-modal-body">
               <div className="label-success-info">
                 <p><strong>Tracking Number:</strong> {generatedLabel.trackingNumber}</p>
                 <p><strong>Shipping Cost:</strong> ${generatedLabel.cost.toFixed(2)}</p>
+                {generatedLabel.isMockLabel && (
+                  <p style={{ color: '#b45309', marginTop: '8px' }}>
+                    ⚠️ FedEx API was unavailable. A placeholder tracking number has been assigned.
+                    The actual FedEx label will need to be generated separately.
+                  </p>
+                )}
               </div>
-              <p>Please print the shipping label and affix it to the package.</p>
+              {!generatedLabel.isMockLabel && (
+                <p>Please print the shipping label and affix it to the package.</p>
+              )}
             </div>
             <div className="procview-modal-footer">
-              <button className="procview-btn-primary" onClick={handlePrintLabel}>
-                Print Shipping Label
-              </button>
+              {generatedLabel.labelPath ? (
+                <button className="procview-btn-primary" onClick={handlePrintLabel}>
+                  Print Shipping Label
+                </button>
+              ) : (
+                <button className="procview-btn-primary" onClick={handlePrintLabel}>
+                  Continue
+                </button>
+              )}
             </div>
           </div>
         </div>
