@@ -65,7 +65,9 @@ const AdminPanel: React.FC = () => {
       if (userStr) {
         return JSON.parse(userStr)?.role || '';
       }
-    } catch (e) {}
+    } catch (e) {
+      // Handle error silently
+    }
     return '';
   };
   const isSuperAdmin = getCurrentUserRole() === 'super_admin';
