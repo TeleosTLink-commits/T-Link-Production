@@ -569,7 +569,7 @@ interface FileShareEmailOptions {
   recipientName: string;
   subject: string;
   message: string;
-  attachment: {
+  attachment?: {
     filename: string;
     content: Buffer;
   };
@@ -593,11 +593,11 @@ export const sendFileShareEmail = async (options: FileShareEmailOptions): Promis
           <p style="color: #374151; white-space: pre-wrap; margin: 0;">${escapeHtml(message)}</p>
         </div>
         
-        <div style="background: #f0fdf4; padding: 16px; border-radius: 8px; border: 1px solid #bbf7d0;">
+        ${attachment ? `<div style="background: #f0fdf4; padding: 16px; border-radius: 8px; border: 1px solid #bbf7d0;">
           <p style="color: #166534; margin: 0; font-size: 14px;">
             📎 <strong>Attached File:</strong> ${escapeHtml(attachment.filename)}
           </p>
-        </div>
+        </div>` : ''}
         
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;" />
         
@@ -613,21 +613,26 @@ export const sendFileShareEmail = async (options: FileShareEmailOptions): Promis
   `;
 
   try {
-    await transporter.sendMail({
+    const mailOptions: any = {
       from: process.env.EMAIL_FROM || 'noreply@ajwalabs.com',
       to,
       subject: `[T-Link] ${subject}`,
       html,
-      text: `Hello ${recipientName},\n\n${message}\n\nAttached: ${attachment.filename}\n\nSent via T-Link Sample Management System`,
-      attachments: [
+      text: `Hello ${recipientName},\n\n${message}${attachment ? `\n\nAttached: ${attachment.filename}` : ''}\n\nSent via T-Link Sample Management System`,
+    };
+
+    if (attachment) {
+      mailOptions.attachments = [
         {
           filename: attachment.filename,
           content: attachment.content
         }
-      ]
-    });
+      ];
+    }
 
-    logger.info(`File share email sent to ${to} with attachment: ${attachment.filename}`);
+    await transporter.sendMail(mailOptions);
+
+    logger.info(`File share email sent to ${to}${attachment ? ` with attachment: ${attachment.filename}` : ''}`);
     return { success: true };
   } catch (error: any) {
     logger.error(`Failed to send file share email to ${to}:`, error);

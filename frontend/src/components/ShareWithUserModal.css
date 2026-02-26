@@ -148,6 +148,20 @@
   border-radius: 6px;
 }
 
+.selected-user-info.send-all-info {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+  font-size: 14px;
+}
+
+.optional-label {
+  font-size: 12px;
+  color: #9ca3af;
+  font-weight: normal;
+  font-style: italic;
+}
+
 .user-email {
   font-size: 13px;
   color: #059669;

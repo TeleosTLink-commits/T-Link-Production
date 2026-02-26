@@ -664,62 +664,114 @@ router.get('/user-activity', async (req, res) => {
   }
 });
 
-// Share file with user via email
+// Share file with user via email (file is optional, supports send-to-all)
 router.post('/share-file', upload.single('file'), async (req: AuthRequest, res) => {
   try {
-    const { recipientEmail, recipientName, subject, message } = req.body;
+    const { recipientEmail, recipientName, subject, message, sendToAll, recipients: recipientsJson } = req.body;
     const file = req.file;
 
-    if (!recipientEmail || !subject || !message) {
+    if (!subject || !message) {
       return res.status(400).json({
         error: 'Missing required fields',
-        required: ['recipientEmail', 'subject', 'message']
+        required: ['subject', 'message']
       });
     }
 
-    if (!file) {
-      return res.status(400).json({
-        error: 'No file uploaded'
+    const attachment = file ? { filename: file.originalname, content: file.buffer } : undefined;
+    const senderName = req.user?.email || 'T-Link Admin';
+
+    if (sendToAll === 'true' && recipientsJson) {
+      // Send to multiple recipients
+      const recipients = JSON.parse(recipientsJson) as Array<{ email: string; name: string }>;
+      let successCount = 0;
+      let failCount = 0;
+      const errors: string[] = [];
+
+      for (const recipient of recipients) {
+        try {
+          const emailResult = await sendFileShareEmail({
+            to: recipient.email,
+            recipientName: recipient.name,
+            subject,
+            message,
+            attachment,
+            senderName
+          });
+          if (emailResult.success) {
+            successCount++;
+          } else {
+            failCount++;
+            errors.push(`${recipient.email}: ${emailResult.error}`);
+          }
+        } catch (err: any) {
+          failCount++;
+          errors.push(`${recipient.email}: ${err.message}`);
+        }
+      }
+
+      // Log the activity
+      await pool.query(`
+        INSERT INTO admin_activity_log (user_id, action, details, created_at)
+        VALUES ($1, 'share_file_all', $2, NOW())
+      `, [
+        req.user?.id,
+        JSON.stringify({
+          total_recipients: recipients.length,
+          success_count: successCount,
+          fail_count: failCount,
+          file_name: file?.originalname || null,
+          subject
+        })
+      ]).catch(() => {});
+
+      res.json({
+        success: true,
+        message: `Email sent to ${successCount} of ${recipients.length} users`,
+        successCount,
+        failCount,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } else {
+      // Send to single recipient
+      if (!recipientEmail) {
+        return res.status(400).json({
+          error: 'Missing recipientEmail',
+          required: ['recipientEmail', 'subject', 'message']
+        });
+      }
+
+      const emailResult = await sendFileShareEmail({
+        to: recipientEmail,
+        recipientName: recipientName || recipientEmail,
+        subject,
+        message,
+        attachment,
+        senderName
+      });
+
+      if (!emailResult.success) {
+        throw new Error(emailResult.error || 'Failed to send email');
+      }
+
+      // Log the activity
+      await pool.query(`
+        INSERT INTO admin_activity_log (user_id, action, details, created_at)
+        VALUES ($1, 'share_file', $2, NOW())
+      `, [
+        req.user?.id,
+        JSON.stringify({
+          recipient_email: recipientEmail,
+          file_name: file?.originalname || null,
+          subject
+        })
+      ]).catch(() => {});
+
+      res.json({
+        success: true,
+        message: file ? 'File shared successfully' : 'Email sent successfully',
+        recipient: recipientEmail
       });
     }
-
-    // Send email with attachment
-    const emailResult = await sendFileShareEmail({
-      to: recipientEmail,
-      recipientName: recipientName || recipientEmail,
-      subject,
-      message,
-      attachment: {
-        filename: file.originalname,
-        content: file.buffer
-      },
-      senderName: req.user?.email || 'T-Link Admin'
-    });
-
-    if (!emailResult.success) {
-      throw new Error(emailResult.error || 'Failed to send email');
-    }
-
-    // Log the activity
-    await pool.query(`
-      INSERT INTO admin_activity_log (user_id, action, details, created_at)
-      VALUES ($1, 'share_file', $2, NOW())
-    `, [
-      req.user?.id,
-      JSON.stringify({
-        recipient_email: recipientEmail,
-        file_name: file.originalname,
-        subject: subject
-      })
-    ]).catch(() => {
-      // Ignore if table doesn't exist
-    });
-
-    res.json({
-      success: true,
-      message: 'File shared successfully',
-      recipient: recipientEmail
-    });
   } catch (error: any) {
     console.error('Error sharing file:', error);
     res.status(500).json({

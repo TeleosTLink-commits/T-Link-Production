@@ -18,16 +18,18 @@ interface ShareWithUserModalProps {
 }
 
 const ShareWithUserModal: React.FC<ShareWithUserModalProps> = ({ isOpen, onClose, users }) => {
-  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<number | string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [sendProgress, setSendProgress] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const selectedUser = users.find(u => u.id === selectedUserId);
+  const isSendToAll = selectedUserId === 'all';
+  const selectedUser = typeof selectedUserId === 'number' ? users.find(u => u.id === selectedUserId) : null;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -45,13 +47,8 @@ const ShareWithUserModal: React.FC<ShareWithUserModalProps> = ({ isOpen, onClose
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedUser) {
+    if (!selectedUserId) {
       setError('Please select a user');
-      return;
-    }
-    
-    if (!file) {
-      setError('Please select a file to share');
       return;
     }
     
@@ -67,35 +64,72 @@ const ShareWithUserModal: React.FC<ShareWithUserModalProps> = ({ isOpen, onClose
 
     setIsSending(true);
     setError('');
+    setSendProgress('');
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('recipientEmail', selectedUser.email);
-      formData.append('recipientName', selectedUser.name || selectedUser.email);
-      formData.append('subject', subject);
-      formData.append('message', message);
+      if (isSendToAll) {
+        // Send to all users
+        const recipients = users.map(u => ({ email: u.email, name: u.name || u.email }));
+        setSendProgress(`Sending to ${recipients.length} users...`);
 
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${API_BASE_URL}/admin/share-file`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData,
-      });
+        const formData = new FormData();
+        if (file) formData.append('file', file);
+        formData.append('recipients', JSON.stringify(recipients));
+        formData.append('subject', subject);
+        formData.append('message', message);
+        formData.append('sendToAll', 'true');
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to send file');
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch(`${API_BASE_URL}/admin/share-file`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || 'Failed to send emails');
+        }
+
+        const result = await response.json();
+        setSendProgress(`Sent to ${result.successCount || recipients.length} of ${recipients.length} users`);
+      } else {
+        // Send to single user
+        if (!selectedUser) {
+          setError('Please select a user');
+          return;
+        }
+
+        const formData = new FormData();
+        if (file) formData.append('file', file);
+        formData.append('recipientEmail', selectedUser.email);
+        formData.append('recipientName', selectedUser.name || selectedUser.email);
+        formData.append('subject', subject);
+        formData.append('message', message);
+
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch(`${API_BASE_URL}/admin/share-file`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || 'Failed to send email');
+        }
       }
 
       setSuccess(true);
       setTimeout(() => {
         handleClose();
-      }, 2500);
+      }, 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to share file. Please try again.');
+      setError(err instanceof Error ? err.message : 'Failed to share. Please try again.');
     } finally {
       setIsSending(false);
     }
@@ -108,6 +142,7 @@ const ShareWithUserModal: React.FC<ShareWithUserModalProps> = ({ isOpen, onClose
     setMessage('');
     setSuccess(false);
     setError('');
+    setSendProgress('');
     onClose();
   };
 
@@ -134,8 +169,8 @@ const ShareWithUserModal: React.FC<ShareWithUserModalProps> = ({ isOpen, onClose
         {success ? (
           <div className="success-state">
             <div className="success-icon-large">✓</div>
-            <h3>File Shared Successfully!</h3>
-            <p>Email sent to {selectedUser?.email}</p>
+            <h3>{file ? 'File Shared' : 'Email Sent'} Successfully!</h3>
+            <p>{isSendToAll ? sendProgress : `Email sent to ${selectedUser?.email}`}</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="share-form">
@@ -153,18 +188,29 @@ const ShareWithUserModal: React.FC<ShareWithUserModalProps> = ({ isOpen, onClose
               <select
                 id="userSelect"
                 value={selectedUserId || ''}
-                onChange={(e) => setSelectedUserId(e.target.value ? parseInt(e.target.value) : null)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedUserId(val === 'all' ? 'all' : val ? parseInt(val) : null);
+                }}
                 required
               >
                 <option value="">-- Choose a user --</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name || user.email}
-                    {user.company_name ? ` (${user.company_name})` : ''}
-                    {user.role ? ` - ${user.role}` : ''}
-                  </option>
-                ))}
+                <option value="all" style={{ fontWeight: 'bold', backgroundColor: '#f0fdf4' }}>📨 Send to ALL Users ({users.length})</option>
+                <optgroup label="Individual Users">
+                  {users.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name || user.email}
+                      {user.company_name ? ` (${user.company_name})` : ''}
+                      {user.role ? ` - ${user.role}` : ''}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
+              {isSendToAll && (
+                <div className="selected-user-info send-all-info">
+                  <span>📨 Email will be sent to <strong>{users.length} users</strong></span>
+                </div>
+              )}
               {selectedUser && (
                 <div className="selected-user-info">
                   <span className="user-email">📧 {selectedUser.email}</span>
@@ -175,7 +221,7 @@ const ShareWithUserModal: React.FC<ShareWithUserModalProps> = ({ isOpen, onClose
             {/* File Upload */}
             <div className="form-group">
               <label>
-                Upload File <span className="required">*</span>
+                Attach File <span className="optional-label">(optional)</span>
               </label>
               <div className="file-upload-area">
                 <input
@@ -246,12 +292,12 @@ const ShareWithUserModal: React.FC<ShareWithUserModalProps> = ({ isOpen, onClose
                 {isSending ? (
                   <>
                     <span className="spinner"></span>
-                    Sending...
+                    {sendProgress || 'Sending...'}
                   </>
                 ) : (
                   <>
                     <span>✉️</span>
-                    Send Email
+                    {isSendToAll ? `Send to All (${users.length})` : 'Send Email'}
                   </>
                 )}
               </button>
