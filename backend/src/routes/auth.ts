@@ -83,6 +83,18 @@ router.post('/login', loginValidator, async (req: Request, res: Response, next: 
       [user.id]
     );
 
+    // Record login event in history table
+    try {
+      await query(
+        `INSERT INTO login_history (user_id, ip_address, user_agent, login_type)
+         VALUES ($1, $2, $3, 'password')`,
+        [user.id, req.ip || req.headers['x-forwarded-for'] || 'unknown', req.headers['user-agent'] || 'unknown']
+      );
+    } catch (historyErr) {
+      // Don't fail login if history table doesn't exist yet (pre-migration)
+      console.warn('Could not record login history:', (historyErr as any).message);
+    }
+
     // Log successful login
     await logLoginSuccess(req, user.id, user.email);
 
@@ -232,7 +244,7 @@ router.post('/register', registerValidator, async (req: Request, res: Response, 
       // Update existing user created by admin
       result = await query(
         `UPDATE users 
-         SET first_name = $1, last_name = $2, password_hash = $3, is_active = true, email_verified = true, username = $4
+         SET first_name = $1, last_name = $2, password_hash = $3, is_active = true, email_verified = true, username = $4, last_login = CURRENT_TIMESTAMP
          WHERE LOWER(email) = $5
          RETURNING id, email, first_name, last_name, role, created_at`,
         [first_name, last_name, password_hash, normalizedEmail, normalizedEmail]
@@ -240,14 +252,25 @@ router.post('/register', registerValidator, async (req: Request, res: Response, 
     } else {
       // Create new user from authorized_emails
       result = await query(
-        `INSERT INTO users (email, password_hash, first_name, last_name, role, is_active, email_verified, username)
-         VALUES ($1, $2, $3, $4, $5, true, true, $1)
+        `INSERT INTO users (email, password_hash, first_name, last_name, role, is_active, email_verified, username, last_login)
+         VALUES ($1, $2, $3, $4, $5, true, true, $1, CURRENT_TIMESTAMP)
          RETURNING id, email, first_name, last_name, role, created_at`,
         [normalizedEmail, password_hash, first_name, last_name, userRole]
       );
     }
 
     const user = result.rows[0];
+
+    // Record signup as a login event in history table
+    try {
+      await query(
+        `INSERT INTO login_history (user_id, ip_address, user_agent, login_type)
+         VALUES ($1, $2, $3, 'signup')`,
+        [user.id, req.ip || req.headers['x-forwarded-for'] || 'unknown', req.headers['user-agent'] || 'unknown']
+      );
+    } catch (historyErr) {
+      console.warn('Could not record signup login history:', (historyErr as any).message);
+    }
 
     // For manufacturers, create/link company
     if (userRole === 'manufacturer' && company_name) {

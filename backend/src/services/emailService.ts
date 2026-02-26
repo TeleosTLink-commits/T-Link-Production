@@ -7,6 +7,8 @@ interface EmailOptions {
   subject: string;
   html: string;
   text?: string;
+  /** If true, skip HTML sanitization (for system-generated templates we control) */
+  trusted?: boolean;
 }
 
 /**
@@ -50,34 +52,83 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+/**
+ * Check SMTP connection health - useful for admin diagnostics
+ */
+export const checkSmtpConnection = async (): Promise<{ healthy: boolean; error?: string; config: { host: string | undefined; port: number; user: string | undefined; hasPassword: boolean } }> => {
+  const config = {
+    host: smtpHost,
+    port: smtpPort,
+    user: smtpUser,
+    hasPassword: !!smtpPassword,
+  };
+  
+  if (!smtpHost || !smtpUser || !smtpPassword) {
+    return { healthy: false, error: 'SMTP configuration incomplete - missing environment variables', config };
+  }
+
+  try {
+    await transporter.verify();
+    return { healthy: true, config };
+  } catch (error: any) {
+    return { healthy: false, error: error.message || 'Unknown SMTP error', config };
+  }
+};
+
 export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
   try {
-    // Use sanitize-html library for proper XSS protection
-    // Remove 'style' tag from allowedTags to avoid XSS vulnerability
-    // Instead, use inline styles on allowed elements
-    const safeHtml = sanitizeHtmlLib(options.html, {
-      allowedTags: sanitizeHtmlLib.defaults.allowedTags.concat(['img']),
-      allowedAttributes: {
-        ...sanitizeHtmlLib.defaults.allowedAttributes,
-        '*': ['style', 'class'],
-        'img': ['src', 'alt', 'width', 'height'],
-        'a': ['href', 'target', 'rel']
-      },
-      allowedSchemes: ['http', 'https', 'mailto']
-    });
+    // Check SMTP configuration before attempting to send
+    if (!smtpHost || !smtpUser || !smtpPassword) {
+      logger.error('SMTP configuration incomplete - cannot send email', {
+        to: options.to,
+        smtpHost: smtpHost ? 'set' : 'MISSING',
+        smtpUser: smtpUser ? 'set' : 'MISSING',
+        smtpPassword: smtpPassword ? 'set' : 'MISSING'
+      });
+      return false;
+    }
+
+    // For trusted system-generated emails, skip sanitization to preserve <style> tags
+    // For user-supplied content, sanitize to prevent XSS
+    let finalHtml: string;
+    if (options.trusted) {
+      finalHtml = options.html;
+    } else {
+      finalHtml = sanitizeHtmlLib(options.html, {
+        allowedTags: sanitizeHtmlLib.defaults.allowedTags.concat(['img', 'style']),
+        allowedAttributes: {
+          ...sanitizeHtmlLib.defaults.allowedAttributes,
+          '*': ['style', 'class'],
+          'img': ['src', 'alt', 'width', 'height'],
+          'a': ['href', 'target', 'rel']
+        },
+        allowedSchemes: ['http', 'https', 'mailto']
+      });
+    }
     
     await transporter.sendMail({
       from: process.env.EMAIL_FROM || 'noreply@teleos.com',
       to: options.to,
-      subject: escapeHtml(options.subject),
-      html: safeHtml,
+      subject: options.subject,
+      html: finalHtml,
       text: options.text || stripHtmlTags(options.html),
     });
 
     logger.info(`Email sent successfully to ${options.to}`);
     return true;
-  } catch (error) {
-    logger.error('Failed to send email:', error);
+  } catch (error: any) {
+    // Log detailed SMTP error info
+    const errorDetails = {
+      to: options.to,
+      subject: options.subject,
+      smtpHost,
+      smtpPort,
+      errorCode: error?.code,
+      errorCommand: error?.command,
+      errorResponse: error?.response,
+      errorMessage: error?.message,
+    };
+    logger.error('Failed to send email - detailed SMTP error:', errorDetails);
     return false;
   }
 };
@@ -115,7 +166,7 @@ export const sendCoAExpirationAlert = async (
     <p style="color: #666; font-size: 12px;">This is an automated message from the T-Link system.</p>
   `;
 
-  return sendEmail({ to: recipientEmail, subject, html });
+  return sendEmail({ to: recipientEmail, subject, html, trusted: true });
 };
 
 export const sendLowInventoryAlert = async (
@@ -152,7 +203,7 @@ export const sendLowInventoryAlert = async (
     <p style="color: #666; font-size: 12px;">This is an automated message from the T-Link system.</p>
   `;
 
-  return sendEmail({ to: recipientEmail, subject, html });
+  return sendEmail({ to: recipientEmail, subject, html, trusted: true });
 };
 
 export const sendShipmentRequestNotification = async (
@@ -188,7 +239,7 @@ export const sendShipmentRequestNotification = async (
     <p style="color: #666; font-size: 12px;">This is an automated message from the T-Link system.</p>
   `;
 
-  return sendEmail({ to: recipientEmail, subject, html });
+  return sendEmail({ to: recipientEmail, subject, html, trusted: true });
 };
 
 export const sendLowSupplyStockAlert = async (
@@ -219,7 +270,7 @@ export const sendLowSupplyStockAlert = async (
     <p style="color: #666; font-size: 12px;">This is an automated message from the T-Link system.</p>
   `;
 
-  return sendEmail({ to: recipientEmail, subject, html });
+  return sendEmail({ to: recipientEmail, subject, html, trusted: true });
 };
 
 export const sendShipmentCreatedNotification = async (
@@ -284,7 +335,7 @@ export const sendShipmentCreatedNotification = async (
     </html>
   `;
 
-  return sendEmail({ to: recipientEmail, subject, html });
+  return sendEmail({ to: recipientEmail, subject, html, trusted: true });
 };
 
 export const sendShipmentShippedNotification = async (
@@ -334,7 +385,7 @@ export const sendShipmentShippedNotification = async (
     </html>
   `;
 
-  return sendEmail({ to: recipientEmail, subject, html });
+  return sendEmail({ to: recipientEmail, subject, html, trusted: true });
 };
 
 export const sendSupportRequestNotification = async (
@@ -379,7 +430,7 @@ export const sendSupportRequestNotification = async (
   `;
 
   // Send to support team
-  await sendEmail({ to: recipientEmail, subject: emailSubject, html });
+  await sendEmail({ to: recipientEmail, subject: emailSubject, html, trusted: true });
   
   // Send confirmation copy to manufacturer at their registered email
   const manufacturerHtml = `
@@ -416,7 +467,7 @@ export const sendSupportRequestNotification = async (
     </html>
   `;
   
-  return sendEmail({ to: senderEmail, subject: `Confirmation: ${emailSubject}`, html: manufacturerHtml });
+  return sendEmail({ to: senderEmail, subject: `Confirmation: ${emailSubject}`, html: manufacturerHtml, trusted: true });
 };
 
 /**
@@ -502,7 +553,7 @@ export const sendRegistrationInvitation = async (
   `;
 
   try {
-    const result = await sendEmail({ to: email, subject, html });
+    const result = await sendEmail({ to: email, subject, html, trusted: true });
     if (result) {
       logger.info(`Registration invitation sent to ${email} for role: ${role}`);
     }
@@ -565,7 +616,7 @@ export const sendFileShareEmail = async (options: FileShareEmailOptions): Promis
     await transporter.sendMail({
       from: process.env.EMAIL_FROM || 'noreply@ajwalabs.com',
       to,
-      subject: `[T-Link] ${escapeHtml(subject)}`,
+      subject: `[T-Link] ${subject}`,
       html,
       text: `Hello ${recipientName},\n\n${message}\n\nAttached: ${attachment.filename}\n\nSent via T-Link Sample Management System`,
       attachments: [
@@ -682,7 +733,7 @@ export const sendReviewSubmissionEmail = async (options: ReviewSubmissionEmailOp
       from: process.env.EMAIL_FROM || 'noreply@ajwalabs.com',
       to,
       replyTo: reviewerEmail,
-      subject: escapeHtml(subject),
+      subject,
       html,
       text: formattedBody
     });

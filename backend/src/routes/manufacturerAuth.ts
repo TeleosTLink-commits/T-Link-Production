@@ -66,8 +66,8 @@ router.post('/signup', manufacturerSignupValidator, async (req: Request, res: Re
     // Create user with normalized email
     const userId = uuidv4();
     const userResult = await client.query(
-      `INSERT INTO users (id, username, email, password_hash, first_name, last_name, role, is_active)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO users (id, username, email, password_hash, first_name, last_name, role, is_active, last_login)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
        RETURNING id, email, first_name, last_name, role`,
       [userId, normalizedEmail, normalizedEmail, password_hash, first_name, last_name, 'manufacturer', true]
     );
@@ -98,6 +98,17 @@ router.post('/signup', manufacturerSignupValidator, async (req: Request, res: Re
     );
 
     await client.query('COMMIT');
+
+    // Record signup as a login event in history table
+    try {
+      await pool.query(
+        `INSERT INTO login_history (user_id, ip_address, user_agent, login_type)
+         VALUES ($1, $2, $3, 'signup')`,
+        [userResult.rows[0].id, req.ip || req.headers['x-forwarded-for'] || 'unknown', req.headers['user-agent'] || 'unknown']
+      );
+    } catch (historyErr) {
+      console.warn('Could not record manufacturer signup login history:', (historyErr as any).message);
+    }
 
     // Generate JWT token
     const token = jwt.sign(
@@ -175,6 +186,17 @@ router.post('/login', manufacturerLoginValidator, async (req: Request, res: Resp
 
     // Update last login
     await pool.query('UPDATE users SET last_login = NOW() WHERE id = $1', [user.id]);
+
+    // Record login event in history table
+    try {
+      await pool.query(
+        `INSERT INTO login_history (user_id, ip_address, user_agent, login_type)
+         VALUES ($1, $2, $3, 'password')`,
+        [user.id, req.ip || req.headers['x-forwarded-for'] || 'unknown', req.headers['user-agent'] || 'unknown']
+      );
+    } catch (historyErr) {
+      console.warn('Could not record login history:', (historyErr as any).message);
+    }
 
     // Generate token
     const token = jwt.sign(

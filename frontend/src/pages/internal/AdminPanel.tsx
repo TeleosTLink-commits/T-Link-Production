@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import ShareWithUserModal from '../../components/ShareWithUserModal';
@@ -53,6 +53,7 @@ interface ActivityData {
   }>;
   neverLoggedIn: number;
   loginsByDay: Array<{ date: string; logins: string }>;
+  totalLogins: number;
 }
 
 const AdminPanel: React.FC = () => {
@@ -95,18 +96,52 @@ const AdminPanel: React.FC = () => {
   // Activity
   const [activityData, setActivityData] = useState<ActivityData | null>(null);
 
+  // Auto-refresh state
+  const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
+  const AUTO_REFRESH_INTERVAL = 30000; // 30 seconds
+  const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Get the fetch function for the current tab
+  const refreshCurrentTab = useCallback(() => {
+    const fetchMap: Record<string, () => Promise<void>> = {
+      users: fetchUsers,
+      activity: fetchActivity,
+      shipments: fetchShipments,
+      samples: fetchSamples,
+      testmethods: fetchTestMethods,
+      system: fetchSystemStats,
+    };
+    const fetchFn = fetchMap[activeTab];
+    if (fetchFn) {
+      fetchFn();
+      setLastRefreshed(new Date());
+    }
+  }, [activeTab]);
+
   useEffect(() => {
     checkAdminAccess();
   }, []);
 
+  // Fetch data when tab changes
   useEffect(() => {
-    if (activeTab === 'users') fetchUsers();
-      if (activeTab === 'activity') fetchActivity();
-    if (activeTab === 'shipments') fetchShipments();
-    if (activeTab === 'samples') fetchSamples();
-    if (activeTab === 'testmethods') fetchTestMethods();
-    if (activeTab === 'system') fetchSystemStats();
+    refreshCurrentTab();
   }, [activeTab]);
+
+  // Auto-refresh polling
+  useEffect(() => {
+    if (autoRefreshEnabled) {
+      refreshIntervalRef.current = setInterval(() => {
+        refreshCurrentTab();
+      }, AUTO_REFRESH_INTERVAL);
+    }
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+    };
+  }, [autoRefreshEnabled, refreshCurrentTab]);
 
   const checkAdminAccess = async () => {
     try {
@@ -201,12 +236,18 @@ const AdminPanel: React.FC = () => {
     e.preventDefault();
     try {
       const response = await api.post('/admin/users', newUser);
-      alert(response.data.message || 'User added successfully');
+      const data = response.data.data || response.data;
+      const emailStatus = data.emailSent === false 
+        ? '\n\n⚠️ NOTE: The invitation email could NOT be sent. The user has been authorized — you can resend the invitation from the Pending Invitations section below.'
+        : '';
+      alert((response.data.message || 'User added successfully') + emailStatus);
       setShowAddUser(false);
       setNewUser({ email: '', role: 'manufacturer' });
       fetchUsers();
+      setLastRefreshed(new Date());
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to create user');
+      const errorDetail = err.response?.data?.details ? `\n\nDetails: ${err.response.data.details}` : '';
+      alert((err.response?.data?.error || 'Failed to create user') + errorDetail);
     }
   };
 
@@ -307,6 +348,27 @@ const AdminPanel: React.FC = () => {
           </div>
         </div>
         
+        <div className="admin-refresh-bar">
+          <div className="admin-refresh-info">
+            <span className="refresh-timestamp">Last updated: {lastRefreshed.toLocaleTimeString()}</span>
+            <button 
+              className="admin-refresh-btn" 
+              onClick={refreshCurrentTab}
+              title="Refresh data now"
+            >
+              🔄 Refresh
+            </button>
+            <label className="auto-refresh-toggle" title="Auto-refresh every 30 seconds">
+              <input 
+                type="checkbox" 
+                checked={autoRefreshEnabled} 
+                onChange={(e) => setAutoRefreshEnabled(e.target.checked)} 
+              />
+              Auto-refresh
+            </label>
+          </div>
+        </div>
+
         <div className="admin-tabs">
           <button 
             className={`admin-tab ${activeTab === 'users' ? 'active' : ''}`}
@@ -526,6 +588,11 @@ const AdminPanel: React.FC = () => {
                                   : 'N/A'}
                               </div>
                               <div className="stat-label">Latest Login</div>
+                            </div>
+                            <div className="stat-card">
+                              <div className="stat-icon"></div>
+                              <div className="stat-value">{activityData.totalLogins || 0}</div>
+                              <div className="stat-label">Total Login Events</div>
                             </div>
                 </div>
 
@@ -752,26 +819,59 @@ const AdminPanel: React.FC = () => {
             {loading ? (
               <div className="admin-loading">Loading system stats...</div>
             ) : dbStats ? (
-              <div className="system-stats">
-                <div className="stat-card">
-                  <div className="stat-icon"></div>
-                  <div className="stat-value">{dbStats.totalUsers || 0}</div>
-                  <div className="stat-label">Total Users</div>
+              <div>
+                <div className="system-stats">
+                  <div className="stat-card">
+                    <div className="stat-icon"></div>
+                    <div className="stat-value">{dbStats.totalUsers || 0}</div>
+                    <div className="stat-label">Total Users</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-icon"></div>
+                    <div className="stat-value">{dbStats.totalShipments || 0}</div>
+                    <div className="stat-label">Total Shipments</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-icon"></div>
+                    <div className="stat-value">{dbStats.totalSamples || 0}</div>
+                    <div className="stat-label">Total Samples</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-icon"></div>
+                    <div className="stat-value">{dbStats.totalTestMethods || 0}</div>
+                    <div className="stat-label">Test Methods</div>
+                  </div>
                 </div>
-                <div className="stat-card">
-                  <div className="stat-icon"></div>
-                  <div className="stat-value">{dbStats.totalShipments || 0}</div>
-                  <div className="stat-label">Total Shipments</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-icon"></div>
-                  <div className="stat-value">{dbStats.totalSamples || 0}</div>
-                  <div className="stat-label">Total Samples</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-icon"></div>
-                  <div className="stat-value">{dbStats.totalTestMethods || 0}</div>
-                  <div className="stat-label">Test Methods</div>
+
+                {/* SMTP Health Check */}
+                <div className="activity-section" style={{ marginTop: '30px' }}>
+                  <h3>Email Service Diagnostics</h3>
+                  <p style={{ color: '#666', marginBottom: '15px', fontSize: '14px' }}>
+                    Check if the SMTP email service is properly configured and reachable.
+                  </p>
+                  <button 
+                    className="admin-primary-btn"
+                    onClick={async () => {
+                      try {
+                        const response = await api.get('/admin/smtp-health');
+                        const data = response.data.data;
+                        const status = data.healthy ? '✅ HEALTHY' : '❌ UNHEALTHY';
+                        const details = [
+                          `Status: ${status}`,
+                          `Host: ${data.config.host || 'NOT SET'}`,
+                          `Port: ${data.config.port}`,
+                          `User: ${data.config.user || 'NOT SET'}`,
+                          `Password: ${data.config.hasPassword ? 'Set' : 'NOT SET'}`,
+                          data.error ? `Error: ${data.error}` : ''
+                        ].filter(Boolean).join('\n');
+                        alert(`SMTP Health Check\n\n${details}`);
+                      } catch (err) {
+                        alert('Failed to check SMTP health. See console for details.');
+                      }
+                    }}
+                  >
+                    🔍 Check SMTP Health
+                  </button>
                 </div>
               </div>
             ) : (

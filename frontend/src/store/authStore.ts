@@ -26,7 +26,8 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       login: async (username: string, password: string) => {
         try {
-          const response = await api.post('/auth/login', { username, password });
+          // Backend expects 'email' field, not 'username'
+          const response = await api.post('/auth/login', { email: username, password });
           const { token, user } = response.data;
           set({ user, token });
           // Also set manual localStorage keys for compatibility

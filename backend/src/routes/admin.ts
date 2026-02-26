@@ -3,7 +3,7 @@ import { pool } from '../config/database';
 import bcrypt from 'bcrypt';
 import multer from 'multer';
 import { authenticate, AuthRequest } from '../middleware/auth';
-import { sendRegistrationInvitation, sendFileShareEmail, sendReviewSubmissionEmail } from '../services/emailService';
+import { sendRegistrationInvitation, sendFileShareEmail, sendReviewSubmissionEmail, checkSmtpConnection } from '../services/emailService';
 
 const router = Router();
 
@@ -251,12 +251,17 @@ router.post('/users', async (req, res) => {
 
     // Send email invitation with registration link
     let emailSent = false;
+    let emailError = '';
     try {
       console.log(`Attempting to send registration invitation to: ${normalizedEmail}`);
       emailSent = await sendRegistrationInvitation(normalizedEmail, role);
       console.log(`Registration invitation result for ${normalizedEmail}: ${emailSent ? 'SUCCESS' : 'FAILED'}`);
-    } catch (emailError: any) {
-      console.error('Failed to send invitation email:', emailError.message || emailError);
+      if (!emailSent) {
+        emailError = 'SMTP send returned false - check server logs for detailed SMTP error. Verify SMTP_HOST, SMTP_USER, SMTP_PASSWORD env vars are set correctly.';
+      }
+    } catch (emailErr: any) {
+      emailError = emailErr.message || 'Unknown email error';
+      console.error('Failed to send invitation email:', emailError);
       // Don't fail the whole operation if email fails
     }
 
@@ -264,8 +269,8 @@ router.post('/users', async (req, res) => {
       success: true, 
       message: emailSent 
         ? 'User authorized successfully. An invitation email has been sent.'
-        : 'User authorized successfully. They can now register at the portal. (Email notification could not be sent)',
-      data: { email: normalizedEmail, role, emailSent }
+        : `User authorized successfully. They can now register at the portal. (Email could not be sent: ${emailError})`,
+      data: { email: normalizedEmail, role, emailSent, emailError: emailSent ? undefined : emailError }
     });
   } catch (error: any) {
     console.error('Error authorizing user:', error);
@@ -545,6 +550,23 @@ router.get('/system-stats', async (req, res) => {
   }
 });
 
+// SMTP health check - diagnose email sending issues
+router.get('/smtp-health', async (req, res) => {
+  try {
+    const result = await checkSmtpConnection();
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to check SMTP health',
+      details: error.message
+    });
+  }
+});
+
 // Get user activity statistics
 router.get('/user-activity', async (req, res) => {
   try {
@@ -588,16 +610,39 @@ router.get('/user-activity', async (req, res) => {
         AND is_active = true
     `);
 
-    // Get login activity by day (last 30 days)
-    const loginsByDay = await pool.query(`
-      SELECT 
-        DATE(last_login) as date,
-        COUNT(*) as logins
-      FROM users
-      WHERE last_login >= NOW() - INTERVAL '30 days'
-      GROUP BY DATE(last_login)
-      ORDER BY date DESC
-    `);
+    // Get login activity by day (last 30 days) - use login_history table if available
+    let loginsByDay;
+    try {
+      loginsByDay = await pool.query(`
+        SELECT 
+          DATE(login_at) as date,
+          COUNT(*) as logins
+        FROM login_history
+        WHERE login_at >= NOW() - INTERVAL '30 days'
+        GROUP BY DATE(login_at)
+        ORDER BY date DESC
+      `);
+    } catch (historyErr) {
+      // Fallback if login_history table doesn't exist yet (pre-migration)
+      loginsByDay = await pool.query(`
+        SELECT 
+          DATE(last_login) as date,
+          COUNT(*) as logins
+        FROM users
+        WHERE last_login >= NOW() - INTERVAL '30 days'
+        GROUP BY DATE(last_login)
+        ORDER BY date DESC
+      `);
+    }
+
+    // Get total login count (all-time) from login_history if available
+    let totalLogins = 0;
+    try {
+      const totalResult = await pool.query('SELECT COUNT(*) FROM login_history');
+      totalLogins = parseInt(totalResult.rows[0].count);
+    } catch (e) {
+      // Table doesn't exist yet
+    }
 
     res.json({
       success: true,
@@ -606,7 +651,8 @@ router.get('/user-activity', async (req, res) => {
         usersByRole: usersByRole.rows,
         recentLogins: recentLogins.rows,
         neverLoggedIn: parseInt(neverLoggedIn.rows[0].count),
-        loginsByDay: loginsByDay.rows
+        loginsByDay: loginsByDay.rows,
+        totalLogins
       }
     });
   } catch (error: any) {
