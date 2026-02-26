@@ -45,7 +45,7 @@ if (!smtpHost || !smtpUser || !smtpPassword) {
 const transporter = nodemailer.createTransport({
   host: smtpHost || 'smtp.gmail.com',
   port: smtpPort,
-  secure: process.env.SMTP_SECURE === 'true',
+  secure: process.env.SMTP_SECURE === 'true' || smtpPort === 465,
   auth: {
     user: smtpUser,
     pass: smtpPassword,
