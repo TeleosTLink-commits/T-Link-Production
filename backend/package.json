@@ -76,5 +76,8 @@
     },
     "overrides": {
         "fast-xml-parser": "$fast-xml-parser"
+    },
+    "engines": {
+        "node": ">=18.0.0"
     }
 }
