@@ -247,6 +247,9 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       notes
     } = req.body;
 
+    // Convert empty strings to null for date fields (PostgreSQL rejects '' for DATE columns)
+    const toDateOrNull = (val: any) => (val === '' || val === undefined ? null : val);
+
     const result = await pool.query(
       `INSERT INTO samples (
         chemical_name, received_date, lot_number, quantity, concentration,
@@ -256,9 +259,9 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
       RETURNING *`,
       [
-        chemical_name, received_date, lot_number, quantity, concentration,
-        has_dow_sds || false, cas_number, has_coa || false, certification_date, recertification_date,
-        expiration_date, un_number, hazard_description, hs_code, hazard_class,
+        chemical_name, toDateOrNull(received_date), lot_number, quantity, concentration,
+        has_dow_sds || false, cas_number, has_coa || false, toDateOrNull(certification_date), toDateOrNull(recertification_date),
+        toDateOrNull(expiration_date), un_number, hazard_description, hs_code, hazard_class,
         packing_group, packing_instruction, status || 'active', notes, req.user?.id
       ]
     );
@@ -296,6 +299,9 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       notes
     } = req.body;
 
+    // Convert empty strings to null for date fields (PostgreSQL rejects '' for DATE columns)
+    const toDateOrNull = (val: any) => (val === '' || val === undefined ? null : val);
+
     const result = await pool.query(
       `UPDATE samples SET
         chemical_name = $1, received_date = $2, lot_number = $3, quantity = $4, concentration = $5,
@@ -305,9 +311,9 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       WHERE id = $20
       RETURNING *`,
       [
-        chemical_name, received_date, lot_number, quantity, concentration,
-        has_dow_sds, cas_number, has_coa, certification_date, recertification_date,
-        expiration_date, un_number, hazard_description, hs_code, hazard_class,
+        chemical_name, toDateOrNull(received_date), lot_number, quantity, concentration,
+        has_dow_sds, cas_number, has_coa, toDateOrNull(certification_date), toDateOrNull(recertification_date),
+        toDateOrNull(expiration_date), un_number, hazard_description, hs_code, hazard_class,
         packing_group, packing_instruction, status, notes, id
       ]
     );
