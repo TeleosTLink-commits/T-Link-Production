@@ -107,7 +107,7 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
     }
     
     await transporter.sendMail({
-      from: process.env.EMAIL_FROM || 'noreply@teleos.com',
+      from: process.env.EMAIL_FROM || 'support@teleostlink.com',
       to: options.to,
       subject: options.subject,
       html: finalHtml,
@@ -614,7 +614,7 @@ export const sendFileShareEmail = async (options: FileShareEmailOptions): Promis
 
   try {
     const mailOptions: any = {
-      from: process.env.EMAIL_FROM || 'noreply@ajwalabs.com',
+      from: process.env.EMAIL_FROM || 'support@teleostlink.com',
       to,
       subject: `[T-Link] ${subject}`,
       html,
@@ -735,7 +735,7 @@ export const sendReviewSubmissionEmail = async (options: ReviewSubmissionEmailOp
 
   try {
     await transporter.sendMail({
-      from: process.env.EMAIL_FROM || 'noreply@ajwalabs.com',
+      from: process.env.EMAIL_FROM || 'support@teleostlink.com',
       to,
       replyTo: reviewerEmail,
       subject,

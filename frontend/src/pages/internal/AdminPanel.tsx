@@ -933,7 +933,7 @@ const AdminPanel: React.FC = () => {
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
         users={users.map(u => ({
-          id: parseInt(u.id) || 0,
+          id: u.id,
           email: u.email,
           name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || undefined,
           company_name: undefined,

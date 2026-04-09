@@ -4,7 +4,7 @@ import './ShareWithUserModal.css';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://tlink-production-backend.onrender.com/api';
 
 interface User {
-  id: number;
+  id: string;
   email: string;
   name?: string;
   company_name?: string;
@@ -18,7 +18,7 @@ interface ShareWithUserModalProps {
 }
 
 const ShareWithUserModal: React.FC<ShareWithUserModalProps> = ({ isOpen, onClose, users }) => {
-  const [selectedUserId, setSelectedUserId] = useState<number | string | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
@@ -29,7 +29,7 @@ const ShareWithUserModal: React.FC<ShareWithUserModalProps> = ({ isOpen, onClose
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isSendToAll = selectedUserId === 'all';
-  const selectedUser = typeof selectedUserId === 'number' ? users.find(u => u.id === selectedUserId) : null;
+  const selectedUser = selectedUserId && selectedUserId !== 'all' ? users.find(u => u.id === selectedUserId) : null;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -190,7 +190,7 @@ const ShareWithUserModal: React.FC<ShareWithUserModalProps> = ({ isOpen, onClose
                 value={selectedUserId || ''}
                 onChange={(e) => {
                   const val = e.target.value;
-                  setSelectedUserId(val === 'all' ? 'all' : val ? parseInt(val) : null);
+                  setSelectedUserId(val || null);
                 }}
                 required
               >
