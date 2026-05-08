@@ -370,48 +370,112 @@ router.post('/:id/coa/upload', authenticate, upload.single('file'), async (req: 
     const { id } = req.params;
     const file = req.file;
 
+    // Validate request
+    if (!id || !id.trim()) {
+      return res.status(400).json({ success: false, message: 'Sample ID is required' });
+    }
+
     if (!file) {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
-    console.log('CoA upload request:', {
-      id,
-      name: file.originalname,
-      size: (file as any).size,
-      mimetype: file.mimetype,
-      envCloudinary: {
-        cloud: !!process.env.CLOUDINARY_CLOUD_NAME,
-        key: !!process.env.CLOUDINARY_API_KEY,
-        secret: !!process.env.CLOUDINARY_API_SECRET
-      },
+
+    // Validate file size
+    const fileSize = (file as any).size || file.buffer?.length || 0;
+    if (fileSize === 0) {
+      return res.status(400).json({ success: false, message: 'Uploaded file is empty' });
+    }
+
+    if (fileSize > 25 * 1024 * 1024) {
+      return res.status(413).json({ success: false, message: 'File exceeds 25MB limit' });
+    }
+
+    // Validate sample exists
+    const sampleCheck = await pool.query('SELECT id, lot_number FROM samples WHERE id = $1', [id]);
+    if (sampleCheck.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Sample not found' });
+    }
+
+    const sample = sampleCheck.rows[0];
+    const fileName = file.originalname || `coa-${Date.now()}.pdf`;
+    const fileBuffer = file.buffer || (file as any).path;
+
+    if (!fileBuffer) {
+      return res.status(400).json({ success: false, message: 'Unable to access file data' });
+    }
+
+    console.log('CoA upload:', {
+      sampleId: id,
+      lotNumber: sample.lot_number,
+      fileName,
+      fileSize,
+      bufferAvailable: !!file.buffer,
+      pathAvailable: !!(file as any).path,
       nodeEnv: process.env.NODE_ENV
     });
-    const fileName = file.originalname;
+
     let filePath: string | null = null;
 
     if (process.env.NODE_ENV === 'production') {
+      // Upload to Cloudinary in production
       const { uploadBufferToCloudinary } = require('../utils/cloudinary');
       try {
-        filePath = await uploadBufferToCloudinary(file.buffer, fileName, 'sample-inventory/coa');
+        if (!file.buffer) {
+          return res.status(400).json({ success: false, message: 'File buffer unavailable in production' });
+        }
+        filePath = await uploadBufferToCloudinary(file.buffer, fileName, 'samples/coa');
         if (!filePath) {
-          return res.status(500).json({ success: false, message: 'Failed to upload CoA to cloud' });
+          return res.status(500).json({ success: false, message: 'Cloudinary returned empty URL' });
         }
       } catch (cloudError: any) {
-        console.error('Cloudinary upload error:', cloudError);
-        return res.status(500).json({ success: false, message: 'Failed to upload to cloud storage', error: cloudError.message });
+        console.error('Cloudinary upload error:', {
+          error: cloudError?.message || cloudError,
+          stack: cloudError?.stack
+        });
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to upload to Cloudinary',
+          error: cloudError?.message || 'Unknown error'
+        });
       }
     } else {
+      // Use local path in development
       filePath = (file as any).path;
+      if (!filePath) {
+        return res.status(400).json({ success: false, message: 'File path not available' });
+      }
     }
 
-    await pool.query(
-      'UPDATE samples SET coa_file_path = $1, coa_file_name = $2, has_coa = true, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
+    // Update database
+    const updateResult = await pool.query(
+      `UPDATE samples 
+       SET coa_file_path = $1, coa_file_name = $2, has_coa = true, updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $3 
+       RETURNING id, lot_number, coa_file_path, coa_file_name`,
       [filePath, fileName, id]
     );
 
-    res.json({ success: true, message: 'CoA uploaded successfully', data: { filePath, fileName } });
+    if (updateResult.rows.length === 0) {
+      return res.status(500).json({ success: false, message: 'Failed to update sample record' });
+    }
+
+    const updated = updateResult.rows[0];
+    res.json({
+      success: true,
+      message: 'CoA uploaded successfully',
+      data: {
+        sampleId: updated.id,
+        lotNumber: updated.lot_number,
+        filePath: updated.coa_file_path,
+        fileName: updated.coa_file_name
+      }
+    });
   } catch (error: any) {
     console.error('Error uploading CoA:', error);
-    res.status(500).json({ success: false, message: 'Failed to upload CoA', error: error.message || String(error) });
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload CoA',
+      error: error.message || String(error)
+    });
   }
 });
 

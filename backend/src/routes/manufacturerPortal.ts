@@ -25,6 +25,41 @@ function requiresState(countryCode?: string): boolean {
   return !COUNTRIES_WITHOUT_STATES.includes(countryCode.toUpperCase());
 }
 
+function resolveLocalCoaPath(storedPath: string): string | null {
+  if (!storedPath) {
+    return null;
+  }
+
+  const candidates = new Set<string>();
+  const normalized = storedPath.replace(/\\/g, path.sep);
+  const fileName = path.basename(normalized);
+  const cwd = process.cwd();
+
+  candidates.add(storedPath);
+  candidates.add(normalized);
+
+  if (path.isAbsolute(normalized)) {
+    candidates.add(normalized);
+  } else {
+    candidates.add(path.resolve(cwd, normalized));
+  }
+
+  if (fileName) {
+    candidates.add(path.join(cwd, 'uploads', 'sample-documents', fileName));
+    candidates.add(path.join(cwd, 'backend', 'uploads', 'sample-documents', fileName));
+    candidates.add(path.join(cwd, 'storage', 'sample-inventory', fileName));
+    candidates.add(path.join(cwd, 'backend', 'storage', 'sample-inventory', fileName));
+  }
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
 /**
  * Middleware: Check if user is manufacturer
  */
@@ -139,14 +174,21 @@ router.get('/coa/download/:sampleId', authenticate, checkManufacturer, async (re
     }
 
     const sample = result.rows[0];
-    const filePath = sample.coa_file_path;
+    const filePath = sample.coa_file_path as string | null;
 
-    // Check if file exists locally
-    if (filePath && filePath.startsWith('C:\\')) {
-      if (!fs.existsSync(filePath)) {
+    // Legacy/local path handling: support both Windows and Linux path formats.
+    if (filePath && !filePath.startsWith('http://') && !filePath.startsWith('https://')) {
+      const resolvedPath = resolveLocalCoaPath(filePath);
+      if (!resolvedPath) {
+        logger.warn('CoA file path exists in DB but file is missing on disk', {
+          sampleId,
+          lotNumber: sample.lot_number,
+          storedPath: filePath,
+          processCwd: process.cwd(),
+        });
         return res.status(404).json({ error: 'CoA file not found on server' });
       }
-      return res.download(filePath, `${sample.lot_number}_CoA.pdf`);
+      return res.download(resolvedPath, `${sample.lot_number}_CoA.pdf`);
     }
 
     // If Cloudinary URL
