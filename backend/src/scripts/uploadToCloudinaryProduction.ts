@@ -8,7 +8,7 @@ dotenv.config();
 
 // Configure Cloudinary
 cloudinary.v2.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'di7yyu1mx',
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dsg5o79p9',
   api_key: process.env.CLOUDINARY_API_KEY || '733869953499621',
   api_secret: process.env.CLOUDINARY_API_SECRET || 'S4ASfISu4o4Br1r3fchP0SiIko4',
 });

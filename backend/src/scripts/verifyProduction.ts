@@ -3,7 +3,7 @@ import cloudinary from 'cloudinary';
 import { Pool } from 'pg';
 
 cloudinary.v2.config({
-  cloud_name: 'di7yyu1mx',
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dsg5o79p9',
   api_key: '733869953499621',
   api_secret: 'S4ASfISu4o4Br1r3fchP0SiIko4',
 });
