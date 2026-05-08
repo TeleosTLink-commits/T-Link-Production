@@ -53,10 +53,25 @@ export async function uploadToCloudinary(filePath: string, folder: string): Prom
  */
 export async function uploadBufferToCloudinary(buffer: Buffer, originalFilename: string, folder: string): Promise<string | null> {
   try {
+    // Reconfigure every call so Render env vars are always used (not stale module-load values)
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET
+    });
+
     if (!hasCloudinaryConfig()) {
       console.error('Cloudinary env vars are missing (CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET).');
       return null;
     }
+
+    // Log masked credentials for diagnostics
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+    console.log('[Cloudinary] cloud_name:', cloudName);
+    console.log('[Cloudinary] api_key:', apiKey ? `${apiKey.slice(0, 6)}...` : 'MISSING');
+    console.log('[Cloudinary] api_secret:', apiSecret ? `${apiSecret.slice(0, 4)}...` : 'MISSING');
 
     const baseName = sanitizeBaseName(originalFilename);
     const baseOptions = {

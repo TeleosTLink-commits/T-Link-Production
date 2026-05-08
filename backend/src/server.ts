@@ -183,6 +183,19 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// Diagnostic endpoint — shows masked Cloudinary config for production troubleshooting
+app.get('/health/cloudinary', (req, res) => {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+  res.json({
+    cloud_name: cloudName || 'MISSING',
+    api_key: apiKey ? `${apiKey.slice(0, 6)}...` : 'MISSING',
+    api_secret: apiSecret ? `${apiSecret.slice(0, 4)}...` : 'MISSING',
+    all_set: Boolean(cloudName && apiKey && apiSecret),
+  });
+});
+
 // API Routes
 // NOTE: More specific routes must come before less specific ones
 app.use('/api/auth/manufacturer', authLimiter, manufacturerAuthRoutes); // Must be before /api/auth
