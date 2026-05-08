@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import path from 'path';
+import { v2 as cloudinary } from 'cloudinary';
 import { errorHandler } from './middleware/errorHandler';
 import { apiLimiter, authLimiter } from './middleware/rateLimiter';
 import logger from './config/logger';
@@ -194,6 +195,31 @@ app.get('/health/cloudinary', (req, res) => {
     api_secret: apiSecret ? `${apiSecret.slice(0, 4)}...` : 'MISSING',
     all_set: Boolean(cloudName && apiKey && apiSecret),
   });
+});
+
+// Diagnostic endpoint — verifies Cloudinary credentials via authenticated API call
+app.get('/health/cloudinary/ping', async (req, res) => {
+  try {
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+    });
+
+    const pingResult = await cloudinary.api.ping();
+    return res.json({
+      ok: true,
+      status: pingResult?.status || 'unknown',
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'MISSING',
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      ok: false,
+      error: error?.message || 'Cloudinary ping failed',
+      http_code: error?.http_code || null,
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'MISSING',
+    });
+  }
 });
 
 // API Routes
