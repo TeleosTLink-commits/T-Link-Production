@@ -8,6 +8,31 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+function hasCloudinaryConfig(): boolean {
+  return Boolean(
+    process.env.CLOUDINARY_CLOUD_NAME &&
+    process.env.CLOUDINARY_API_KEY &&
+    process.env.CLOUDINARY_API_SECRET
+  );
+}
+
+function sanitizeBaseName(originalFilename: string): string {
+  return originalFilename
+    .replace(/\.[^/.]+$/, '')
+    .replace(/[^a-zA-Z0-9_-]+/g, '-')
+    .toLowerCase();
+}
+
+async function uploadBufferWithOptions(buffer: Buffer, options: any): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(options, (error, result) => {
+      if (error) return reject(error);
+      resolve(result);
+    });
+    stream.end(buffer);
+  });
+}
+
 export async function uploadToCloudinary(filePath: string, folder: string): Promise<string | null> {
   try {
     const result = await cloudinary.uploader.upload(filePath, {
@@ -28,27 +53,41 @@ export async function uploadToCloudinary(filePath: string, folder: string): Prom
  */
 export async function uploadBufferToCloudinary(buffer: Buffer, originalFilename: string, folder: string): Promise<string | null> {
   try {
-    const baseName = originalFilename
-      .replace(/\.[^/.]+$/, '')
-      .replace(/[^a-zA-Z0-9_-]+/g, '-')
-      .toLowerCase();
-    const result: any = await new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        {
-          folder: `tlink/${folder}`,
-          resource_type: 'auto',
-          use_filename: true,
-          unique_filename: true,
-          public_id: baseName
-        },
-        (error, result) => {
-          if (error) return reject(error);
-          resolve(result);
-        }
-      );
-      stream.end(buffer);
-    });
-    return result.secure_url as string;
+    if (!hasCloudinaryConfig()) {
+      console.error('Cloudinary env vars are missing (CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET).');
+      return null;
+    }
+
+    const baseName = sanitizeBaseName(originalFilename);
+    const baseOptions = {
+      folder: `tlink/${folder}`,
+      use_filename: true,
+      unique_filename: true,
+      public_id: baseName,
+    };
+
+    // PDF and document uploads are often more reliable as raw resources.
+    let result: any;
+    try {
+      result = await uploadBufferWithOptions(buffer, {
+        ...baseOptions,
+        resource_type: 'raw',
+      });
+    } catch (rawError: any) {
+      console.warn('Cloudinary raw upload failed, retrying with auto resource_type:', rawError?.message);
+      result = await uploadBufferWithOptions(buffer, {
+        ...baseOptions,
+        resource_type: 'auto',
+      });
+    }
+
+    const uploadedUrl = result?.secure_url || result?.url || null;
+    if (!uploadedUrl) {
+      console.error('Cloudinary upload completed but returned no URL:', result);
+      return null;
+    }
+
+    return uploadedUrl as string;
   } catch (error: any) {
     console.error(`Error uploading buffer to Cloudinary:`, error.message);
     return null;

@@ -424,7 +424,10 @@ router.post('/:id/coa/upload', authenticate, upload.single('file'), async (req: 
         }
         filePath = await uploadBufferToCloudinary(file.buffer, fileName, 'samples/coa');
         if (!filePath) {
-          return res.status(500).json({ success: false, message: 'Cloudinary returned empty URL' });
+          return res.status(500).json({
+            success: false,
+            message: 'Cloudinary upload failed. Please verify Cloudinary credentials and upload settings on the server.'
+          });
         }
       } catch (cloudError: any) {
         console.error('Cloudinary upload error:', {
