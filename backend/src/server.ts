@@ -200,23 +200,35 @@ app.get('/health/cloudinary', (req, res) => {
 // Diagnostic endpoint — verifies Cloudinary credentials via authenticated API call
 app.get('/health/cloudinary/ping', async (req, res) => {
   try {
+    const normalizeEnvValue = (value?: string): string => {
+      const trimmed = (value || '').trim();
+      return trimmed.replace(/^['\"]|['\"]$/g, '');
+    };
+
+    const cloudName = normalizeEnvValue(process.env.CLOUDINARY_CLOUD_NAME);
+    const apiKey = normalizeEnvValue(process.env.CLOUDINARY_API_KEY);
+    const apiSecret = normalizeEnvValue(process.env.CLOUDINARY_API_SECRET);
+
     cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
+      cloud_name: cloudName,
+      api_key: apiKey,
+      api_secret: apiSecret,
     });
 
     const pingResult = await cloudinary.api.ping();
     return res.json({
       ok: true,
       status: pingResult?.status || 'unknown',
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'MISSING',
+      cloud_name: cloudName || 'MISSING',
     });
   } catch (error: any) {
     return res.status(500).json({
       ok: false,
       error: error?.message || 'Cloudinary ping failed',
       http_code: error?.http_code || null,
+      error_name: error?.name || null,
+      error_message: error?.error?.message || null,
+      error_raw: String(error),
       cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'MISSING',
     });
   }

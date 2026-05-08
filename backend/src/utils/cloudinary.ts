@@ -1,18 +1,27 @@
 import { v2 as cloudinary } from 'cloudinary';
 import crypto from 'crypto';
 
+function normalizeEnvValue(value?: string): string {
+  const trimmed = (value || '').trim();
+  return trimmed.replace(/^['\"]|['\"]$/g, '');
+}
+
 // Configure Cloudinary
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
+  cloud_name: normalizeEnvValue(process.env.CLOUDINARY_CLOUD_NAME),
+  api_key: normalizeEnvValue(process.env.CLOUDINARY_API_KEY),
+  api_secret: normalizeEnvValue(process.env.CLOUDINARY_API_SECRET)
 });
 
 function hasCloudinaryConfig(): boolean {
+  const cloudName = normalizeEnvValue(process.env.CLOUDINARY_CLOUD_NAME);
+  const apiKey = normalizeEnvValue(process.env.CLOUDINARY_API_KEY);
+  const apiSecret = normalizeEnvValue(process.env.CLOUDINARY_API_SECRET);
+
   return Boolean(
-    process.env.CLOUDINARY_CLOUD_NAME &&
-    process.env.CLOUDINARY_API_KEY &&
-    process.env.CLOUDINARY_API_SECRET
+    cloudName &&
+    apiKey &&
+    apiSecret
   );
 }
 
@@ -53,11 +62,15 @@ export async function uploadToCloudinary(filePath: string, folder: string): Prom
  */
 export async function uploadBufferToCloudinary(buffer: Buffer, originalFilename: string, folder: string): Promise<string | null> {
   try {
+    const cloudName = normalizeEnvValue(process.env.CLOUDINARY_CLOUD_NAME);
+    const apiKey = normalizeEnvValue(process.env.CLOUDINARY_API_KEY);
+    const apiSecret = normalizeEnvValue(process.env.CLOUDINARY_API_SECRET);
+
     // Reconfigure every call so Render env vars are always used (not stale module-load values)
     cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET
+      cloud_name: cloudName,
+      api_key: apiKey,
+      api_secret: apiSecret
     });
 
     if (!hasCloudinaryConfig()) {
@@ -66,9 +79,6 @@ export async function uploadBufferToCloudinary(buffer: Buffer, originalFilename:
     }
 
     // Log masked credentials for diagnostics
-    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-    const apiKey = process.env.CLOUDINARY_API_KEY;
-    const apiSecret = process.env.CLOUDINARY_API_SECRET;
     console.log('[Cloudinary] cloud_name:', cloudName);
     console.log('[Cloudinary] api_key:', apiKey ? `${apiKey.slice(0, 6)}...` : 'MISSING');
     console.log('[Cloudinary] api_secret:', apiSecret ? `${apiSecret.slice(0, 4)}...` : 'MISSING');
