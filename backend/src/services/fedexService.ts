@@ -474,6 +474,24 @@ class FedExService {
       
       // Fall back to mock label data when FedEx API fails
       // This ensures shipments can still be processed while FedEx integration is being resolved
+      // SAFETY: This silent fallback masks real credential/account issues. Only enable it
+      // when FEDEX_ALLOW_MOCK_FALLBACK=true is explicitly set. By default, surface the
+      // real FedEx error so the user can fix it (e.g. update credentials in Render).
+      if (process.env.FEDEX_ALLOW_MOCK_FALLBACK !== 'true') {
+        const apiError =
+          error.response?.data?.errors?.[0]?.message ||
+          error.response?.data?.errors?.[0]?.code ||
+          error.message ||
+          'Unknown FedEx API error';
+        return {
+          trackingNumber: '',
+          label: '',
+          cost: 0,
+          estimatedDelivery: '',
+          error: `FedEx API error: ${apiError}`,
+        };
+      }
+
       console.warn('FedEx API error - falling back to mock label data for shipment processing');
       const mockTrackingNumber = `TLINK${Date.now().toString().slice(-10)}`;
       const isIntl = request.service.startsWith('INTERNATIONAL');
