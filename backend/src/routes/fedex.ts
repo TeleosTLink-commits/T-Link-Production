@@ -167,6 +167,17 @@ router.get('/tracking/:trackingNumber', authenticate, async (req: Request, res: 
       return res.status(400).json({ error: 'Tracking number is required' });
     }
 
+    // Mock tracking numbers (prefix TLINK or MOCK) are generated locally when
+    // FedEx credentials are missing at label-generation time. They will never
+    // resolve against the real FedEx tracking API. Surface a clear error.
+    if (/^(TLINK|MOCK)/i.test(trackingNumber)) {
+      return res.status(404).json({
+        error:
+          'This shipment was created without live FedEx credentials and has no real tracking number. Regenerate the shipping label to obtain a valid FedEx tracking number.',
+        mock: true,
+      });
+    }
+
     // Get tracking info
     const trackingInfo = await fedexService.getTrackingInfo(trackingNumber);
 
