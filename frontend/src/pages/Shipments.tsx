@@ -258,7 +258,7 @@ const Shipments: React.FC = () => {
       fetchShipments();
       fetchSamples(); // Refresh to show updated quantities
     } catch (err: any) {
-      const errorMsg = err.response?.data?.message || err.message || 'Failed to create shipment';
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to create shipment';
       alert('Error: ' + errorMsg);
     }
   };
