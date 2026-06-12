@@ -321,7 +321,7 @@ class FedExService {
 
       // Create shipment request
       const shipmentPayload: any = {
-        labelResponseOptions: 'URL_ONLY',
+        labelResponseOptions: 'LABEL',
         requestedShipment: {
           shipper: {
             contact: {
@@ -446,9 +446,19 @@ class FedExService {
         // Calculate estimated delivery (typically 1-5 business days depending on service)
         const estimatedDelivery = this.calculateEstimatedDelivery(request.service);
 
+        // FedEx returns label data in pieceResponses[].packageDocuments[].encodedLabel
+        // when labelResponseOptions === 'LABEL'. Fall back to other common field names
+        // for resilience across API versions.
+        const piece = shipment.pieceResponses?.[0];
+        const labelData =
+          piece?.packageDocuments?.[0]?.encodedLabel ||
+          piece?.packageDocuments?.[0]?.url ||
+          piece?.labelDownloadUrl ||
+          '';
+
         return {
           trackingNumber,
-          label: shipment.pieceResponses?.[0]?.labelDownloadUrl || '',
+          label: labelData,
           cost,
           estimatedDelivery,
         };
