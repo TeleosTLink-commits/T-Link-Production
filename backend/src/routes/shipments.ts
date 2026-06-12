@@ -317,8 +317,10 @@ router.post('/multi', authenticate, authorize('admin', 'lab_staff', 'logistics',
       const sample = sampleResult.rows[0];
       const amountToShip = parseFloat(item.amount_shipped);
 
-      // Parse current quantity
-      const quantityMatch = sample.quantity.match(/[\\d.]+/g);
+      // Parse current quantity (the stored value may include unit suffixes
+      // like "100g" or "2.5 kg", and occasionally multiple components such as
+      // "100g + 50g"; sum all numeric parts).
+      const quantityMatch = String(sample.quantity ?? '').match(/[\d.]+/g);
       const currentQty = quantityMatch ? quantityMatch.reduce((sum: number, val: string) => sum + parseFloat(val), 0) : 0;
 
       if (amountToShip > currentQty) {
