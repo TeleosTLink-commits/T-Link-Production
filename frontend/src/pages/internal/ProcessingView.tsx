@@ -656,7 +656,7 @@ const ProcessingView: React.FC = () => {
               </div>
               <div className="detail-item">
                 <label>Scheduled Ship Date</label>
-                <div>{new Date(shipment.scheduled_ship_date).toLocaleDateString()}</div>
+                <div>{shipment.scheduled_ship_date ? new Date(shipment.scheduled_ship_date).toLocaleDateString() : 'Not scheduled'}</div>
               </div>
             </div>
           </div>

@@ -132,11 +132,12 @@ const ProcessingDashboard: React.FC = () => {
                   </thead>
                   <tbody>
                     {shipments.map((shipment) => {
-                      const scheduledDate = new Date(shipment.scheduled_ship_date);
+                      const hasScheduledDate = !!shipment.scheduled_ship_date;
+                      const scheduledDate = hasScheduledDate ? new Date(shipment.scheduled_ship_date) : null;
                       const today = new Date();
-                      const diffDays = Math.ceil((scheduledDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                      const isDueSoon = diffDays <= 2 && diffDays >= 0;
-                      const isPastDue = diffDays < 0;
+                      const diffDays = scheduledDate ? Math.ceil((scheduledDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+                      const isDueSoon = hasScheduledDate && diffDays <= 2 && diffDays >= 0;
+                      const isPastDue = hasScheduledDate && diffDays < 0;
 
                       return (
                         <tr key={shipment.id} className={isPastDue ? 'past-due' : isDueSoon ? 'due-soon' : ''}>
@@ -155,7 +156,7 @@ const ProcessingDashboard: React.FC = () => {
                           </td>
                           <td>{shipment.recipient_name}</td>
                           <td>
-                            {new Date(shipment.scheduled_ship_date).toLocaleDateString()}
+                            {hasScheduledDate ? new Date(shipment.scheduled_ship_date).toLocaleDateString() : 'Not scheduled'}
                             {isPastDue && <span className="date-flag past-due-flag">PAST DUE</span>}
                             {isDueSoon && <span className="date-flag due-soon-flag">DUE SOON</span>}
                           </td>
