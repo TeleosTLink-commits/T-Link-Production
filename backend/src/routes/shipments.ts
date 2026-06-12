@@ -260,6 +260,7 @@ router.post('/multi', authenticate, authorize('admin', 'lab_staff', 'logistics',
       recipient_country,
       is_international,
       emergency_contact_phone,
+      scheduled_ship_date,
       notes,
     } = req.body;
 
@@ -359,8 +360,8 @@ router.post('/multi', authenticate, authorize('admin', 'lab_staff', 'logistics',
         recipient_name, recipient_company, destination_address,
         destination_city, destination_state, destination_zip, destination_country,
         special_instructions, is_hazmat, requires_dg_declaration,
-        requested_by, status, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'initiated', NOW())
+        requested_by, scheduled_ship_date, status, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'initiated', NOW())
        RETURNING *`,
       [
         shipmentNumber,
@@ -378,6 +379,7 @@ router.post('/multi', authenticate, authorize('admin', 'lab_staff', 'logistics',
         isHazmat,
         isHazmat,
         req.user?.id,
+        scheduled_ship_date || null,
       ]
     );
 

@@ -88,6 +88,7 @@ const Shipments: React.FC = () => {
     recipient_country: 'US',
     is_international: false,
     emergency_contact_phone: '',
+    scheduled_ship_date: '',
     notes: ''
   });
 
@@ -233,6 +234,7 @@ const Shipments: React.FC = () => {
         recipient_country: formData.recipient_country,
         is_international: formData.is_international,
         emergency_contact_phone: formData.emergency_contact_phone || undefined,
+        scheduled_ship_date: formData.scheduled_ship_date || undefined,
         notes: formData.notes
       });
       
@@ -253,6 +255,7 @@ const Shipments: React.FC = () => {
         recipient_country: 'US',
         is_international: false,
         emergency_contact_phone: '',
+        scheduled_ship_date: '',
         notes: ''
       });
       fetchShipments();
@@ -951,6 +954,17 @@ const Shipments: React.FC = () => {
                   placeholder="Required for hazmat shipments"
                 />
                 <small style={{ color: '#666' }}>Required for hazmat materials - must be available 24/7</small>
+              </div>
+
+              <div className="shipments-form-group">
+                <label>Scheduled Ship Date</label>
+                <input
+                  type="date"
+                  value={formData.scheduled_ship_date}
+                  onChange={(e) => setFormData({ ...formData, scheduled_ship_date: e.target.value })}
+                  min={new Date().toISOString().split('T')[0]}
+                />
+                <small style={{ color: '#666' }}>Optional - leave blank for as-soon-as-possible processing</small>
               </div>
 
               <div className="shipments-form-group">
