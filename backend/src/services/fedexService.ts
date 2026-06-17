@@ -361,18 +361,18 @@ class FedExService {
             specialServiceTypes: ['HAZARDOUS_MATERIALS'],
             hazardousCommoditiesDetail: {
               regulation: 'DOT',
-              options: ['HAZARDOUS_MATERIALS'],
               hazardousCommodities: [commodity],
             },
           };
         } else {
-          // Express / air: IATA regulation, DANGEROUS_GOODS service
+          // Express / air: IATA regulation, DANGEROUS_GOODS service.
+          // Note: accessibility is REQUIRED. Do not pass an options array
+          // unless you are explicitly declaring battery / ORM-D / etc.
           packageSpecialServices = {
             specialServiceTypes: ['DANGEROUS_GOODS'],
             dangerousGoodsDetail: {
               regulation: 'IATA',
-              accessibility: 'ACCESSIBLE',
-              options: ['ACCESSIBLE_DANGEROUS_GOODS'],
+              accessibility: 'INACCESSIBLE',
               hazardousCommodities: [commodity],
             },
           };
