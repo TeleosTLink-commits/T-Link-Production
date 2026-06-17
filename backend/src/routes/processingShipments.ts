@@ -792,7 +792,8 @@ router.post('/generate-label', authenticate, checkLabStaff, async (req: Request,
 
     // Also get hazmat info from shipment_samples for multi-sample shipments
     const samplesResult = await pool.query(
-      `SELECT sam.un_number, sam.hazard_class, sam.packing_group, sam.proper_shipping_name, sam.chemical_name
+      `SELECT sam.un_number, sam.hazard_class, sam.packing_group, sam.proper_shipping_name, sam.chemical_name,
+              ss.quantity_requested, ss.unit
        FROM shipment_samples ss
        JOIN samples sam ON ss.sample_id = sam.id
        WHERE ss.shipment_id = $1`,
@@ -805,11 +806,18 @@ router.post('/generate-label', authenticate, checkLabStaff, async (req: Request,
       // Try to get hazmat details from the shipment's samples
       const sampleWithHazmat = samplesResult.rows.find((s: any) => s.un_number || s.hazard_class) || shipment;
       if (sampleWithHazmat.un_number || sampleWithHazmat.hazard_class) {
+        // Sum quantity across all hazmat samples (single-commodity assumption)
+        const totalQty = samplesResult.rows
+          .filter((s: any) => s.un_number || s.hazard_class)
+          .reduce((acc: number, s: any) => acc + (parseFloat(s.quantity_requested) || 0), 0);
+        const unit = sampleWithHazmat.unit || 'ml';
         effectiveHazmatDetails = {
           unNumber: sampleWithHazmat.un_number,
           properShippingName: sampleWithHazmat.proper_shipping_name || sampleWithHazmat.chemical_name,
           hazardClass: sampleWithHazmat.hazard_class,
           packingGroup: sampleWithHazmat.packing_group,
+          quantity: totalQty > 0 ? totalQty : undefined,
+          quantityUnits: unit,
         };
       }
     }

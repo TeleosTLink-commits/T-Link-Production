@@ -40,6 +40,28 @@ function requiresState(countryCode?: string): boolean {
 }
 
 /**
+ * Normalize a hazmat quantity + unit into FedEx-accepted hazmat unit codes.
+ * FedEx valid codes: G (Gallons), L (Liters), ML (Milliliters), KG (Kilograms),
+ * LB (Pounds), OZ (Ounces). Note: FedEx does NOT accept grams directly, so
+ * grams are converted to kilograms.
+ */
+function normalizeHazmatUnits(
+  amount: number | undefined,
+  units: string | undefined
+): { amount: number; units: string } {
+  const safeAmount = typeof amount === 'number' && amount > 0 ? amount : 1;
+  const u = (units || 'KG').trim().toLowerCase();
+  if (u === 'g' || u === 'gram' || u === 'grams') return { amount: safeAmount / 1000, units: 'KG' };
+  if (u === 'ml' || u === 'milliliter' || u === 'milliliters') return { amount: safeAmount, units: 'ML' };
+  if (u === 'l' || u === 'liter' || u === 'liters') return { amount: safeAmount, units: 'L' };
+  if (u === 'kg' || u === 'kilogram' || u === 'kilograms') return { amount: safeAmount, units: 'KG' };
+  if (u === 'lb' || u === 'lbs' || u === 'pound' || u === 'pounds') return { amount: safeAmount, units: 'LB' };
+  if (u === 'oz' || u === 'ounce' || u === 'ounces') return { amount: safeAmount, units: 'OZ' };
+  if (u === 'gal' || u === 'gallon' || u === 'gallons') return { amount: safeAmount, units: 'G' };
+  return { amount: safeAmount, units: 'KG' };
+}
+
+/**
  * Split a street address into lines of max 35 characters (FedEx limit).
  * FedEx allows up to 2 street lines of 35 chars each.
  */
@@ -76,6 +98,7 @@ interface HazmatDetails {
   properShippingName: string;
   hazardClass: string;
   packingGroup?: string;
+  technicalName?: string;
   emergencyContact?: string;
   quantity?: number;
   quantityUnits?: string;
@@ -300,22 +323,66 @@ class FedExService {
       // Build hazmat special services if applicable
       let packageSpecialServices: any = undefined;
       if (request.isHazmat && request.hazmatDetails) {
-        // Determine the correct special service type based on service
         const isGround = request.service.includes('GROUND');
-        const hazmatServiceType = isGround ? 'HAZARDOUS_MATERIALS' : 'DANGEROUS_GOODS';
-        
-        packageSpecialServices = {
-          specialServiceTypes: [hazmatServiceType],
-          dangerousGoodsDetail: {
-            regulation: 'DOT',
-            accessibility: isGround ? 'INACCESSIBLE' : 'ACCESSIBLE',
-            options: isGround ? ['HAZARDOUS_MATERIALS'] : ['DANGEROUS_GOODS'],
-          },
+        const h = request.hazmatDetails;
+
+        // Normalize quantity units to FedEx-accepted hazmat unit codes.
+        // Note: FedEx uses 'G' for Gallons (not grams). Grams are converted to KG.
+        const { amount: hazAmount, units: hazUnits } = normalizeHazmatUnits(h.quantity, h.quantityUnits);
+
+        // Normalize UN/NA identifier (FedEx expects e.g. "UN1263")
+        let normalizedId: string | undefined;
+        if (h.unNumber) {
+          const raw = String(h.unNumber).trim().toUpperCase().replace(/\s+/g, '');
+          normalizedId = raw.startsWith('UN') || raw.startsWith('NA') ? raw : `UN${raw}`;
+        }
+
+        const description: any = {
+          sequenceNumber: 1,
+          properShippingName: h.properShippingName,
+          hazardClass: String(h.hazardClass || ''),
         };
+        if (normalizedId) description.id = normalizedId;
+        if (h.packingGroup) description.packingGroup = String(h.packingGroup).toUpperCase();
+        if (h.technicalName) description.technicalName = h.technicalName;
+
+        const commodity = {
+          description,
+          quantity: { amount: hazAmount, units: hazUnits, quantityType: 'NET' },
+          innerReceptacles: [
+            { quantity: { amount: hazAmount, units: hazUnits, quantityType: 'NET' } },
+          ],
+          options: { labelTextType: 'STANDARD' },
+        };
+
+        if (isGround) {
+          // Domestic ground: 49 CFR / DOT regulation, HAZARDOUS_MATERIALS service
+          packageSpecialServices = {
+            specialServiceTypes: ['HAZARDOUS_MATERIALS'],
+            hazardousCommoditiesDetail: {
+              regulation: 'DOT',
+              options: ['HAZARDOUS_MATERIALS'],
+              hazardousCommodities: [commodity],
+            },
+          };
+        } else {
+          // Express / air: IATA regulation, DANGEROUS_GOODS service
+          packageSpecialServices = {
+            specialServiceTypes: ['DANGEROUS_GOODS'],
+            dangerousGoodsDetail: {
+              regulation: 'IATA',
+              accessibility: 'ACCESSIBLE',
+              options: ['ACCESSIBLE_DANGEROUS_GOODS'],
+              hazardousCommodities: [commodity],
+            },
+          };
+        }
       } else if (request.isHazmat) {
-        // Basic hazmat without details
+        // Flagged hazmat without commodity details — minimal payload.
+        // FedEx will likely reject this without commodity info; surface upstream.
+        const isGround = request.service.includes('GROUND');
         packageSpecialServices = {
-          specialServiceTypes: ['DANGEROUS_GOODS'],
+          specialServiceTypes: [isGround ? 'HAZARDOUS_MATERIALS' : 'DANGEROUS_GOODS'],
         };
       }
 
