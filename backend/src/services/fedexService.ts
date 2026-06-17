@@ -104,20 +104,50 @@ interface HazmatDetails {
   quantityUnits?: string;
 }
 
+interface CommodityItem {
+  description: string;
+  countryOfManufacture?: string;
+  quantity?: number;
+  quantityUnits?: string;
+  unitPrice?: number;
+  weight?: number;
+  weightUnit?: 'LB' | 'KG';
+  harmonizedCode?: string;
+  numberOfPieces?: number;
+}
+
+interface CustomsInfo {
+  termsOfSale?: 'FOB' | 'CFR_OR_CPT' | 'CIF_OR_CIP' | 'EXW' | 'DDP';
+  purpose?: 'SAMPLE' | 'GIFT' | 'NOT_SOLD' | 'SOLD' | 'PERSONAL_EFFECTS' | 'REPAIR_AND_RETURN' | 'PERSONAL_USE';
+  dutiesPaymentType?: 'SENDER' | 'RECIPIENT' | 'THIRD_PARTY';
+  totalCustomsValue?: number;
+  currency?: string;
+}
+
+interface ContactInfo {
+  personName?: string;
+  phoneNumber?: string;
+  companyName?: string;
+}
+
 interface ShipmentLabelRequest {
   fromAddress: AddressValidationInput;
   toAddress: AddressValidationInput;
+  recipientContact?: ContactInfo;
   weight: number;
   weightUnit: 'LB' | 'KG';
   service: 'GROUND_HOME_DELIVERY' | 'FEDEX_GROUND' | 'OVERNIGHT_EXPRESS' | 'EXPRESS_SAVER' | 'FEDEX_EXPRESS_SAVER' | 'PRIORITY_OVERNIGHT' | 'STANDARD_OVERNIGHT' | 'INTERNATIONAL_PRIORITY' | 'INTERNATIONAL_ECONOMY' | 'INTERNATIONAL_FIRST' | 'INTERNATIONAL_GROUND';
   packageValue: number;
   isHazmat?: boolean;
   hazmatDetails?: HazmatDetails;
+  commodities?: CommodityItem[];
+  customs?: CustomsInfo;
 }
 
 interface ShipmentLabelResult {
   trackingNumber: string;
   label: string; // Base64 encoded PDF
+  commercialInvoice?: string; // Base64 encoded PDF (international shipments only)
   cost: number;
   estimatedDelivery: string;
   error?: string;
@@ -413,8 +443,9 @@ class FedExService {
           recipients: [
             {
               contact: {
-                personName: 'Recipient',
-                phoneNumber: '0000000000',
+                personName: request.recipientContact?.personName || 'Recipient',
+                phoneNumber: request.recipientContact?.phoneNumber || '0000000000',
+                ...(request.recipientContact?.companyName ? { companyName: request.recipientContact.companyName } : {}),
               },
               address: (() => {
                 const addr: any = {
@@ -471,6 +502,82 @@ class FedExService {
         };
       }
 
+      // International shipments: build customsClearanceDetail and request a
+      // commercial invoice PDF document. FedEx requires this for any non-domestic
+      // shipment (toCountry !== shipperCountry, or service starts with INTERNATIONAL).
+      const isInternationalShipment =
+        request.service.startsWith('INTERNATIONAL') ||
+        (request.toAddress.countryCode &&
+          request.fromAddress.countryCode &&
+          request.toAddress.countryCode.toUpperCase() !== request.fromAddress.countryCode.toUpperCase()) ||
+        (request.toAddress.countryCode && request.toAddress.countryCode.toUpperCase() !== 'US');
+
+      if (isInternationalShipment) {
+        const currency = request.customs?.currency || 'USD';
+        const purpose = request.customs?.purpose || 'SAMPLE';
+        const termsOfSale = request.customs?.termsOfSale || 'FOB';
+
+        const inputCommodities = request.commodities && request.commodities.length > 0
+          ? request.commodities
+          : [{
+              description: 'Cosmetic raw material sample (not for resale)',
+              countryOfManufacture: 'US',
+              quantity: 1,
+              quantityUnits: 'EA',
+              unitPrice: request.packageValue || 1,
+              weight: request.weight,
+              weightUnit: request.weightUnit,
+              numberOfPieces: 1,
+            }];
+
+        const commodities = inputCommodities.map((c) => {
+          const qty = c.quantity ?? 1;
+          const unitPrice = c.unitPrice ?? 1;
+          const lineCustomsValue = +(unitPrice * qty).toFixed(2);
+          const item: any = {
+            description: c.description,
+            countryOfManufacture: c.countryOfManufacture || 'US',
+            quantity: qty,
+            quantityUnits: c.quantityUnits || 'EA',
+            unitPrice: { amount: unitPrice, currency },
+            customsValue: { amount: lineCustomsValue, currency },
+            numberOfPieces: c.numberOfPieces ?? 1,
+          };
+          if (typeof c.weight === 'number' && c.weight > 0) {
+            item.weight = { units: c.weightUnit || request.weightUnit, value: c.weight };
+          }
+          if (c.harmonizedCode) item.harmonizedCode = c.harmonizedCode;
+          return item;
+        });
+
+        const totalCustomsValue =
+          request.customs?.totalCustomsValue ??
+          commodities.reduce((acc: number, c: any) => acc + (c.customsValue?.amount || 0), 0);
+
+        shipmentPayload.requestedShipment.customsClearanceDetail = {
+          dutiesPayment: { paymentType: request.customs?.dutiesPaymentType || 'SENDER' },
+          commercialInvoice: { termsOfSale, purpose },
+          commodities,
+          totalCustomsValue: { amount: +totalCustomsValue.toFixed(2), currency },
+        };
+
+        // Merge / set shippingDocumentSpecification to also request commercial invoice
+        const existingDocSpec =
+          shipmentPayload.requestedShipment.shippingDocumentSpecification || {};
+        const existingTypes: string[] = existingDocSpec.shippingDocumentTypes || [];
+        const mergedTypes = Array.from(new Set([...existingTypes, 'COMMERCIAL_INVOICE']));
+        shipmentPayload.requestedShipment.shippingDocumentSpecification = {
+          ...existingDocSpec,
+          shippingDocumentTypes: mergedTypes,
+          commercialInvoiceDetail: {
+            documentFormat: {
+              stockType: 'PAPER_LETTER',
+              docType: 'PDF',
+            },
+          },
+        };
+      }
+
       // Log request details for debugging (no sensitive data)
       console.log('[FedEx Label] Request details:', {
         service: request.service,
@@ -523,9 +630,23 @@ class FedExService {
           piece?.labelDownloadUrl ||
           '';
 
+        // Commercial invoice (international shipments) is returned in
+        // shipmentDocuments[] alongside the label. Each document has a
+        // contentType such as 'COMMERCIAL_INVOICE' and an encodedLabel field.
+        let commercialInvoice = '';
+        const docs: any[] = shipment.shipmentDocuments || [];
+        for (const doc of docs) {
+          const t = (doc.contentType || doc.type || '').toString().toUpperCase();
+          if (t.includes('COMMERCIAL_INVOICE')) {
+            commercialInvoice = doc.encodedLabel || doc.url || '';
+            break;
+          }
+        }
+
         return {
           trackingNumber,
           label: labelData,
+          commercialInvoice: commercialInvoice || undefined,
           cost,
           estimatedDelivery,
         };

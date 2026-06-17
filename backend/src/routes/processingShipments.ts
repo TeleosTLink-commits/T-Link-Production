@@ -763,7 +763,7 @@ router.post('/get-rate', authenticate, checkLabStaff, async (req: Request, res: 
  */
 router.post('/generate-label', authenticate, checkLabStaff, async (req: Request, res: Response) => {
   try {
-    const { shipmentId, weight, weightUnit, service, packageValue, isHazmat, suppliesUsed, hazmatDetails } = req.body;
+    const { shipmentId, weight, weightUnit, service, packageValue, isHazmat, suppliesUsed, hazmatDetails, customs, commodities } = req.body;
 
     if (!shipmentId || !weight || !weightUnit || !service) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -839,16 +839,63 @@ router.post('/generate-label', authenticate, checkLabStaff, async (req: Request,
       countryCode: shipment.destination_country || 'US',
     };
 
+    // Determine if this is an international shipment so we can build customs info
+    const isInternational =
+      String(service).startsWith('INTERNATIONAL') ||
+      (toAddress.countryCode && toAddress.countryCode.toUpperCase() !== 'US');
+
+    // If international, derive commodities from the shipment samples (one line per sample)
+    // unless the caller provided an explicit override.
+    let derivedCommodities: any[] | undefined = Array.isArray(commodities) && commodities.length > 0 ? commodities : undefined;
+    if (isInternational && !derivedCommodities) {
+      const sampleRows = samplesResult.rows.length > 0
+        ? samplesResult.rows
+        : [{
+            chemical_name: shipment.chemical_name,
+            quantity_requested: shipment.amount_shipped,
+            unit: shipment.unit,
+          }];
+      const totalValue = parseFloat(packageValue) || 1;
+      const perItemValue = sampleRows.length > 0 ? +(totalValue / sampleRows.length).toFixed(2) : totalValue;
+      derivedCommodities = sampleRows.map((s: any) => ({
+        description: (s.proper_shipping_name || s.chemical_name || 'Cosmetic raw material sample').toString().slice(0, 450),
+        countryOfManufacture: 'US',
+        quantity: 1,
+        quantityUnits: 'EA',
+        unitPrice: perItemValue > 0 ? perItemValue : 1,
+        weight: parseFloat(weight) / Math.max(sampleRows.length, 1),
+        weightUnit: String(weightUnit).toUpperCase(),
+        numberOfPieces: 1,
+      }));
+    }
+
+    const effectiveCustoms = isInternational
+      ? {
+          purpose: customs?.purpose || 'SAMPLE',
+          termsOfSale: customs?.termsOfSale || 'FOB',
+          dutiesPaymentType: customs?.dutiesPaymentType || 'SENDER',
+          currency: customs?.currency || 'USD',
+          totalCustomsValue: customs?.totalCustomsValue,
+        }
+      : undefined;
+
     // Generate FedEx label
     const labelResult = await fedexService.generateShipmentLabel({
       fromAddress,
       toAddress,
+      recipientContact: {
+        personName: shipment.recipient_name || 'Recipient',
+        phoneNumber: shipment.recipient_phone || '0000000000',
+        companyName: shipment.recipient_company || undefined,
+      },
       weight: parseFloat(weight),
       weightUnit: weightUnit.toUpperCase() as 'LB' | 'KG',
       service: service as any,
       packageValue: parseFloat(packageValue) || 100,
       isHazmat: isHazmat || false,
       hazmatDetails: effectiveHazmatDetails,
+      commodities: derivedCommodities,
+      customs: effectiveCustoms,
     });
 
     if (labelResult.error) {
@@ -858,6 +905,7 @@ router.post('/generate-label', authenticate, checkLabStaff, async (req: Request,
     // Determine if this is a mock/fallback label (no actual PDF)
     const isMockLabel = !labelResult.label || labelResult.label === '';
     let labelWebPath = '';
+    let invoiceWebPath = '';
 
     // Save label PDF to file system only if we have actual label data
     if (!isMockLabel) {
@@ -877,6 +925,17 @@ router.post('/generate-label', authenticate, checkLabStaff, async (req: Request,
       const labelBuffer = Buffer.from(labelResult.label, 'base64');
       await fs.writeFile(labelPath, labelBuffer);
       labelWebPath = `/uploads/shipping-labels/${labelFileName}`;
+
+      // Save commercial invoice PDF (international only) alongside label
+      if (labelResult.commercialInvoice) {
+        const invoiceFileName = `invoice_${safeShipmentId}_${Date.now()}.pdf`;
+        const invoicePath = path.join(labelDir, invoiceFileName);
+        if (isLabelPathSafe(invoicePath)) {
+          const invoiceBuffer = Buffer.from(labelResult.commercialInvoice, 'base64');
+          await fs.writeFile(invoicePath, invoiceBuffer);
+          invoiceWebPath = `/uploads/shipping-labels/${invoiceFileName}`;
+        }
+      }
     }
 
     // Update shipment with tracking info
@@ -933,6 +992,7 @@ router.post('/generate-label', authenticate, checkLabStaff, async (req: Request,
         cost: labelResult.cost,
         estimatedDelivery: labelResult.estimatedDelivery,
         labelPath: labelWebPath || null,
+        commercialInvoicePath: invoiceWebPath || null,
         isMockLabel,
       },
     });

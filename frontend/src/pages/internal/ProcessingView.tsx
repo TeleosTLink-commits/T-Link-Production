@@ -109,7 +109,7 @@ const ProcessingView: React.FC = () => {
   const [showSdsPrintPrompt, setShowSdsPrintPrompt] = useState(false);
   const [showLabelPrintPrompt, setShowLabelPrintPrompt] = useState(false);
   const [showHazmatLabelPrompt, setShowHazmatLabelPrompt] = useState(false);
-  const [generatedLabel, setGeneratedLabel] = useState<{ trackingNumber: string; labelPath: string; cost: number; isMockLabel?: boolean } | null>(null);
+  const [generatedLabel, setGeneratedLabel] = useState<{ trackingNumber: string; labelPath: string; commercialInvoicePath?: string | null; cost: number; isMockLabel?: boolean } | null>(null);
   const [sdsPrinted, setSdsPrinted] = useState(false);
   
   // Address validation
@@ -442,6 +442,7 @@ const ProcessingView: React.FC = () => {
       setGeneratedLabel({
         trackingNumber: response.data.data.trackingNumber,
         labelPath: response.data.data.labelPath,
+        commercialInvoicePath: response.data.data.commercialInvoicePath || null,
         cost: response.data.data.cost,
         isMockLabel: response.data.data.isMockLabel || false,
       });
@@ -540,8 +541,21 @@ const ProcessingView: React.FC = () => {
               {!generatedLabel.isMockLabel && (
                 <p>Please print the shipping label and affix it to the package.</p>
               )}
+              {generatedLabel.commercialInvoicePath && (
+                <p style={{ color: '#1e3a8a', marginTop: '8px' }}>
+                  📄 <strong>International shipment:</strong> Print 3 copies of the Commercial Invoice and place them in a clear pouch on the outside of the package for customs.
+                </p>
+              )}
             </div>
             <div className="procview-modal-footer">
+              {generatedLabel.commercialInvoicePath && (
+                <button
+                  className="procview-btn-secondary"
+                  onClick={() => window.open(generatedLabel.commercialInvoicePath as string, '_blank')}
+                >
+                  Print Commercial Invoice
+                </button>
+              )}
               {generatedLabel.labelPath ? (
                 <button className="procview-btn-primary" onClick={handlePrintLabel}>
                   Print Shipping Label
