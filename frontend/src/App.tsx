@@ -25,6 +25,8 @@ import TrackingView from './pages/internal/TrackingView';
 import SupplyInventory from './pages/internal/SupplyInventory';
 import HazmatWarning from './pages/internal/HazmatWarning';
 import AdminPanel from './pages/internal/AdminPanel';
+import StudiesDashboard from './pages/internal/StudiesDashboard';
+import StudyWorkspace from './pages/internal/StudyWorkspace';
 
 const getAuthState = () => {
   const token = localStorage.getItem('auth_token');
@@ -72,7 +74,11 @@ function App() {
           <Route path="test-methods" element={<TestMethods />} />
           <Route path="inventory" element={<SampleInventory />} />
           <Route path="shipments" element={<Shipments />} />
-          
+
+          {/* Teleos Studies (internal only) */}
+          <Route path="studies" element={<StudiesDashboard />} />
+          <Route path="studies/:id" element={<StudyWorkspace />} />
+
           {/* Manufacturer Portal Pages */}
           <Route path="manufacturer/dashboard" element={<ManufacturerDashboard />} />
           <Route path="manufacturer/coa-lookup" element={<CoALookup />} />

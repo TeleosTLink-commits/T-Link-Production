@@ -61,6 +61,11 @@ const Dashboard: React.FC = () => {
             <span className="btn-desc">Manage shipping operations</span>
           </button>
 
+          <button className="action-btn studies-btn" onClick={() => navigate('/studies')}>
+            <span className="btn-label">Teleos Studies</span>
+            <span className="btn-desc">Manage GLP &amp; non-GLP studies</span>
+          </button>
+
           {effectiveUser?.role === 'super_admin' && (
             <button className="action-btn admin-btn" onClick={() => navigate('/internal/admin')}>
               <span className="btn-label">Super Admin Panel</span>
