@@ -21,9 +21,9 @@ interface StudySample {
   material_role: string;
   notes: string | null;
   sample_pk: string;
-  sample_id: string;
   chemical_name: string;
   lot_number: string | null;
+  cas_number: string | null;
   quantity: string | null;
 }
 
@@ -654,9 +654,9 @@ const StudyWorkspace: React.FC = () => {
                 <table className="studies-table">
                   <thead>
                     <tr>
-                      <th>Sample ID</th>
                       <th>Chemical Name</th>
                       <th>Lot Number</th>
+                      <th>CAS Number</th>
                       <th>Role</th>
                       <th>Quantity</th>
                       <th>Notes</th>
@@ -665,9 +665,9 @@ const StudyWorkspace: React.FC = () => {
                   <tbody>
                     {study.samples.map((s) => (
                       <tr key={s.id}>
-                        <td>{s.sample_id}</td>
                         <td>{s.chemical_name}</td>
                         <td>{s.lot_number || '—'}</td>
+                        <td>{s.cas_number || '—'}</td>
                         <td>{s.material_role}</td>
                         <td>{s.quantity || '—'}</td>
                         <td>{s.notes || '—'}</td>

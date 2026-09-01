@@ -308,7 +308,8 @@ router.get('/:id', requireStudyRole('study_viewer'), async (req: AuthRequest, re
       ),
       pool.query(
         `SELECT ss.id, ss.material_role, ss.notes, ss.added_at,
-                sm.id AS sample_pk, sm.sample_id, sm.chemical_name, sm.lot_number, sm.quantity
+                sm.id AS sample_pk, sm.chemical_name, sm.lot_number,
+                sm.cas_number, sm.quantity
          FROM study_samples ss
          JOIN samples sm ON sm.id = ss.sample_id
          WHERE ss.study_id = $1
