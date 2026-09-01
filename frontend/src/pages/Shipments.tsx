@@ -82,6 +82,8 @@ const Shipments: React.FC = () => {
     recipient_company: '',
     recipient_phone: '',
     recipient_address: '',
+    recipient_address_2: '',
+    recipient_address_3: '',
     recipient_city: '',
     recipient_state: '',
     recipient_zip: '',
@@ -129,7 +131,7 @@ const Shipments: React.FC = () => {
   };
 
   const addShipmentItem = () => {
-    if (formData.shipment_items.length < 10) {
+    if (formData.shipment_items.length < 20) {
       setFormData({
         ...formData,
         shipment_items: [...formData.shipment_items, { 
@@ -228,6 +230,8 @@ const Shipments: React.FC = () => {
         recipient_company: formData.recipient_company || undefined,
         recipient_phone: formData.recipient_phone,
         recipient_address: formData.recipient_address,
+        recipient_address_2: formData.recipient_address_2 || undefined,
+        recipient_address_3: formData.recipient_address_3 || undefined,
         recipient_city: formData.recipient_city,
         recipient_state: formData.recipient_state,
         recipient_zip: formData.recipient_zip,
@@ -249,6 +253,8 @@ const Shipments: React.FC = () => {
         recipient_company: '',
         recipient_phone: '',
         recipient_address: '',
+        recipient_address_2: '',
+        recipient_address_3: '',
         recipient_city: '',
         recipient_state: '',
         recipient_zip: '',
@@ -649,7 +655,7 @@ const Shipments: React.FC = () => {
         <div className="shipments-modal-overlay" onClick={() => setShowModal(false)}>
           <div className="shipments-modal large" onClick={(e) => e.stopPropagation()}>
             <div className="shipments-modal-header">
-              <h2>Create New Shipment (Ship 1-10 Items per Request)</h2>
+              <h2>Create New Shipment (Ship 1-20 Items per Request)</h2>
               <button className="shipments-modal-close" onClick={() => setShowModal(false)}>
                 Close
               </button>
@@ -658,18 +664,18 @@ const Shipments: React.FC = () => {
               {/* Shipment Items Section */}
               <div className="shipments-form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <label style={{ marginBottom: 0 }}>Samples to Ship ({formData.shipment_items.length}/10) *</label>
+                  <label style={{ marginBottom: 0 }}>Samples to Ship ({formData.shipment_items.length}/20) *</label>
                   <button 
                     type="button" 
                     onClick={addShipmentItem}
-                    disabled={formData.shipment_items.length >= 10}
+                    disabled={formData.shipment_items.length >= 20}
                     style={{
                       padding: '0.5rem 1rem',
-                      backgroundColor: formData.shipment_items.length >= 10 ? '#ccc' : '#28a745',
+                      backgroundColor: formData.shipment_items.length >= 20 ? '#ccc' : '#28a745',
                       color: 'white',
                       border: 'none',
                       borderRadius: '4px',
-                      cursor: formData.shipment_items.length >= 10 ? 'not-allowed' : 'pointer'
+                      cursor: formData.shipment_items.length >= 20 ? 'not-allowed' : 'pointer'
                     }}
                   >
                     + Add Sample
@@ -822,13 +828,33 @@ const Shipments: React.FC = () => {
               </div>
 
               <div className="shipments-form-group">
-                <label>Street Address *</label>
+                <label>Address Line 1 *</label>
                 <input
                   type="text"
                   required
                   value={formData.recipient_address}
                   onChange={(e) => setFormData({ ...formData, recipient_address: e.target.value })}
                   placeholder="Street address"
+                />
+              </div>
+
+              <div className="shipments-form-group">
+                <label>Address Line 2</label>
+                <input
+                  type="text"
+                  value={formData.recipient_address_2}
+                  onChange={(e) => setFormData({ ...formData, recipient_address_2: e.target.value })}
+                  placeholder="Building, floor, suite, etc. (optional)"
+                />
+              </div>
+
+              <div className="shipments-form-group">
+                <label>Address Line 3</label>
+                <input
+                  type="text"
+                  value={formData.recipient_address_3}
+                  onChange={(e) => setFormData({ ...formData, recipient_address_3: e.target.value })}
+                  placeholder="Additional address details (optional)"
                 />
               </div>
 

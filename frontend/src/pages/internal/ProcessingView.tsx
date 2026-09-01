@@ -68,6 +68,25 @@ interface Supply {
   unit: string;
 }
 
+interface ShipmentDocument {
+  id: string;
+  document_type: string;
+  file_name: string;
+  file_path: string;
+  file_size?: number;
+  mime_type?: string;
+  notes?: string;
+  created_at: string;
+  uploaded_by_name?: string;
+}
+
+const CUSTOMS_DOCUMENT_TYPES = [
+  'Commercial Invoice', 'Packing List', 'Certificate of Origin',
+  'Import Permit', 'Export License', 'Customs Declaration',
+  'Material Safety Data Sheet', 'Dangerous Goods Declaration',
+  'Certificate of Analysis', 'Other',
+];
+
 // DOT Hazard Class Labels mapping
 const HAZARD_CLASS_LABELS: { [key: string]: { name: string; color: string; symbol: string } } = {
   '1': { name: 'Explosives', color: '#FF6600', symbol: '💥' },
@@ -129,6 +148,13 @@ const ProcessingView: React.FC = () => {
   // Rate quote
   const [rateQuote, setRateQuote] = useState<number | null>(null);
   const [gettingRate, setGettingRate] = useState(false);
+
+  // Custom customs / shipping documents
+  const [documents, setDocuments] = useState<ShipmentDocument[]>([]);
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const [docType, setDocType] = useState('Other');
+  const [docNotes, setDocNotes] = useState('');
+  const [uploadingDoc, setUploadingDoc] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -194,6 +220,69 @@ const ProcessingView: React.FC = () => {
       setSupplies(suppliesArray);
     } catch (err: any) {
       console.error('Failed to fetch supplies:', err);
+    }
+  };
+
+  const fetchDocuments = async () => {
+    if (!id) return;
+    try {
+      const response = await api.get(`/shipments/${id}/documents`);
+      setDocuments(response.data.data || []);
+    } catch (err: any) {
+      console.error('Failed to fetch documents:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (id) fetchDocuments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  const handleUploadDocument = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !docFile) {
+      alert('Please choose a file to upload');
+      return;
+    }
+    try {
+      setUploadingDoc(true);
+      const form = new FormData();
+      form.append('file', docFile);
+      form.append('document_type', docType);
+      if (docNotes) form.append('notes', docNotes);
+      await api.post(`/shipments/${id}/documents`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setDocFile(null);
+      setDocType('Other');
+      setDocNotes('');
+      // Reset the file input element
+      const input = document.getElementById('shipment-doc-input') as HTMLInputElement | null;
+      if (input) input.value = '';
+      await fetchDocuments();
+    } catch (err: any) {
+      alert(err.response?.data?.error || err.response?.data?.message || 'Failed to upload document');
+    } finally {
+      setUploadingDoc(false);
+    }
+  };
+
+  const handleDeleteDocument = async (docId: string) => {
+    if (!id) return;
+    if (!window.confirm('Remove this document from the shipment?')) return;
+    try {
+      await api.delete(`/shipments/${id}/documents/${docId}`);
+      await fetchDocuments();
+    } catch (err: any) {
+      alert(err.response?.data?.error || err.response?.data?.message || 'Failed to remove document');
+    }
+  };
+
+  const openDocument = (doc: ShipmentDocument) => {
+    if (/^https?:\/\//i.test(doc.file_path)) {
+      window.open(doc.file_path, '_blank', 'noopener');
+    } else {
+      window.open(`${api.defaults.baseURL}/shipments/${id}/documents/${doc.id}/download`, '_blank', 'noopener');
     }
   };
 
@@ -673,6 +762,110 @@ const ProcessingView: React.FC = () => {
                 <div>{shipment.scheduled_ship_date ? new Date(shipment.scheduled_ship_date).toLocaleDateString() : 'Not scheduled'}</div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Customs & Shipping Documents Card */}
+        <div className="procview-card">
+          <div className="procview-card-header">
+            <h2>📎 Customs &amp; Shipping Documents</h2>
+          </div>
+          <div className="procview-card-body">
+            <p style={{ marginTop: 0, color: '#555', fontSize: '0.9rem' }}>
+              Attach any additional customs or shipping documents this shipment requires
+              (e.g. import permits, certificates of origin, country-specific customs forms).
+              These are in addition to the auto-generated Commercial Invoice and Packing List.
+            </p>
+
+            {documents.length > 0 ? (
+              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1rem' }}>
+                <thead>
+                  <tr style={{ textAlign: 'left', borderBottom: '2px solid #e0e0e0' }}>
+                    <th style={{ padding: '0.5rem' }}>Type</th>
+                    <th style={{ padding: '0.5rem' }}>File</th>
+                    <th style={{ padding: '0.5rem' }}>Notes</th>
+                    <th style={{ padding: '0.5rem' }}>Added</th>
+                    <th style={{ padding: '0.5rem' }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {documents.map((doc) => (
+                    <tr key={doc.id} style={{ borderBottom: '1px solid #eee' }}>
+                      <td style={{ padding: '0.5rem' }}>{doc.document_type}</td>
+                      <td style={{ padding: '0.5rem' }}>
+                        <button
+                          type="button"
+                          onClick={() => openDocument(doc)}
+                          style={{ background: 'none', border: 'none', color: '#0b7', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
+                        >
+                          {doc.file_name}
+                        </button>
+                      </td>
+                      <td style={{ padding: '0.5rem', color: '#666' }}>{doc.notes || '—'}</td>
+                      <td style={{ padding: '0.5rem', color: '#666', fontSize: '0.85rem' }}>
+                        {new Date(doc.created_at).toLocaleDateString()}
+                        {doc.uploaded_by_name ? ` · ${doc.uploaded_by_name}` : ''}
+                      </td>
+                      <td style={{ padding: '0.5rem' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteDocument(doc.id)}
+                          style={{ background: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', padding: '0.25rem 0.5rem', cursor: 'pointer' }}
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p style={{ color: '#888', fontStyle: 'italic' }}>No additional documents attached yet.</p>
+            )}
+
+            <form onSubmit={handleUploadDocument} style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'flex-end', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <label style={{ fontSize: '0.85rem', marginBottom: '0.25rem' }}>Document Type</label>
+                <select value={docType} onChange={(e) => setDocType(e.target.value)} style={{ padding: '0.5rem' }}>
+                  {CUSTOMS_DOCUMENT_TYPES.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <label style={{ fontSize: '0.85rem', marginBottom: '0.25rem' }}>File</label>
+                <input
+                  id="shipment-doc-input"
+                  type="file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.png,.jpg,.jpeg"
+                  onChange={(e) => setDocFile(e.target.files?.[0] || null)}
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: '160px' }}>
+                <label style={{ fontSize: '0.85rem', marginBottom: '0.25rem' }}>Notes (optional)</label>
+                <input
+                  type="text"
+                  value={docNotes}
+                  onChange={(e) => setDocNotes(e.target.value)}
+                  placeholder="e.g. Required for Japan customs"
+                  style={{ padding: '0.5rem' }}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={uploadingDoc || !docFile}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: uploadingDoc || !docFile ? '#ccc' : '#28a745',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: uploadingDoc || !docFile ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {uploadingDoc ? 'Uploading…' : 'Attach Document'}
+              </button>
+            </form>
           </div>
         </div>
 

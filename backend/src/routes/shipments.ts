@@ -1,7 +1,11 @@
 import { Router } from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import { query } from '../config/database';
 import { AuthRequest, authenticate, authorize } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
+import { uploadToCloudinary, uploadBufferToCloudinary } from '../utils/cloudinary';
 
 const router = Router();
 
@@ -254,6 +258,8 @@ router.post('/multi', authenticate, authorize('admin', 'lab_staff', 'logistics',
       recipient_company,
       recipient_phone,
       recipient_address,
+      recipient_address_2,
+      recipient_address_3,
       recipient_city,
       recipient_state,
       recipient_zip,
@@ -269,8 +275,8 @@ router.post('/multi', authenticate, authorize('admin', 'lab_staff', 'logistics',
       throw new AppError('shipment_items array is required', 400);
     }
 
-    if (shipment_items.length > 10) {
-      throw new AppError('Maximum 10 samples per shipment', 400);
+    if (shipment_items.length > 20) {
+      throw new AppError('Maximum 20 samples per shipment', 400);
     }
 
     // State is only required for countries that use states/provinces
@@ -348,9 +354,14 @@ router.post('/multi', authenticate, authorize('admin', 'lab_staff', 'logistics',
     const shipmentNumber = `SHIP-${Date.now()}`;
     // Handle state for countries that don't require it (empty string -> null -> proper formatting)
     const stateValue = recipient_state && recipient_state.trim() !== '' ? recipient_state : null;
-    const fullAddress = stateValue
-      ? `${recipient_address}, ${recipient_city}, ${stateValue} ${recipient_zip}`
-      : `${recipient_address}, ${recipient_city}, ${recipient_zip}`;
+    // Build a street-only, multi-line address. City/state/zip are stored in
+    // their own columns, so destination_address holds just the street lines
+    // (Line 1 + optional Line 2/3 such as building/floor codes). Newlines are
+    // preserved so the FedEx service can emit up to 3 separate street lines.
+    const streetAddress = [recipient_address, recipient_address_2, recipient_address_3]
+      .map((line: string | undefined) => (line || '').trim())
+      .filter((line: string) => line.length > 0)
+      .join('\n');
     const isHazmat = hasHazmat || totalAmount >= 30;
 
     // Create shipment record
@@ -370,7 +381,7 @@ router.post('/multi', authenticate, authorize('admin', 'lab_staff', 'logistics',
         unit,
         recipient_name,
         recipient_company || null,
-        fullAddress,
+        streetAddress,
         recipient_city,
         stateValue,
         recipient_zip,
@@ -668,5 +679,203 @@ router.get('/hazards/all', authenticate, async (req: AuthRequest, res, next) => 
     next(error);
   }
 });
+
+// ============================================================================
+// Custom customs / shipping documents
+// ----------------------------------------------------------------------------
+// Staff can attach arbitrary documents to a shipment (e.g. import permits,
+// certificates, country-specific customs forms) beyond the auto-generated
+// Commercial Invoice and Packing List. Files are stored on Cloudinary in
+// production and on local disk in development.
+// ============================================================================
+
+const DOCUMENT_TYPES = [
+  'Commercial Invoice', 'Packing List', 'Certificate of Origin',
+  'Import Permit', 'Export License', 'Customs Declaration',
+  'Material Safety Data Sheet', 'Dangerous Goods Declaration',
+  'Certificate of Analysis', 'Other',
+];
+
+const SHIPMENT_DOC_DIR = path.resolve(__dirname, '../../uploads/shipment-documents');
+
+const documentStorage = process.env.NODE_ENV === 'production'
+  ? multer.memoryStorage()
+  : multer.diskStorage({
+      destination: (_req, _file, cb) => {
+        if (!fs.existsSync(SHIPMENT_DOC_DIR)) fs.mkdirSync(SHIPMENT_DOC_DIR, { recursive: true });
+        cb(null, SHIPMENT_DOC_DIR);
+      },
+      filename: (_req, file, cb) => {
+        const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        cb(null, file.fieldname + '-' + unique + path.extname(file.originalname));
+      },
+    });
+
+const uploadDocument = multer({
+  storage: documentStorage,
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB
+  fileFilter: (_req, file, cb) => {
+    const allowedExt = /\.(pdf|doc|docx|xls|xlsx|csv|txt|png|jpg|jpeg)$/i.test(path.extname(file.originalname));
+    const allowedMime = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/csv',
+      'text/plain',
+      'image/png',
+      'image/jpeg',
+    ].includes(file.mimetype);
+    if (allowedExt || allowedMime) cb(null, true);
+    else cb(new Error('Only PDF, Word, Excel, CSV, text and image files are allowed'));
+  },
+});
+
+// List documents attached to a shipment
+router.get('/:id/documents', authenticate, async (req: AuthRequest, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await query(
+      `SELECT d.id, d.shipment_id, d.document_type, d.file_name, d.file_path,
+              d.file_size, d.mime_type, d.notes, d.created_at,
+              u.first_name || ' ' || u.last_name AS uploaded_by_name
+       FROM shipment_custom_documents d
+       LEFT JOIN users u ON d.uploaded_by = u.id
+       WHERE d.shipment_id = $1
+       ORDER BY d.created_at DESC`,
+      [id]
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Upload/attach a document to a shipment
+router.post(
+  '/:id/documents',
+  authenticate,
+  authorize('admin', 'lab_staff', 'logistics', 'super_admin'),
+  uploadDocument.single('file'),
+  async (req: AuthRequest, res, next) => {
+    try {
+      const { id } = req.params;
+      const file = req.file;
+      if (!file) {
+        throw new AppError('No file uploaded', 400);
+      }
+
+      const documentType = DOCUMENT_TYPES.includes(req.body.document_type)
+        ? req.body.document_type
+        : 'Other';
+      const notes = req.body.notes || null;
+
+      // Confirm the shipment exists
+      const shipmentResult = await query('SELECT id FROM shipments WHERE id = $1', [id]);
+      if (shipmentResult.rows.length === 0) {
+        throw new AppError('Shipment not found', 404);
+      }
+
+      // Persist the file (Cloudinary in production, disk path in development)
+      const folder = `shipment-documents/${id}`;
+      let filePath: string;
+      if (process.env.NODE_ENV === 'production') {
+        if (!file.buffer) throw new AppError('File buffer unavailable in production', 500);
+        const url = await uploadBufferToCloudinary(file.buffer, file.originalname, folder);
+        if (!url) throw new AppError('Cloud upload failed', 502);
+        filePath = url;
+      } else {
+        const url = await uploadToCloudinary(file.path, folder).catch(() => null);
+        filePath = url || file.path;
+      }
+
+      const result = await query(
+        `INSERT INTO shipment_custom_documents
+         (shipment_id, document_type, file_name, file_path, file_size, mime_type, notes, uploaded_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING id, shipment_id, document_type, file_name, file_path, file_size, mime_type, notes, created_at`,
+        [id, documentType, file.originalname, filePath, file.size || null, file.mimetype || null, notes, req.user?.id]
+      );
+
+      res.status(201).json({ success: true, data: result.rows[0] });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// Download / open a shipment document
+router.get('/:id/documents/:docId/download', authenticate, async (req: AuthRequest, res, next) => {
+  try {
+    const { id, docId } = req.params;
+    const result = await query(
+      `SELECT file_path, file_name, mime_type
+       FROM shipment_custom_documents
+       WHERE id = $1 AND shipment_id = $2`,
+      [docId, id]
+    );
+
+    if (result.rows.length === 0) {
+      throw new AppError('Document not found', 404);
+    }
+
+    const { file_path, file_name, mime_type } = result.rows[0];
+
+    // Cloudinary-hosted file: redirect the client to the stored URL.
+    if (/^https?:\/\//i.test(file_path)) {
+      return res.redirect(file_path);
+    }
+
+    // Local disk file (development): stream it back, guarding against traversal.
+    const resolved = path.resolve(file_path);
+    if (!resolved.startsWith(SHIPMENT_DOC_DIR)) {
+      throw new AppError('Invalid file path', 400);
+    }
+    if (!fs.existsSync(resolved)) {
+      throw new AppError('File not found on disk', 404);
+    }
+    if (mime_type) res.type(mime_type);
+    res.setHeader('Content-Disposition', `inline; filename="${file_name.replace(/["\\]/g, '')}"`);
+    return fs.createReadStream(resolved).pipe(res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Delete a shipment document
+router.delete(
+  '/:id/documents/:docId',
+  authenticate,
+  authorize('admin', 'lab_staff', 'logistics', 'super_admin'),
+  async (req: AuthRequest, res, next) => {
+    try {
+      const { id, docId } = req.params;
+      const result = await query(
+        `DELETE FROM shipment_custom_documents
+         WHERE id = $1 AND shipment_id = $2
+         RETURNING id, file_path`,
+        [docId, id]
+      );
+
+      if (result.rows.length === 0) {
+        throw new AppError('Document not found', 404);
+      }
+
+      // Best-effort local cleanup (development disk files only).
+      const filePath = result.rows[0].file_path;
+      if (filePath && !/^https?:\/\//i.test(filePath)) {
+        const resolved = path.resolve(filePath);
+        if (resolved.startsWith(SHIPMENT_DOC_DIR) && fs.existsSync(resolved)) {
+          fs.unlink(resolved, () => undefined);
+        }
+      }
+
+      res.json({ success: true, message: 'Document removed' });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 export default router;

@@ -208,7 +208,7 @@ const TrackingView: React.FC = () => {
                   {shipment.recipient_company && (
                     <div className="recipient-company">{shipment.recipient_company}</div>
                   )}
-                  <div className="recipient-address">
+                  <div className="recipient-address" style={{ whiteSpace: 'pre-line' }}>
                     {shipment.destination_address}
                   </div>
                   <div className="recipient-city-state">

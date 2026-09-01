@@ -63,18 +63,32 @@ function normalizeHazmatUnits(
 
 /**
  * Split a street address into lines of max 35 characters (FedEx limit).
- * FedEx allows up to 2 street lines of 35 chars each.
+ * FedEx allows up to 3 street lines of 35 chars each.
+ *
+ * If the caller already provides explicit line breaks (e.g. Address Line 1/2/3
+ * captured separately in the UI), those are honored directly. Otherwise a single
+ * long string is auto-split at a natural break point near the 35-char mark.
  */
 function splitStreetLines(street: string): string[] {
   if (!street) return [''];
-  const trimmed = street.trim();
+
+  // Honor explicit line breaks first (up to 3 lines, each capped at 35 chars).
+  const explicitLines = street
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  if (explicitLines.length > 1) {
+    return explicitLines.slice(0, 3).map((line) => line.substring(0, 35));
+  }
+
+  const trimmed = (explicitLines[0] ?? street).trim();
   if (trimmed.length <= 35) return [trimmed];
-  
+
   // Try to split at a natural break point (space, comma) near the 35-char mark
   let splitIndex = trimmed.lastIndexOf(' ', 35);
   if (splitIndex <= 0) splitIndex = trimmed.lastIndexOf(',', 35);
   if (splitIndex <= 0) splitIndex = 35; // Hard split if no natural break
-  
+
   const line1 = trimmed.substring(0, splitIndex).trim();
   const line2 = trimmed.substring(splitIndex).trim().substring(0, 35); // Cap line 2 at 35 too
   return line2 ? [line1, line2] : [line1];
